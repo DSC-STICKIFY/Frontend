@@ -1,0 +1,20 @@
+﻿
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={handleBuyNow}
+                                    className="bg-yellow-400 hover:bg-yellow-300 font-bold py-3 rounded-lg"
+                                >
+                                    Buy Now
+                                </button>
+                                <button className="border border-black hover:bg-gray-100 font-bold py-3 rounded-lg">
+                                    Message to Customize
+                                </button>
+                            </div>
+                        </div>
+                    </div >
+                </div >
+            </div >
+            );
+};
+
+            export default ModalGiveawayCallingCard;

@@ -1,0 +1,1 @@
+- [x] Add "Assorted" to the TYPES_BY_CATEGORY array for "Stickers" in src/pages/superAdmin/SuperAdminProducts.jsx

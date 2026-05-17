@@ -1,0 +1,269 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import CustDBProductsLayout from '../../../layouts/CustDBProductsLayout.jsx';
+import cart from '../../../assets/servicesImgIcon/graphicservices/cart.svg';
+import { useProducts } from '../../../context/ProductsContext';
+import PromoTag, { getBestPromo, getDiscountedPrice } from '../../../components/PromoTag'; 
+
+// Components
+import ModalGiveawaysMugnShirt from '../../../components/ModalGiveawaysMugnShirt.jsx';
+import ModalGiveawaysStandeenTarpulin from '../../../components/ModalGiveawaysStandeenTarpulin.jsx';
+import ModalGiveawayMore from '../../../components/ModalGiveawayMore.jsx';
+import ModalGiveawayCallingCard from '../../../components/ModalGiveawayCallingCard.jsx';
+
+import defaultImage from '../../../assets/servicesImgIcon/giveaways/standee.png';
+
+
+const Giveaways = () => { 
+    const [selectedGiveaways, setSelectedGiveaways] = useState(null);
+    const { allProducts, loading, refreshProducts } = useProducts();
+
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('🔄 Auto-refreshing Giveaways (Customer)...');
+            refreshProducts();
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [refreshProducts]);
+
+    const getModalType = (product) => {
+        const type = product.type?.toLowerCase() || "";
+        const name = product.name?.toLowerCase() || "";
+        const desc = product.description?.toLowerCase() || "";
+
+        if (type.includes('sintra board') || type.includes('sintraboard')) {
+            const identifier = name || desc;
+            if (identifier.includes('standee')) {
+                return "standee-tarpulinModal";
+            } else if (identifier.includes('calling card')) {
+                return "callingcardModal";
+            }
+        }
+
+        if (type.includes('standee') || type.includes('tarpulin')) {
+            return "standee-tarpulinModal";
+        } else if (type.includes('calling card')) {
+            return "callingcardModal";
+        } else if (type.includes('mug') || type.includes('shirt')) {
+            return "mug-shirtModal";
+        } else {
+            return "moreModal";
+        }
+    };
+
+    // Filter and process products using useMemo for performance
+    const { bestSellers, moreProducts } = useMemo(() => {
+        const giveawayProducts = allProducts.filter(p =>
+            p.category?.toLowerCase() === 'giveaways'
+        );
+
+        const bestSellerTypes = ['Standee', 'Tarpulin', 'Magic Mug', 'DriFit T-Shirt', 'Sublimation'];
+        const best = [];
+        const more = [];
+
+        giveawayProducts.forEach(product => {
+
+            const bestPromo = product.applied_promo || null;
+            const discountedPrice = product.discounted_price ?? null;
+            
+            const mappedProduct = {
+                product_id: product.id,
+                product_name: product.name,
+                product_description: product.description,
+                product_price: product.discounted_price || product.price,
+                product_image: product.image,
+                product_quantity: product.quantity || 1,
+                type: product.type,
+                category: product.category,
+                modalType: getModalType(product),
+                
+                promo: bestPromo,
+                originalPrice: product.price,
+                discountedPrice: discountedPrice,
+            };
+
+            const isBestSeller = bestSellerTypes.some(type => product.type?.includes(type));
+            if (isBestSeller) {
+                best.push(mappedProduct);
+            } else {
+                more.push(mappedProduct);
+            }
+        });
+
+        return { bestSellers: best, moreProducts: more };
+    }, [allProducts]);
+
+    // Helper to render price with discount if applicable
+    const renderPrice = (product) => {
+        const hasDiscount = product.discountedPrice !== null && product.discountedPrice < product.originalPrice;
+        if (hasDiscount) {
+            return (
+                <div className="flex items-center gap-2">
+                    <span className="text-gray-400 line-through text-sm">
+                        ₱{product.originalPrice.toLocaleString("en-PH")}
+                    </span>
+                    <span className="text-xl font-bold text-red-600">
+                        ₱{product.discountedPrice.toLocaleString("en-PH")}
+                    </span>
+                </div>
+            );
+        }
+        return (
+            <span className="text-xl font-semibold">
+                ₱{product.product_price.toLocaleString("en-PH")}
+            </span>
+        );
+    };
+
+    return (
+        <CustDBProductsLayout categoryName="Giveaways">
+
+            <h1 className='mt-10 text-center text-[35px] font-bold italic'>
+                Everything You Need, Fully Customized
+            </h1>
+            <p className='text-center text-sm mt-1 mb-10 tracking-widest'>
+                Wide range of personalized products including apparel, accessories, marketing materials, and display boards.
+            </p>
+
+            {loading ? (
+                <div className="text-center py-20">
+                    <div className="inline-block w-8 h-8 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                    <p className="ml-4 text-lg text-gray-600">Loading products...</p>
+                </div>
+            ) : (
+                <>
+                    {/* Best Seller Section */}
+                    {bestSellers.length > 0 && (
+                        <div className='my-6'>
+                            <h2 className='font-bold text-3xl mb-6'>Best Seller</h2>
+                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
+                                {bestSellers.map((item) => (
+                                    <div key={item.product_id} className="relative w-full">
+                                        <div className='mt-4 h-fit rounded-[16px]'>
+                                            {/*  */}
+                                            <div className="relative">
+                                                <img
+                                                    src={item.product_image || defaultImage}
+                                                    alt={item.product_name}
+                                                    className='rounded-2xl w-full h-[250px] object-cover'
+                                                    onError={(e) => { e.target.src = defaultImage; }}
+                                                />
+                                                <PromoTag promo={item.promo} />
+                                            </div>
+                                            <div className="flex flex-col justify-between font-semibold mt-2">
+                                                <div>
+                                                    <p className="text-sm">{item.product_name}</p>
+                                                    <p className="text-[14px] min-h-5 text-gray-600">
+                                                        {item.type}
+                                                        {item.product_quantity > 1 && ` • ${item.product_quantity} pcs`}
+                                                    </p>
+                                                    {item.product_description && (
+                                                        <p className="text-gray-500 text-[11px] line-clamp-2 leading-relaxed mt-1">
+                                                            {item.product_description}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="flex justify-between items-end mt-2">
+                                                    {renderPrice(item)}
+                                                    <div
+                                                        className="rounded-full border-2 p-2 border-[#5A5A5A] cursor-pointer hover:bg-gray-100"
+                                                        onClick={() => setSelectedGiveaways(item)}
+                                                    >
+                                                        <img src={cart} alt="Add to cart" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* More Products Section */}
+                    {moreProducts.length > 0 && (
+                        <div className='my-6'>
+                            <h2 className='font-bold text-3xl mb-6'>More</h2>
+                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
+                                {moreProducts.map((item) => (
+                                    <div key={item.product_id} className="relative w-full">
+                                        <div className='mt-4 h-fit rounded-[16px]'>
+                                            <div className="relative">
+                                                <img
+                                                    src={item.product_image || defaultImage}
+                                                    alt={item.product_name}
+                                                    className='rounded-2xl w-full h-[250px] object-cover'
+                                                    onError={(e) => { e.target.src = defaultImage; }}
+                                                />
+                                                <PromoTag promo={item.promo} />
+                                            </div>
+                                            <div className="flex flex-col justify-between font-semibold mt-2">
+                                                <div>
+                                                    <p className="text-sm">{item.product_name}</p>
+                                                    <p className="text-[15px] text-gray-600">
+                                                        {item.type} • {item.product_quantity} pcs
+                                                    </p>
+                                                    {item.product_description && (
+                                                        <p className="text-gray-500 text-[11px] line-clamp-2 leading-relaxed mt-1">
+                                                            {item.product_description}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="flex justify-between items-end mt-2">
+                                                    {renderPrice(item)}
+                                                    <div
+                                                        className="rounded-full border-2 p-2 border-[#5A5A5A] cursor-pointer hover:bg-gray-100"
+                                                        onClick={() => setSelectedGiveaways(item)}
+                                                    >
+                                                        <img src={cart} alt="Add to cart" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {bestSellers.length === 0 && moreProducts.length === 0 && (
+                        <div className="text-center py-20">
+                            <p className="text-gray-500 text-xl">No giveaway products available yet.</p>
+                            <p className="text-gray-400 mt-2">Products added by admin will appear here automatically!</p>
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Modals - Dynamic Data Passing */}
+            {selectedGiveaways && selectedGiveaways.modalType === "standee-tarpulinModal" && (
+                <ModalGiveawaysStandeenTarpulin
+                    giveaways={selectedGiveaways}
+                    onClose={() => setSelectedGiveaways(null)}
+                />
+            )}
+            {selectedGiveaways && selectedGiveaways.modalType === "mug-shirtModal" && (
+                <ModalGiveawaysMugnShirt
+                    giveaways={selectedGiveaways}
+                    onClose={() => setSelectedGiveaways(null)}
+                />
+            )}
+            {selectedGiveaways && selectedGiveaways.modalType === "callingcardModal" && (
+                <ModalGiveawayCallingCard
+                    giveaways={selectedGiveaways}
+                    onClose={() => setSelectedGiveaways(null)}
+                />
+            )}
+            {selectedGiveaways && selectedGiveaways.modalType === "moreModal" && (
+                <ModalGiveawayMore
+                    giveaways={selectedGiveaways}
+                    allMore={moreProducts}
+                    onClose={() => setSelectedGiveaways(null)}
+                />
+            )}
+
+        </CustDBProductsLayout>
+    );
+};
+
+export default Giveaways;
