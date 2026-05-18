@@ -13,6 +13,7 @@ import PromoTag from '../../components/PromoTag';
 const Giveaways = () => {
     const { allProducts, loading, refreshProducts } = useProducts();
     const [selectedGiveaways, setSelectedGiveaways] = useState(null);
+    const [productNatureFilter, setProductNatureFilter] = useState("All");
     const scrollPositionRef = useRef(null);
     const isRefreshingRef = useRef(false);
 
@@ -45,15 +46,25 @@ const Giveaways = () => {
         return "moreModal";
     };
 
-    const { bestSellers, moreProducts } = useMemo(() => {
-        const giveawaysData = allProducts.filter(item => item.category === 'Giveaways');
-        const bestSellerKeywords = ['Standee', 'Tarpulin', 'Magic Mug', 'DriFit', 'Shirt'];
+    const { bestSellers, moreProducts, hasAnyBest, hasAnyMore } = useMemo(() => {
+        let giveawayProducts = allProducts.filter(item => item.category === 'Giveaways');
+
+        const bestSellerTypes = ['Standee', 'Tarpulin', 'Magic Mug', 'DriFit T-Shirt', 'Sublimation'];
+        const hasAnyBest = giveawayProducts.some(p => bestSellerTypes.some(t => p.type?.includes(t)));
+        const hasAnyMore = giveawayProducts.some(p => !bestSellerTypes.some(t => p.type?.includes(t)));
+
+        if (productNatureFilter === "Customizable") {
+            giveawayProducts = giveawayProducts.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
+        } else if (productNatureFilter === "Ready Made") {
+            giveawayProducts = giveawayProducts.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
+        }
 
         const best = [];
         const more = [];
 
-        giveawaysData.forEach(product => {
+        giveawayProducts.forEach(product => {
             const mappedItem = {
+                ...product,
                 id: product.id,
                 image: product.image || defaultImg,
                 category: product.category,
@@ -68,15 +79,15 @@ const Giveaways = () => {
                 spec: product.description || product.type
             };
 
-            const isBest = bestSellerKeywords.some(kw =>
-                product.name.includes(kw) || (product.type && product.type.includes(kw))
+            const isBestSeller = bestSellerTypes.some(kw =>
+                product.name?.includes(kw) || (product.type && product.type.includes(kw))
             );
 
-            isBest ? best.push(mappedItem) : more.push(mappedItem);
+            isBestSeller ? best.push(mappedItem) : more.push(mappedItem);
         });
 
-        return { bestSellers: best, moreProducts: more };
-    }, [allProducts]);
+        return { bestSellers: best, moreProducts: more, hasAnyBest, hasAnyMore };
+    }, [allProducts, productNatureFilter]);
 
     // ✅ Only show loading screen on initial load, not on background refresh
     const isInitialLoad = loading && allProducts.length === 0;
@@ -84,32 +95,80 @@ const Giveaways = () => {
 
     return (
         <div>
-            <h1 className='mt-32 text-center text-[35px] font-bold italic'>
-                Everything You Need, Fully Customized
-            </h1>
-            <p className='text-center text-sm mt-1 mb-10 tracking-widest px-4'>
-                Wide range of personalized products including apparel, accessories, marketing materials, and display boards.
-            </p>
+            <div className="flex flex-col md:flex-row justify-between items-end w-full max-w-7xl mx-auto px-4 mt-32 mb-10">
+                <div className="text-left">
+                    <h1 className='text-[35px] font-bold italic'>
+                        Everything You Need, Fully Customized
+                    </h1>
+                    <p className='text-sm mt-1 tracking-widest'>
+                        Wide range of personalized products including apparel, accessories, marketing materials, and display boards.
+                    </p>
+                </div>
+            </div>
 
-            {bestSellers.length > 0 && (
+            {hasAnyBest && (
                 <div className='my-15'>
-                    <h2 className='font-bold text-3xl mb-6'>Best Seller</h2>
-                    <div className='mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
-                        {bestSellers.map(item => (
-                            <GiveawayCard key={item.id} item={item} onSelect={setSelectedGiveaways} isBest={true} />
-                        ))}
+                    <div className="flex justify-between items-center mb-6 px-4">
+                        <h2 className='font-bold text-3xl'>Best Seller</h2>
+                        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                            {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                                <button
+                                    key={opt}
+                                    onClick={() => setProductNatureFilter(opt)}
+                                    className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                                        productNatureFilter === opt 
+                                            ? 'bg-black text-white shadow-md' 
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
                     </div>
+                    {bestSellers.length > 0 ? (
+                        <div className='mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full px-4'>
+                            {bestSellers.map(item => (
+                                <GiveawayCard key={item.id} item={item} onSelect={setSelectedGiveaways} isBest={true} />
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 italic py-4 px-4">No products match the selected filter.</p>
+                    )}
                 </div>
             )}
 
-            {moreProducts.length > 0 && (
+            {hasAnyMore && (
                 <div className='my-15'>
-                    <h2 className='font-bold text-3xl mb-6'>More</h2>
-                    <div className='mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
-                        {moreProducts.map(item => (
-                            <GiveawayCard key={item.id} item={item} onSelect={setSelectedGiveaways} />
-                        ))}
+                    <div className="flex justify-between items-center mb-6 px-4">
+                        <h2 className='font-bold text-3xl'>More</h2>
+                        {(!hasAnyBest || bestSellers.length === 0 && !hasAnyBest) && (
+                            <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                                {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                                    <button
+                                        key={opt}
+                                        onClick={() => setProductNatureFilter(opt)}
+                                        className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                                            productNatureFilter === opt 
+                                                ? 'bg-black text-white shadow-md' 
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
+                    {moreProducts.length > 0 ? (
+                        <div className='mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full px-4'>
+                            {moreProducts.map(item => (
+                                <GiveawayCard key={item.id} item={item} onSelect={setSelectedGiveaways} />
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-gray-500 italic py-4 px-4">No products match the selected filter.</p>
+                    )}
                 </div>
             )}
 
@@ -135,7 +194,7 @@ const Giveaways = () => {
     );
 };
 
-const GiveawayCard = ({ item, onSelect, isBest }) => {
+const GiveawayCard = ({ item, onSelect }) => {
     const hasDiscount = item.discounted_price !== null && item.discounted_price < item.originalPrice;
 
     return (

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import CustDBProductsLayout from '../../../layouts/CustDBProductsLayout.jsx';
 import cart from '../../../assets/servicesImgIcon/graphicservices/cart.svg';
 import { useProducts } from '../../../context/ProductsContext';
-import PromoTag, { getBestPromo, getDiscountedPrice } from '../../../components/PromoTag'; 
+import PromoTag from '../../../components/PromoTag'; 
 
 // Components
 import ModalGiveawaysMugnShirt from '../../../components/ModalGiveawaysMugnShirt.jsx';
@@ -15,6 +15,7 @@ import defaultImage from '../../../assets/servicesImgIcon/giveaways/standee.png'
 
 const Giveaways = () => { 
     const [selectedGiveaways, setSelectedGiveaways] = useState(null);
+    const [productNatureFilter, setProductNatureFilter] = useState("All");
     const { allProducts, loading, refreshProducts } = useProducts();
 
 
@@ -52,12 +53,21 @@ const Giveaways = () => {
     };
 
     // Filter and process products using useMemo for performance
-    const { bestSellers, moreProducts } = useMemo(() => {
-        const giveawayProducts = allProducts.filter(p =>
+    const { bestSellers, moreProducts, hasAnyBest, hasAnyMore } = useMemo(() => {
+        let giveawayProducts = allProducts.filter(p =>
             p.category?.toLowerCase() === 'giveaways'
         );
 
         const bestSellerTypes = ['Standee', 'Tarpulin', 'Magic Mug', 'DriFit T-Shirt', 'Sublimation'];
+        const hasAnyBest = giveawayProducts.some(p => bestSellerTypes.some(t => p.type?.includes(t)));
+        const hasAnyMore = giveawayProducts.some(p => !bestSellerTypes.some(t => p.type?.includes(t)));
+
+        if (productNatureFilter === "Customizable") {
+            giveawayProducts = giveawayProducts.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
+        } else if (productNatureFilter === "Ready Made") {
+            giveawayProducts = giveawayProducts.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
+        }
+
         const best = [];
         const more = [];
 
@@ -67,6 +77,7 @@ const Giveaways = () => {
             const discountedPrice = product.discounted_price ?? null;
             
             const mappedProduct = {
+                ...product,
                 product_id: product.id,
                 product_name: product.name,
                 product_description: product.description,
@@ -90,8 +101,8 @@ const Giveaways = () => {
             }
         });
 
-        return { bestSellers: best, moreProducts: more };
-    }, [allProducts]);
+        return { bestSellers: best, moreProducts: more, hasAnyBest, hasAnyMore };
+    }, [allProducts, productNatureFilter]);
 
     // Helper to render price with discount if applicable
     const renderPrice = (product) => {
@@ -118,12 +129,16 @@ const Giveaways = () => {
     return (
         <CustDBProductsLayout categoryName="Giveaways">
 
-            <h1 className='mt-10 text-center text-[35px] font-bold italic'>
-                Everything You Need, Fully Customized
-            </h1>
-            <p className='text-center text-sm mt-1 mb-10 tracking-widest'>
-                Wide range of personalized products including apparel, accessories, marketing materials, and display boards.
-            </p>
+            <div className="flex flex-col md:flex-row justify-between items-end w-full max-w-7xl mx-auto px-4 mt-10 mb-10">
+                <div className="text-left">
+                    <h1 className='text-[35px] font-bold italic'>
+                        Everything You Need, Fully Customized
+                    </h1>
+                    <p className='text-sm mt-1 tracking-widest'>
+                        Wide range of personalized products including apparel, accessories, marketing materials, and display boards.
+                    </p>
+                </div>
+            </div>
 
             {loading ? (
                 <div className="text-center py-20">
@@ -133,11 +148,29 @@ const Giveaways = () => {
             ) : (
                 <>
                     {/* Best Seller Section */}
-                    {bestSellers.length > 0 && (
+                    {hasAnyBest && (
                         <div className='my-6'>
-                            <h2 className='font-bold text-3xl mb-6'>Best Seller</h2>
-                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
-                                {bestSellers.map((item) => (
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className='font-bold text-3xl'>Best Seller</h2>
+                                <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                                    {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                                        <button
+                                            key={opt}
+                                            onClick={() => setProductNatureFilter(opt)}
+                                            className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                                                productNatureFilter === opt 
+                                                    ? 'bg-black text-white shadow-md' 
+                                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            {bestSellers.length > 0 ? (
+                                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
+                                    {bestSellers.map((item) => (
                                     <div key={item.product_id} className="relative w-full">
                                         <div className='mt-4 h-fit rounded-[16px]'>
                                             {/*  */}
@@ -176,16 +209,39 @@ const Giveaways = () => {
                                         </div>
                                     </div>
                                 ))}
-                            </div>
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 italic py-4">No products match the selected filter.</p>
+                            )}
                         </div>
                     )}
 
                     {/* More Products Section */}
-                    {moreProducts.length > 0 && (
+                    {hasAnyMore && (
                         <div className='my-6'>
-                            <h2 className='font-bold text-3xl mb-6'>More</h2>
-                            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
-                                {moreProducts.map((item) => (
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className='font-bold text-3xl'>More</h2>
+                                {(!hasAnyBest || bestSellers.length === 0 && !hasAnyBest) && (
+                                    <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                                        {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                                            <button
+                                                key={opt}
+                                                onClick={() => setProductNatureFilter(opt)}
+                                                className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                                                    productNatureFilter === opt 
+                                                        ? 'bg-black text-white shadow-md' 
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                {opt}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            {moreProducts.length > 0 ? (
+                                <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
+                                    {moreProducts.map((item) => (
                                     <div key={item.product_id} className="relative w-full">
                                         <div className='mt-4 h-fit rounded-[16px]'>
                                             <div className="relative">
@@ -222,7 +278,10 @@ const Giveaways = () => {
                                         </div>
                                     </div>
                                 ))}
-                            </div>
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 italic py-4">No products match the selected filter.</p>
+                            )}
                         </div>
                     )}
 

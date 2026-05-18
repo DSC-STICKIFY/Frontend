@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import CustDBProductsLayout from '../../../layouts/CustDBProductsLayout.jsx';
 import { useProducts } from '../../../context/ProductsContext';  
 import cart from '../../../assets/servicesImgIcon/graphicservices/cart.svg';
 import ModalGraphicServices from '../../../components/ModalGraphicServices.jsx';
@@ -10,6 +11,7 @@ import bgCustomer from '../../../assets/servicesImgIcon/graphicservices/gsBG.png
 const GraphicServices = () => {
     const { allProducts, loading, refreshProducts } = useProducts();
     const [selectedItem, setSelectedItem] = useState(null);
+    const [productNatureFilter, setProductNatureFilter] = useState("All");
     const scrollPositionRef = useRef(null);
     const isRefreshingRef = useRef(false);
 
@@ -110,7 +112,14 @@ const GraphicServices = () => {
     };
 
     const { businessLogo, motoVlog } = useMemo(() => {
-        const graphicProducts = allProducts.filter(p => p.category === 'Graphic Services');
+        let graphicProducts = allProducts.filter(p => p.category === 'Graphic Services');
+        
+        if (productNatureFilter === "Customizable") {
+            graphicProducts = graphicProducts.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
+        } else if (productNatureFilter === "Ready Made") {
+            graphicProducts = graphicProducts.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
+        }
+        
         const business = [];
         const moto = [];
 
@@ -124,6 +133,7 @@ const GraphicServices = () => {
 
             const packageDetails = parsePackageDetails(p.description, p.name, p.type);
             const mappedItem = {
+                ...p,
                 id: p.id,
                 image: p.image,
                 category: p.name,
@@ -160,12 +170,12 @@ const GraphicServices = () => {
         };
 
         return { businessLogo: business.sort(sortByTier), motoVlog: moto.sort(sortByTier) };
-    }, [allProducts]);
+    }, [allProducts, productNatureFilter]);
 
     if (loading) return <div className="text-center py-20 font-bold">Loading Graphic Services...</div>;
 
     return (
-        <>
+        <CustDBProductsLayout>
             {/* Banner */}
             <div className="relative w-full overflow-hidden rounded-2xl mb-10">
                 <img
@@ -181,7 +191,24 @@ const GraphicServices = () => {
             {/* Business Logo Section */}
             {businessLogo.length > 0 && (
                 <div className='my-12 px-2'>
-                    <h2 className='font-bold text-3xl mb-6'>Business Logo</h2>
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className='font-bold text-3xl'>Business Logo</h2>
+                        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                            {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                                <button
+                                    key={opt}
+                                    onClick={() => setProductNatureFilter(opt)}
+                                    className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                                        productNatureFilter === opt 
+                                            ? 'bg-black text-white shadow-md' 
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                     <div className='mt-8 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 w-full'>
                         {businessLogo.map((item) => (
                             <ServiceCard key={item.id} item={item} onSelect={setSelectedItem} />
@@ -193,7 +220,26 @@ const GraphicServices = () => {
             {/* Moto Vlog Section */}
             {motoVlog.length > 0 && (
                 <div className='my-12 px-2'>
-                    <h2 className='font-bold text-3xl mb-6'>Moto Vlog</h2>
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className='font-bold text-3xl'>Moto Vlog</h2>
+                        {businessLogo.length === 0 && (
+                            <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                                {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                                    <button
+                                        key={opt}
+                                        onClick={() => setProductNatureFilter(opt)}
+                                        className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                                            productNatureFilter === opt 
+                                                ? 'bg-black text-white shadow-md' 
+                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                     <div className='mt-8 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 w-full'>
                         {motoVlog.map((item) => (
                             <ServiceCard key={item.id} item={item} onSelect={setSelectedItem} isMoto={true} />
@@ -217,6 +263,7 @@ const GraphicServices = () => {
                 <ModalGraphicServices
                     onClose={() => setSelectedItem(null)}
                     product={{
+                        ...selectedItem,
                         id: selectedItem.id,
                         image: selectedItem.image,
                         category: selectedItem.category,
@@ -232,7 +279,7 @@ const GraphicServices = () => {
                     }}
                 />
             )}
-        </>
+        </CustDBProductsLayout>
     );
 };
 

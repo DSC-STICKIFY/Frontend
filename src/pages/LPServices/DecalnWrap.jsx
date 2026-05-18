@@ -47,13 +47,16 @@ const SkeletonCard = () => (
 );
 
 /* ─── Section heading ─────────────────────────────────────────────────── */
-const SectionHeading = ({ children, sub }) => (
+const SectionHeading = ({ children, sub, filterDropdown }) => (
     <div className="mb-16">
-        <div className="flex items-end gap-6">
-            <h2 className="font-black text-5xl md:text-6xl tracking-tighter italic uppercase text-gray-900 leading-none">
-                {children}
-            </h2>
-            {sub && <span className="text-sm font-black text-gray-400 uppercase tracking-[0.25em] mb-2 pb-1">{sub}</span>}
+        <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-6">
+            <div className="flex items-end gap-6">
+                <h2 className="font-black text-5xl md:text-6xl tracking-tighter italic uppercase text-gray-900 leading-none">
+                    {children}
+                </h2>
+                {sub && <span className="text-sm font-black text-gray-400 uppercase tracking-[0.25em] mb-2 pb-1">{sub}</span>}
+            </div>
+            {filterDropdown && <div className="mb-2">{filterDropdown}</div>}
         </div>
         <div className="mt-4 h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
             <div className="h-full w-32 bg-[#FDE31E] rounded-full" />
@@ -169,6 +172,7 @@ const DecalnWrap = () => {
     const [showCarModal, setShowCarModal] = useState(false);
     const [showMotorModal, setShowMotorModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
+    const [productNatureFilter, setProductNatureFilter] = useState("All");
 
     const openCarInquiry = (p) => { setSelectedProduct(p); setShowCarModal(true); };
     const openMotorInquiry = (p) => { setSelectedProduct(p); setShowMotorModal(true); };
@@ -188,9 +192,15 @@ const DecalnWrap = () => {
     }, []);
 
     const { carServices, motorServices } = useMemo(() => {
-        const relevant = allProducts.filter(p =>
+        let relevant = allProducts.filter(p =>
             (p.category || p.product_category || '').toLowerCase() === 'decals & wrap'
         );
+
+        if (productNatureFilter === "Customizable") {
+            relevant = relevant.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
+        } else if (productNatureFilter === "Ready Made") {
+            relevant = relevant.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
+        }
 
         const cars = [], motors = [];
 
@@ -244,7 +254,7 @@ const DecalnWrap = () => {
         });
 
         return { carServices: finalCars, motorServices: motors };
-    }, [allProducts]);
+    }, [allProducts, productNatureFilter]);
 
     if (loading) {
         return (
@@ -285,7 +295,26 @@ const DecalnWrap = () => {
 
             {/* CAR SERVICES */}
             <div className="mb-32">
-                <SectionHeading sub="Cars & SUVs">Car Services</SectionHeading>
+                <SectionHeading 
+                    sub="Cars & SUVs"
+                    filterDropdown={
+                        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                            {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                                <button
+                                    key={opt}
+                                    onClick={() => setProductNatureFilter(opt)}
+                                    className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                                        productNatureFilter === opt 
+                                            ? 'bg-black text-white shadow-md' 
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+                    }
+                >Car Services</SectionHeading>
                 <div className="flex flex-col gap-8">
                     {carServices.map((item, idx) => (
                         <CarCard key={item.id || idx} item={item} idx={idx} onInquire={openCarInquiry} />
@@ -295,7 +324,26 @@ const DecalnWrap = () => {
 
             {/* MOTORBIKE SECTION */}
             <div className="mb-32">
-                <SectionHeading sub="Bikes & Scooters">Motorbike Wrap & Decals</SectionHeading>
+                <SectionHeading 
+                    sub="Bikes & Scooters"
+                    filterDropdown={carServices.length === 0 ? (
+                        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                            {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                                <button
+                                    key={opt}
+                                    onClick={() => setProductNatureFilter(opt)}
+                                    className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                                        productNatureFilter === opt 
+                                            ? 'bg-black text-white shadow-md' 
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+                    ) : null}
+                >Motorbike Wrap & Decals</SectionHeading>
                 {motorServices.length === 0 ? (
                     <div className="bg-white rounded-[32px] border border-gray-100 p-16 text-center shadow-sm">
                         <p className="text-gray-400 font-bold uppercase tracking-widest text-sm">No motorbike services available at the moment.</p>

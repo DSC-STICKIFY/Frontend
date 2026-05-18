@@ -71,6 +71,7 @@ const Sticker = () => {
   const [selectedSticker, setSelectedSticker] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [productNatureFilter, setProductNatureFilter] = useState("All");
 
   // Auto-refresh every 60s
   useEffect(() => {
@@ -99,15 +100,25 @@ const Sticker = () => {
   }, []);
 
   // Filter products
-  const { assortedList, moreStickersList } = useMemo(() => {
-    const stickersProducts = allProducts.filter(p =>
+  const { assortedList, moreStickersList, hasAnyAssorted, hasAnyMore } = useMemo(() => {
+    let stickersProducts = allProducts.filter(p =>
       p.category?.toLowerCase() === 'stickers'
     );
+
+    const hasAnyAssorted = stickersProducts.some(p => isAssortedType(p));
+    const hasAnyMore = stickersProducts.some(p => !isAssortedType(p));
+
+    if (productNatureFilter === "Customizable") {
+      stickersProducts = stickersProducts.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
+    } else if (productNatureFilter === "Ready Made") {
+      stickersProducts = stickersProducts.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
+    }
 
     const assorted = stickersProducts.filter(p => isAssortedType(p));
     const more = stickersProducts.filter(p => !isAssortedType(p));
 
     const mapItem = (p, modalType) => ({
+      ...p,
       id: p.id,
       image: p.image || p.product_image || defaultImg,
       title: p.name || p.product_name,
@@ -130,8 +141,10 @@ const Sticker = () => {
     return {
       assortedList: assorted.map(p => mapItem(p, 'assorted')),
       moreStickersList: more.map(p => mapItem(p, 'more')),
+      hasAnyAssorted,
+      hasAnyMore
     };
-  }, [allProducts]);
+  }, [allProducts, productNatureFilter]);
 
   const handleSelect = (item) => {
     setSelectedSticker({
@@ -151,15 +164,32 @@ const Sticker = () => {
           className="w-full h-auto min-h-[300px] md:min-h-[400px] object-cover" 
           alt="Stickers Banner" 
         />
-
       </div>
 
       {/* Assorted Hologram Stickers */}
-      {assortedList.length > 0 && (
+      {hasAnyAssorted && (
         <div className="my-6">
-          <h2 className="font-bold text-3xl">Assorted Hologram Stickers</h2>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {assortedList.map(item => (
+          <div className="flex justify-between items-center mb-6 px-4">
+            <h2 className="font-bold text-3xl">Assorted Hologram Stickers</h2>
+            <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                    <button
+                        key={opt}
+                        onClick={() => setProductNatureFilter(opt)}
+                        className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                            productNatureFilter === opt 
+                                ? 'bg-black text-white shadow-md' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        {opt}
+                    </button>
+                ))}
+            </div>
+          </div>
+          {assortedList.length > 0 ? (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {assortedList.map(item => (
               <div className="w-full group" key={item.id}>
                 <div
                   className="relative rounded-2xl overflow-hidden cursor-pointer shadow-sm group-hover:shadow-md transition-shadow duration-200"
@@ -206,15 +236,38 @@ const Sticker = () => {
               </div>
             ))}
           </div>
+          ) : (
+            <p className="text-gray-500 italic py-4 px-4">No products match the selected filter.</p>
+          )}
         </div>
       )}
 
       {/* More Stickers */}
-      {moreStickersList.length > 0 && (
+      {hasAnyMore && (
         <div className="my-6">
-          <h2 className="font-bold text-3xl">More Stickers</h2>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {moreStickersList.map(item => (
+          <div className="flex justify-between items-center mb-6 px-4">
+            <h2 className="font-bold text-3xl">More Stickers</h2>
+            {(!hasAnyAssorted || (assortedList.length === 0 && !hasAnyAssorted)) && (
+              <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                  {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                      <button
+                          key={opt}
+                          onClick={() => setProductNatureFilter(opt)}
+                          className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                              productNatureFilter === opt 
+                                  ? 'bg-black text-white shadow-md' 
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                      >
+                          {opt}
+                      </button>
+                  ))}
+              </div>
+            )}
+          </div>
+          {moreStickersList.length > 0 ? (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {moreStickersList.map(item => (
               <div key={item.id} className="group">
                 <div
                   className="relative rounded-2xl overflow-hidden cursor-pointer shadow-sm group-hover:shadow-md transition-shadow duration-200"
@@ -256,6 +309,9 @@ const Sticker = () => {
               </div>
             ))}
           </div>
+          ) : (
+            <p className="text-gray-500 italic py-4 px-4">No products match the selected filter.</p>
+          )}
         </div>
       )}
 

@@ -74,6 +74,7 @@ const Sticker = () => {
   const [selectedSticker, setSelectedSticker] = useState(null);
   const [currentUser, setCurrentUser]         = useState(null);
   const [userLoading, setUserLoading]         = useState(true);
+  const [productNatureFilter, setProductNatureFilter] = useState("All");
 
   useEffect(() => {
     const interval = setInterval(() => refreshProducts(), 60000);
@@ -96,16 +97,25 @@ const Sticker = () => {
     load();
   }, []);
 
-  const { assortedHolograms, moreStickers } = useMemo(() => {
-    const stickersProducts = allProducts.filter(p =>
+  const { assortedHolograms, moreStickers, hasAnyAssorted, hasAnyMore } = useMemo(() => {
+    let stickersProducts = allProducts.filter(p =>
       p.category?.toLowerCase() === 'stickers'
     );
 
-    // ✅ FIX: now matches landing page logic — type includes hologram/assorted OR name includes "set"
+    const hasAnyAssorted = stickersProducts.some(p => isAssortedType(p));
+    const hasAnyMore = stickersProducts.some(p => !isAssortedType(p));
+
+    if (productNatureFilter === "Customizable") {
+      stickersProducts = stickersProducts.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
+    } else if (productNatureFilter === "Ready Made") {
+      stickersProducts = stickersProducts.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
+    }
+
     const assorted = stickersProducts.filter(p => isAssortedType(p));
     const others   = stickersProducts.filter(p => !isAssortedType(p));
 
     const fmt = (p, modalType, extra = {}) => ({
+      ...p,
       id:                  p.id,
       image:               p.image             || p.product_image,
       title:               p.name              || p.product_name,
@@ -135,8 +145,10 @@ const Sticker = () => {
           : '',
       })),
       moreStickers: others.map(p => fmt(p, "more")),
+      hasAnyAssorted,
+      hasAnyMore
     };
-  }, [allProducts]);
+  }, [allProducts, productNatureFilter]);
 
   const handleSelect = (item) =>
     setSelectedSticker({ ...item, userAddress: currentUser?.address || "No address saved" });
@@ -182,84 +194,125 @@ const Sticker = () => {
       </div>
 
       {/* Assorted Hologram Stickers */}
-      {assortedHolograms.length > 0 && (
+      {hasAnyAssorted && (
         <div className="my-6">
-          <h2 className="font-bold text-3xl">Assorted Hologram Stickers</h2>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {assortedHolograms.map(item => (
-              <div className="w-full group" key={item.id}>
-                <div
-                  className="relative rounded-2xl overflow-hidden cursor-pointer shadow-sm group-hover:shadow-md transition-shadow duration-200"
-                  onClick={() => handleSelect(item)}
-                >
-                  <PromoTag promo={item.applied_promo} />
-                  <img
-                    src={getImageUrl(item.image)}
-                    className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
-                    alt={item.title}
-                    onError={(e) => { e.target.onerror = null; }}
-                  />
-                  {item.qty && (
-                    <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-lg shadow-sm">
-                      <p className="text-[11px] font-bold text-black">{item.qty}</p>
-                    </div>
-                  )}
-                </div>
-                <div className="font-semibold mt-3">
-                  <p className="text-base font-bold text-gray-900 truncate">{item.title}</p>
-                  {item.type && (
-                    <p className="text-blue-500 font-semibold text-xs mt-0.5 truncate">{item.type}</p>
-                  )}
-                  {item.description && (
-                    <p className="text-gray-500 text-[11px] line-clamp-2 leading-relaxed mt-1">
-                      {item.description}
-                    </p>
-                  )}
-                  {item.applied_promo && (
-                    <p className="text-[10px] text-yellow-600 font-bold uppercase tracking-wide mt-0.5">
-                      🏷 {item.applied_promo.name}
-                    </p>
-                  )}
-                  <div className="flex justify-between items-center mt-1 gap-2">
-                    <PriceDisplay
-                      price={item.price}
-                      discountedPrice={item.discounted_price}
-                      promo={item.applied_promo}
-                      className="text-lg"
-                    />
+          <div className="flex justify-between items-center mb-6 px-4">
+            <h2 className="font-bold text-3xl">Assorted Hologram Stickers</h2>
+            <div className="flex gap-2 overflow-x-auto">
+                {['All', 'Ready Made', 'Customizable'].map((opt) => (
                     <button
-                      className="flex-shrink-0 rounded-xl border border-gray-300 p-2 w-10 h-10 flex items-center justify-center cursor-pointer hover:bg-gray-100 hover:border-gray-400 transition"
-                      onClick={() => handleSelect(item)}
+                        key={opt}
+                        onClick={() => setProductNatureFilter(opt)}
+                        className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                            productNatureFilter === opt 
+                                ? 'bg-black text-white shadow-md' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
                     >
-                      <img src={cart} alt="Add to cart" />
+                        {opt}
                     </button>
+                ))}
+            </div>
+          </div>
+          {assortedHolograms.length > 0 ? (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {assortedHolograms.map(item => (
+                <div className="w-full group" key={item.id}>
+                  <div
+                    className="relative rounded-2xl overflow-hidden cursor-pointer shadow-sm group-hover:shadow-md transition-shadow duration-200"
+                    onClick={() => handleSelect(item)}
+                  >
+                    <PromoTag promo={item.applied_promo} />
+                    <img
+                      src={getImageUrl(item.image)}
+                      className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                      alt={item.title}
+                      onError={(e) => { e.target.onerror = null; }}
+                    />
+                    {item.qty && (
+                      <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-lg shadow-sm">
+                        <p className="text-[11px] font-bold text-black">{item.qty}</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="font-semibold mt-3">
+                    <p className="text-base font-bold text-gray-900 truncate">{item.title}</p>
+                    {item.type && (
+                      <p className="text-blue-500 font-semibold text-xs mt-0.5 truncate">{item.type}</p>
+                    )}
+                    {item.description && (
+                      <p className="text-gray-500 text-[11px] line-clamp-2 leading-relaxed mt-1">
+                        {item.description}
+                      </p>
+                    )}
+                    {item.applied_promo && (
+                      <p className="text-[10px] text-yellow-600 font-bold uppercase tracking-wide mt-0.5">
+                        🏷 {item.applied_promo.name}
+                      </p>
+                    )}
+                    <div className="flex justify-between items-center mt-1 gap-2">
+                      <PriceDisplay
+                        price={item.price}
+                        discountedPrice={item.discounted_price}
+                        promo={item.applied_promo}
+                        className="text-lg"
+                      />
+                      <button
+                        className="flex-shrink-0 rounded-xl border border-gray-300 p-2 w-10 h-10 flex items-center justify-center cursor-pointer hover:bg-gray-100 hover:border-gray-400 transition"
+                        onClick={() => handleSelect(item)}
+                      >
+                        <img src={cart} alt="Add to cart" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 italic py-4 px-4">No products match the selected filter.</p>
+          )}
         </div>
       )}
 
       {/* More Stickers */}
-      {moreStickers.length > 0 && (
+      {hasAnyMore && (
         <div className="my-6">
-          <h2 className="font-bold text-3xl">More Stickers</h2>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {moreStickers.map(item => (
-              <div key={item.id} className="group">
-                <div
-                  className="relative rounded-2xl overflow-hidden cursor-pointer shadow-sm group-hover:shadow-md transition-shadow duration-200"
-                  onClick={() => handleSelect(item)}
-                >
-                  <PromoTag promo={item.applied_promo} />
-                  <img
-                    src={getImageUrl(item.image)}
-                    className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                    alt={item.title}
-                    onError={(e) => { e.target.onerror = null; }}
-                  />
-                </div>
+          <div className="flex justify-between items-center mb-6 px-4">
+            <h2 className="font-bold text-3xl">More Stickers</h2>
+            {(!hasAnyAssorted || (assortedHolograms.length === 0 && !hasAnyAssorted)) && (
+              <div className="flex gap-2 overflow-x-auto">
+                  {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                      <button
+                          key={opt}
+                          onClick={() => setProductNatureFilter(opt)}
+                          className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                              productNatureFilter === opt 
+                                  ? 'bg-black text-white shadow-md' 
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                      >
+                          {opt}
+                      </button>
+                  ))}
+              </div>
+            )}
+          </div>
+          {moreStickers.length > 0 ? (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {moreStickers.map(item => (
+                <div key={item.id} className="group">
+                  <div
+                    className="relative rounded-2xl overflow-hidden cursor-pointer shadow-sm group-hover:shadow-md transition-shadow duration-200"
+                    onClick={() => handleSelect(item)}
+                  >
+                    <PromoTag promo={item.applied_promo} />
+                    <img
+                      src={getImageUrl(item.image)}
+                      className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                      alt={item.title}
+                      onError={(e) => { e.target.onerror = null; }}
+                    />
+                  </div>
                 <div className="font-semibold mt-3">
                   <p className="text-base font-bold text-gray-900 truncate">{item.title}</p>
                   {item.type && (
@@ -293,6 +346,9 @@ const Sticker = () => {
               </div>
             ))}
           </div>
+          ) : (
+            <p className="text-gray-500 italic py-4 px-4">No products match the selected filter.</p>
+          )}
         </div>
       )}
 

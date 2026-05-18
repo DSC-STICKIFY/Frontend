@@ -62,6 +62,7 @@ const Signage = () => {
   const [selectedSignage, setSelectedSignage] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [productNatureFilter, setProductNatureFilter] = useState("All");
 
   // Refresh every 60 seconds (same as Sticker)
   useEffect(() => {
@@ -90,10 +91,32 @@ const Signage = () => {
   }, []);
 
   // Categorise products into acrylic, panaflex, neon
-  const { acrylicList, panaflexList, neonList } = useMemo(() => {
-    const signageProducts = allProducts.filter(
+  const { acrylicList, panaflexList, neonList, hasAnyAcrylic, hasAnyPanaflex, hasAnyNeon } = useMemo(() => {
+    let signageProducts = allProducts.filter(
       (p) => p.category?.toLowerCase() === 'signage'
     );
+
+    const hasAnyAcrylic = signageProducts.some(p => {
+      const type = (p.type || "").toLowerCase();
+      const name = (p.name || "").toLowerCase();
+      return type.includes('acrylic') || name.includes('acrylic') || name.includes('buildup') || (!type.includes('panaflex') && !name.includes('panaflex') && !type.includes('neon') && !name.includes('neon'));
+    });
+    const hasAnyPanaflex = signageProducts.some(p => {
+      const type = (p.type || "").toLowerCase();
+      const name = (p.name || "").toLowerCase();
+      return type.includes('panaflex') || name.includes('panaflex');
+    });
+    const hasAnyNeon = signageProducts.some(p => {
+      const type = (p.type || "").toLowerCase();
+      const name = (p.name || "").toLowerCase();
+      return type.includes('neon') || name.includes('neon');
+    });
+
+    if (productNatureFilter === "Customizable") {
+      signageProducts = signageProducts.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
+    } else if (productNatureFilter === "Ready Made") {
+      signageProducts = signageProducts.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
+    }
 
     const acrylic = [];
     const panaflex = [];
@@ -105,6 +128,7 @@ const Signage = () => {
 
       // Build item with proper fields (mirrors Sticker mapping)
       const item = {
+        ...product,
         id: product.id,
         image: product.image || product.product_image,
         title: product.name || product.product_name,
@@ -141,8 +165,8 @@ const Signage = () => {
       }
     });
 
-    return { acrylicList: acrylic, panaflexList: panaflex, neonList: neon };
-  }, [allProducts]);
+    return { acrylicList: acrylic, panaflexList: panaflex, neonList: neon, hasAnyAcrylic, hasAnyPanaflex, hasAnyNeon };
+  }, [allProducts, productNatureFilter]);
 
   const handleSelect = (item) =>
     setSelectedSignage({
@@ -235,32 +259,99 @@ const Signage = () => {
       </div>
 
       {/* Acrylic Signage */}
-      {acrylicList.length > 0 && (
+      {hasAnyAcrylic && (
         <div className="my-6">
-          <h2 className="font-bold text-3xl">Acrylic Signage</h2>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {acrylicList.map(renderCard)}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="font-bold text-3xl">Acrylic Signage</h2>
+            <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                    <button
+                        key={opt}
+                        onClick={() => setProductNatureFilter(opt)}
+                        className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                            productNatureFilter === opt 
+                                ? 'bg-black text-white shadow-md' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        {opt}
+                    </button>
+                ))}
+            </div>
           </div>
+          {acrylicList.length > 0 ? (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {acrylicList.map(renderCard)}
+            </div>
+          ) : (
+            <p className="text-gray-500 italic py-4">No products match the selected filter.</p>
+          )}
         </div>
       )}
 
       {/* Panaflex Signage */}
-      {panaflexList.length > 0 && (
+      {hasAnyPanaflex && (
         <div className="my-6">
-          <h2 className="font-bold text-3xl">Panaflex Signage</h2>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {panaflexList.map(renderCard)}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="font-bold text-3xl">Panaflex Signage</h2>
+            {(!hasAnyAcrylic || (acrylicList.length === 0 && !hasAnyAcrylic)) && (
+              <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                  {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                      <button
+                          key={opt}
+                          onClick={() => setProductNatureFilter(opt)}
+                          className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                              productNatureFilter === opt 
+                                  ? 'bg-black text-white shadow-md' 
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                      >
+                          {opt}
+                      </button>
+                  ))}
+              </div>
+            )}
           </div>
+          {panaflexList.length > 0 ? (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {panaflexList.map(renderCard)}
+            </div>
+          ) : (
+            <p className="text-gray-500 italic py-4">No products match the selected filter.</p>
+          )}
         </div>
       )}
 
       {/* Neon Lights */}
-      {neonList.length > 0 && (
+      {hasAnyNeon && (
         <div className="my-6">
-          <h2 className="font-bold text-3xl">Neon Lights Signage</h2>
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {neonList.map(renderCard)}
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="font-bold text-3xl">Neon Lights Signage</h2>
+            {((!hasAnyAcrylic && !hasAnyPanaflex) || (acrylicList.length === 0 && panaflexList.length === 0 && !hasAnyAcrylic && !hasAnyPanaflex)) && (
+              <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                  {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                      <button
+                          key={opt}
+                          onClick={() => setProductNatureFilter(opt)}
+                          className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                              productNatureFilter === opt 
+                                  ? 'bg-black text-white shadow-md' 
+                                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                      >
+                          {opt}
+                      </button>
+                  ))}
+              </div>
+            )}
           </div>
+          {neonList.length > 0 ? (
+            <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {neonList.map(renderCard)}
+            </div>
+          ) : (
+            <p className="text-gray-500 italic py-4">No products match the selected filter.</p>
+          )}
         </div>
       )}
 

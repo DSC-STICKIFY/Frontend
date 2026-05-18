@@ -20,10 +20,11 @@ const SkeletonCard = ({ tall = false }) => (
 );
 
 // ── Section Component ─────────────────────────────────────────────────────────
-const PrintingSection = ({ title, items, onSelect, loading }) => (
+const PrintingSection = ({ title, items, onSelect, loading, filterDropdown }) => (
   <div className="my-10 px-2">
-    <div className="flex items-center gap-3 mb-8">
+    <div className="flex justify-between items-center mb-8">
         <h2 className="font-bold text-3xl">{title}</h2>
+        {filterDropdown}
     </div>
     {loading ? (
       <div className="mt-5 grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -47,6 +48,7 @@ const Printing = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [productNatureFilter, setProductNatureFilter] = useState("All");
   const scrollPositionRef = useRef(null);
   const isRefreshingRef = useRef(false);
 
@@ -85,9 +87,15 @@ const Printing = () => {
   }, []);
 
   const { promoMaterials, businessEssentials, largeFormat } = useMemo(() => {
-    const printingProducts = allProducts.filter(
+    let printingProducts = allProducts.filter(
       (p) => (p.category || p.product_category || "").toLowerCase() === "printing"
     );
+
+    if (productNatureFilter === "Customizable") {
+      printingProducts = printingProducts.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
+    } else if (productNatureFilter === "Ready Made") {
+      printingProducts = printingProducts.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
+    }
 
     const promo = [];
     const business = [];
@@ -98,6 +106,7 @@ const Printing = () => {
       const type = (product.type || product.product_type || "").toLowerCase();
 
       const item = {
+        ...product,
         id: product.id || product._id,
         image: product.image || product.product_image,
         title: product.name || product.product_name,
@@ -121,7 +130,7 @@ const Printing = () => {
     });
 
     return { promoMaterials: promo, businessEssentials: business, largeFormat: large };
-  }, [allProducts]);
+  }, [allProducts, productNatureFilter]);
 
   const handleSelect = (item) =>
     setSelectedItem({
@@ -147,11 +156,28 @@ const Printing = () => {
       </div>
 
       {/* Sections */}
-      <PrintingSection
-        title="Promotional Materials"
-        items={promoMaterials}
-        onSelect={handleSelect}
-        loading={isLoading}
+      <PrintingSection 
+        title="Promotional Materials" 
+        items={promoMaterials} 
+        onSelect={handleSelect} 
+        loading={isLoading} 
+        filterDropdown={
+            <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                    <button
+                        key={opt}
+                        onClick={() => setProductNatureFilter(opt)}
+                        className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                            productNatureFilter === opt 
+                                ? 'bg-black text-white shadow-md' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        {opt}
+                    </button>
+                ))}
+            </div>
+        }
       />
       <PrintingSection
         title="Business Essentials"

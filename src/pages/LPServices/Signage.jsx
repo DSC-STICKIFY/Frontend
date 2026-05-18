@@ -20,15 +20,18 @@ const SkeletonCard = ({ tall = false }) => (
 );
 
 // ── Section Component (identical to Sticker's grouping) ───────────────────────
-const SignageSection = ({ title, items, onSelect, loading }) => (
+const SignageSection = ({ title, items, onSelect, loading, filterDropdown }) => (
   <div className="my-6">
-    <h2 className="font-bold text-3xl">{title}</h2>
+    <div className="flex justify-between items-center mb-6 px-4">
+      <h2 className="font-bold text-3xl">{title}</h2>
+      {filterDropdown}
+    </div>
     {loading ? (
       <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => <SkeletonCard key={i} />)}
       </div>
     ) : items.length === 0 ? (
-      <p className="text-gray-400 text-sm mt-5">No {title.toLowerCase()} available at the moment.</p>
+      <p className="text-gray-400 text-sm mt-5">No {title?.toLowerCase() ?? 'products'} available at the moment.</p>
     ) : (
       <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {items.map((item) => (
@@ -45,6 +48,7 @@ const Signage = () => {
   const [selectedSignage, setSelectedSignage] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [productNatureFilter, setProductNatureFilter] = useState("All");
   const scrollPositionRef = useRef(null);
   const isRefreshingRef = useRef(false);
 
@@ -89,9 +93,31 @@ const Signage = () => {
 
   // Categorise products (Acrylic, Panaflex, Neon) – using product fields directly
   const { acrylicList, panaflexList, neonList } = useMemo(() => {
-    const signageProducts = allProducts.filter(
+    let signageProducts = allProducts.filter(
       (p) => p.category?.toLowerCase() === "signage"
     );
+
+    const hasAnyAcrylic = signageProducts.some(p => {
+      const type = (p.type || "").toLowerCase();
+      const name = (p.name || "").toLowerCase();
+      return type.includes('acrylic') || name.includes('acrylic') || name.includes('buildup') || (!type.includes('panaflex') && !name.includes('panaflex') && !name.includes('pana') && !type.includes('neon') && !name.includes('neon'));
+    });
+    const hasAnyPanaflex = signageProducts.some(p => {
+      const type = (p.type || "").toLowerCase();
+      const name = (p.name || "").toLowerCase();
+      return type.includes('panaflex') || name.includes('panaflex') || name.includes('pana');
+    });
+    const hasAnyNeon = signageProducts.some(p => {
+      const type = (p.type || "").toLowerCase();
+      const name = (p.name || "").toLowerCase();
+      return type.includes('neon') || name.includes('neon');
+    });
+
+    if (productNatureFilter === "Customizable") {
+      signageProducts = signageProducts.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
+    } else if (productNatureFilter === "Ready Made") {
+      signageProducts = signageProducts.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
+    }
 
     const acrylic = [];
     const panaflex = [];
@@ -103,6 +129,7 @@ const Signage = () => {
 
       // Build item exactly like Sticker does
       const item = {
+        ...product,
         id: product.id,
         image: product.image || product.product_image,
         title: product.name || product.product_name,
@@ -147,8 +174,8 @@ const Signage = () => {
       }
     });
 
-    return { acrylicList: acrylic, panaflexList: panaflex, neonList: neon };
-  }, [allProducts]);
+    return { acrylicList: acrylic, panaflexList: panaflex, neonList: neon, hasAnyAcrylic, hasAnyPanaflex, hasAnyNeon };
+  }, [allProducts, productNatureFilter]);
 
   const handleSelect = (item) =>
     setSelectedSignage({
@@ -162,14 +189,13 @@ const Signage = () => {
   return (
     <>
       {/* Banner */}
-      <div className="relative w-full overflow-hidden rounded-2xl mt-24 md:mt-32 mb-10">
+      <div className="relative w-full overflow-hidden rounded-2xl mb-8">
         <img
           src={bgCustomer}
-          alt="Signage Banner"
           className="w-full h-90 object-cover object-center"
+          alt="Signage Banner"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 text-white text-[17px] italic font-medium w-full text-center px-4">
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-5 text-white text-[17px] italic font-medium w-full text-center">
           Signage That Makes Your Brand Seen.
         </div>
       </div>
@@ -180,6 +206,23 @@ const Signage = () => {
         items={acrylicList}
         onSelect={handleSelect}
         loading={isLoading}
+        filterDropdown={
+            <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+                {['All', 'Ready Made', 'Customizable'].map((opt) => (
+                    <button
+                        key={opt}
+                        onClick={() => setProductNatureFilter(opt)}
+                        className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
+                            productNatureFilter === opt 
+                                ? 'bg-black text-white shadow-md' 
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                    >
+                        {opt}
+                    </button>
+                ))}
+            </div>
+        }
       />
       <SignageSection
         title="Panaflex Signage"

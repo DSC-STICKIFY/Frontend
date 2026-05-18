@@ -147,6 +147,7 @@ const normalizeProduct = (
     product_name: product.product_name || "",
     product_price: parseFloat(product.product_price || 0),
     product_description: product.product_description || product.description || "",
+    is_customizable: product.is_customizable !== undefined ? product.is_customizable : true,
     product_image: getImageUrl(product.product_image),
     price_map_image: getImageUrl(product.price_map_image),
     wrap_price: product.wrap_price || null,
@@ -174,20 +175,50 @@ const validateImage = (file) => {
    =================================== */
 
 const Toast = ({ type = "success", message, onClose }) => {
+  const timerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!message) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => onClose(), 3000);
+    return () => clearTimeout(timerRef.current);
+  }, [message, onClose]);
+
   if (!message) return null;
-  const bg =
-    type === "error"
-      ? "bg-red-50 border-red-300 text-red-700"
-      : "bg-green-50 border-green-300 text-green-700";
+
+  const colorMap = {
+    error:   { wrap: "bg-red-50 border-red-200 text-red-700",     bar: "bg-red-400" },
+    deleted: { wrap: "bg-orange-50 border-orange-200 text-orange-700", bar: "bg-orange-400" },
+    updated: { wrap: "bg-blue-50 border-blue-200 text-blue-700",   bar: "bg-blue-400" },
+    success: { wrap: "bg-green-50 border-green-200 text-green-700", bar: "bg-green-400" },
+  };
+  const colors = colorMap[type] ?? colorMap.success;
 
   return (
-    <div
-      className={`mb-4 px-4 py-3 border rounded-lg ${bg} flex justify-between items-center`}
-    >
-      <span className="text-sm font-medium">{message}</span>
-      <button onClick={onClose} className="text-xs underline hover:opacity-80">
-        Close
-      </button>
+    <div className={`mb-4 border rounded-xl overflow-hidden shadow-sm ${colors.wrap}`}>
+      <div className="px-4 py-3 flex justify-between items-center">
+        <span className="text-sm font-semibold">{message}</span>
+        <button
+          onClick={onClose}
+          className="ml-4 text-xs font-bold opacity-60 hover:opacity-100 transition-opacity"
+        >
+          ✕
+        </button>
+      </div>
+      {/* Progress bar drains over 3s */}
+      <div className="h-0.5 w-full bg-black/5">
+        <div
+          key={message}
+          className={`h-full ${colors.bar} opacity-60`}
+          style={{ animation: "toast-drain 3s linear forwards" }}
+        />
+      </div>
+      <style>{`
+        @keyframes toast-drain {
+          from { width: 100%; }
+          to   { width: 0%; }
+        }
+      `}</style>
     </div>
   );
 };
@@ -208,9 +239,11 @@ const SuperAdminProducts = () => {
     product_name: "",
     product_price: "",
     product_description: "",
+    is_customizable: true,
   });
   const [editingProduct, setEditingProduct] = useState({});
   const [toast, setToast] = useState({ type: "success", message: "" });
+  const [confirmDelete, setConfirmDelete] = useState(null); // product_id pending delete
   const [multiPriceMode, setMultiPriceMode] = useState(false);
   const [multiPrices, setMultiPrices] = useState({
     wrap: "",
@@ -490,6 +523,7 @@ const SuperAdminProducts = () => {
           formData.append("product_category", "Decals & Wrap");
           formData.append("product_type", config.type);
           formData.append("product_description", formValues.product_description || "");
+          formData.append("is_customizable", formValues.is_customizable ? "1" : "0");
           if (newProductImage) formData.append("product_image", newProductImage);
 
           const res = await addProduct(formData);
@@ -498,7 +532,7 @@ const SuperAdminProducts = () => {
           insertProductIntoState(lastProduct);
         }
 
-        setFormValues({ product_name: "", product_price: "", product_description: "" });
+        setFormValues({ product_name: "", product_price: "", product_description: "", is_customizable: true });
         setMultiPrices({ wrap: "", glossy: "", hologram: "" });
         setNewProductImage(null);
         setShowAddForm(false);
@@ -538,6 +572,7 @@ const SuperAdminProducts = () => {
           formData.append("product_category", "Decals & Wrap");
           formData.append("product_type", config.type);
           formData.append("product_description", formValues.product_description || "");
+          formData.append("is_customizable", formValues.is_customizable ? "1" : "0");
           if (newProductImage) formData.append("product_image", newProductImage);
 
           const res = await addProduct(formData);
@@ -546,7 +581,7 @@ const SuperAdminProducts = () => {
           insertProductIntoState(p);
         }
 
-        setFormValues({ product_name: "", product_price: "", product_description: "" });
+        setFormValues({ product_name: "", product_price: "", product_description: "", is_customizable: true });
         setCarPartsPrices(Object.keys(carPartsPrices).reduce((acc, k) => ({ ...acc, [k]: "" }), {}));
         setNewProductImage(null);
         setShowAddForm(false);
@@ -575,6 +610,7 @@ const SuperAdminProducts = () => {
     formData.append("product_category", selectedCategory);
     formData.append("product_type", selectedType);
     formData.append("product_description", formValues.product_description || "");
+    formData.append("is_customizable", formValues.is_customizable ? "1" : "0");
     
     // Service Layout Fields
     formData.append("is_car_service", isCarService ? "1" : "0");
@@ -629,6 +665,7 @@ const SuperAdminProducts = () => {
         product_name: "",
         product_price: "",
         product_description: "",
+        is_customizable: true,
       });
       setNewProductImage(null);
       setPriceMapImage(null);
@@ -694,6 +731,10 @@ const SuperAdminProducts = () => {
         merged.product_type ?? originalItem.product_type ?? subcatType ?? "",
       product_description:
         merged.product_description ?? originalItem.product_description ?? "",
+      is_customizable:
+        tempValues.is_customizable !== undefined
+          ? tempValues.is_customizable
+          : (originalItem.is_customizable !== undefined ? originalItem.is_customizable : true),
     };
 
     const newImageFile = tempValues.product_image;
@@ -725,6 +766,7 @@ const SuperAdminProducts = () => {
       formData.append("product_id", String(product_id));
       formData.append("product_category", normalized.product_category);
       formData.append("product_type", normalized.product_type);
+      formData.append("is_customizable", normalized.is_customizable ? "1" : "0");
 
       Object.entries(normalized).forEach(([key, value]) => {
         if (
@@ -741,7 +783,7 @@ const SuperAdminProducts = () => {
       
       dataToSend = formData;
     } else {
-      dataToSend = normalized;
+      dataToSend = { ...normalized, is_customizable: normalized.is_customizable ? 1 : 0 };
     }
 
     try {
@@ -780,7 +822,7 @@ const SuperAdminProducts = () => {
       );
 
       const updatedImage = hasNewImage
-        ? `${updatedProduct.product_image}?t=${Date.now()}`
+         ? `${updatedProduct.product_image}?t=${Date.now()}`
         : updatedProduct.product_image;
 
       updateProductInState({ ...updatedProduct, product_image: updatedImage });
@@ -798,7 +840,7 @@ const SuperAdminProducts = () => {
         [product_id]: { isEditing: false, tempValues: {} },
       }));
 
-      setToast({ type: "success", message: "Product updated successfully." });
+      setToast({ type: "updated", message: "Product updated successfully." });
     } catch (err) {
       setToast({
         type: "error",
@@ -808,7 +850,10 @@ const SuperAdminProducts = () => {
   };
 
   const handleDelete = async (category, subType, index, product_id) => {
-    if (!confirm("Delete this product?")) return;
+    if (confirmDelete !== product_id) {
+      setConfirmDelete(product_id);
+      return;
+    }
 
     const catObj = productsData.find((c) => c.category === category);
     const subObj = catObj?.subcategories.find((s) => s.type === subType);
@@ -819,8 +864,10 @@ const SuperAdminProducts = () => {
     try {
       await deleteProduct(product_id);
       deleteProductFromState({ ...originalItem });
-      setToast({ type: "success", message: "Product deleted successfully." });
+      setConfirmDelete(null);
+      setToast({ type: "deleted", message: "Product deleted successfully." });
     } catch (err) {
+      setConfirmDelete(null);
       setToast({ type: "error", message: "Delete failed." });
     }
   };
@@ -858,31 +905,54 @@ const SuperAdminProducts = () => {
 
       <h1 className="text-2xl font-bold text-gray-900 mb-5 mt-1">Products</h1>
 
-      <div className="flex justify-between items-center mb-6 gap-4">
-        {productsData.length > 0 && (
-          <div className="flex gap-6 font-semibold text-sm overflow-x-auto pb-2 w-full">
-            {productsData.map((cat) => (
+      <div className="flex items-center mb-6 gap-2">
+        <div className="flex gap-4 font-semibold text-sm">
+          {CATEGORIES.map((cat) => {
+            const catData = productsData.find((c) => c.category === cat);
+            const count = catData
+              ? catData.subcategories.reduce((sum, s) => sum + s.items.length, 0)
+              : 0;
+            return (
               <button
-                key={cat.category}
-                onClick={() => setStatusFilter(cat.category)}
-                className={`pb-2 border-b-2 transition-all whitespace-nowrap ${statusFilter === cat.category
-                  ? "border-[#FDE31E] font-bold"
-                  : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
-                  }`}
+                key={cat}
+                onClick={() => setStatusFilter(cat)}
+                className={`pb-2 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  statusFilter === cat
+                    ? "border-[#FDE31E] font-bold text-gray-900"
+                    : count === 0
+                    ? "text-gray-300 border-transparent hover:text-gray-400 hover:border-gray-200"
+                    : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
+                }`}
               >
-                {cat.category}
+                {cat}
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                  statusFilter === cat
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : count === 0
+                    ? 'bg-gray-100 text-gray-300'
+                    : 'bg-gray-100 text-gray-500'
+                }`}>
+                  {count}
+                </span>
               </button>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
 
-        <div className="flex justify-end w-full">
+        <div className="ml-auto shrink-0">
           <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-[#FDE31E] hover:bg-yellow-400 transition font-bold"
+            onClick={() => setShowAddForm((prev) => !prev)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#FDE31E] hover:bg-yellow-400 transition font-bold"
           >
-            <img src={addIcon} alt="add" className="w-4 h-4" />
             <span className="text-[13px]">Add Product</span>
+            <svg
+              className={`w-4 h-4 transition-transform duration-200 ${showAddForm ? 'rotate-180' : 'rotate-0'}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
         </div>
       </div>
@@ -922,7 +992,7 @@ const SuperAdminProducts = () => {
           setNewProductImage={setNewProductImage}
           handleAdd={handleAdd}
           resetAddForm={() => {
-            setFormValues({ product_name: "", product_price: "" });
+            setFormValues({ product_name: "", product_price: "", product_description: "", is_customizable: true });
             setMultiPrices({ wrap: "", glossy: "", hologram: "" });
             setCarPartsPrices(Object.keys(carPartsPrices).reduce((acc, k) => ({ ...acc, [k]: "" }), {}));
             setNewProductImage(null);
@@ -966,6 +1036,8 @@ const SuperAdminProducts = () => {
           statusFilter={statusFilter}
           displayedColumnOrder={displayedColumnOrder}
           withBust={withBust}
+          confirmDelete={confirmDelete}
+          setConfirmDelete={setConfirmDelete}
         />
       )}
     </div>
@@ -1379,6 +1451,26 @@ const AddProductForm = ({
           </div>
         )}
 
+        {/* Product Nature */}
+        <div>
+          <label className="block text-sm font-semibold mb-2 text-gray-700">
+            Product Nature <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={formValues.is_customizable ? "customizable" : "ready_made"}
+            onChange={(e) =>
+              setFormValues((prev) => ({
+                ...prev,
+                is_customizable: e.target.value === "customizable",
+              }))
+            }
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none transition bg-white cursor-pointer"
+          >
+            <option value="customizable">Customizable</option>
+            <option value="ready_made">Ready Made</option>
+          </select>
+        </div>
+
         {/* Image (Standard) */}
         {!isCarService && !isMotorService && (
           <div>
@@ -1428,6 +1520,8 @@ const ProductTable = ({
   statusFilter,
   displayedColumnOrder,
   withBust,
+  confirmDelete,
+  setConfirmDelete,
 }) => (
   <div className="flex flex-col w-full overflow-hidden flex-1 rounded-2xl border border-gray-100 bg-white shadow-sm">
     <div className="border-b border-gray-100 px-6 py-4 bg-gray-50/50 flex items-center justify-between">
@@ -1446,7 +1540,7 @@ const ProductTable = ({
             {displayedColumnOrder.map((key) => (
               <th
                 key={key}
-                className={`px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase ${key === 'product_name' ? 'w-[25%]' : key === 'product_image' ? 'w-[120px]' : ''}`}
+                className={`px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase ${key === 'product_name' ? 'w-[20%]' : key === 'product_image' ? 'w-[120px]' : ''}`}
               >
                 {key
                   .replace("product_", "")
@@ -1454,7 +1548,10 @@ const ProductTable = ({
                   .replace(/\b\w/g, (l) => l.toUpperCase())}
               </th>
             ))}
-            <th className="px-6 py-4 text-center text-[10px] font-bold text-gray-400 uppercase w-[180px]">
+            <th className="px-4 py-4 text-center text-[10px] font-bold text-gray-400 uppercase w-[110px]">
+              Nature
+            </th>
+            <th className="px-4 py-4 text-center text-[10px] font-bold text-gray-400 uppercase w-[90px]">
               Action
             </th>
           </tr>
@@ -1464,7 +1561,7 @@ const ProductTable = ({
           {displayedProducts.length === 0 ? (
             <tr>
               <td
-                colSpan={displayedColumnOrder.length + 2}
+                colSpan={displayedColumnOrder.length + 3}
                 className="text-center py-20"
               >
                 <p className="font-bold text-gray-400 uppercase">No products in this category yet.</p>
@@ -1713,21 +1810,59 @@ const ProductTable = ({
                       </td>
                     ))}
 
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2 justify-center">
+                    {/* Nature / is_customizable column */}
+                    <td className="px-4 py-4 text-center">
+                      {isEditing ? (
+                        <select
+                          value={
+                            tempValues.is_customizable !== undefined
+                              ? (tempValues.is_customizable ? "customizable" : "ready_made")
+                              : (item.is_customizable ? "customizable" : "ready_made")
+                          }
+                          onChange={(e) =>
+                            setEditingProduct((prev) => ({
+                              ...prev,
+                              [item.product_id]: {
+                                ...prev[item.product_id],
+                                isEditing: true,
+                                tempValues: {
+                                  ...prev[item.product_id]?.tempValues,
+                                  is_customizable: e.target.value === "customizable",
+                                },
+                              },
+                            }))
+                          }
+                          className="text-[10px] font-bold px-2 py-1.5 rounded-lg border border-gray-200 bg-gray-50 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/10 outline-none cursor-pointer"
+                        >
+                          <option value="customizable">Customizable</option>
+                          <option value="ready_made">Ready Made</option>
+                        </select>
+                      ) : (
+                        <span className={`inline-flex items-center px-2 py-1 rounded-lg text-[9px] font-black uppercase ${
+                          item.is_customizable
+                            ? 'bg-blue-50 text-blue-600 border border-blue-100'
+                            : 'bg-green-50 text-green-600 border border-green-100'
+                        }`}>
+                          {item.is_customizable ? 'Customizable' : 'Ready Made'}
+                        </span>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <div className="flex flex-col gap-1.5 items-center">
                         {isEditing ? (
                           <>
                             <button
                               onClick={() =>
                                 handleSave(item.product_id, subcat.type, index)
                               }
-                              className="bg-green-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-green-600 transition-all shadow-sm active:scale-95"
+                              className="w-full bg-green-500 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase hover:bg-green-600 transition-all shadow-sm active:scale-95"
                             >
                               Save
                             </button>
                             <button
                               onClick={() => handleCancelEdit(item.product_id)}
-                              className="bg-gray-100 text-gray-600 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-gray-200 transition-all active:scale-95"
+                              className="w-full bg-gray-100 text-gray-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase hover:bg-gray-200 transition-all active:scale-95"
                             >
                               Cancel
                             </button>
@@ -1744,6 +1879,7 @@ const ProductTable = ({
                                       product_name: item.product_name,
                                       product_price: item.product_price,
                                       product_description: item.product_description,
+                                      is_customizable: item.is_customizable !== undefined ? item.is_customizable : true,
                                       product_imagePreview:
                                         item.product_image || null,
                                       price_map_imagePreview:
@@ -1752,23 +1888,36 @@ const ProductTable = ({
                                   },
                                 }))
                               }
-                              className="bg-gray-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-black transition-all shadow-sm active:scale-95"
+                              className="w-full bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase hover:bg-black transition-all shadow-sm active:scale-95"
                             >
                               Edit
                             </button>
-                            <button
-                              onClick={() =>
-                                handleDelete(
-                                  statusFilter,
-                                  subcat.type,
-                                  index,
-                                  item.product_id,
-                                )
-                              }
-                              className="bg-red-50 text-red-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-red-500 hover:text-white transition-all active:scale-95"
-                            >
-                              Delete
-                            </button>
+                            {confirmDelete === item.product_id ? (
+                              <div className="flex flex-col gap-1 w-full">
+                                <p className="text-[9px] font-black text-red-500 uppercase text-center">Sure?</p>
+                                <button
+                                  onClick={() =>
+                                    handleDelete(statusFilter, subcat.type, index, item.product_id)
+                                  }
+                                  className="w-full bg-red-500 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase hover:bg-red-600 transition-all active:scale-95"
+                                >
+                                  Yes, Delete
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDelete(null)}
+                                  className="w-full bg-gray-100 text-gray-600 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase hover:bg-gray-200 transition-all active:scale-95"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setConfirmDelete(item.product_id)}
+                                className="w-full bg-red-50 text-red-500 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase hover:bg-red-500 hover:text-white transition-all active:scale-95"
+                              >
+                                Delete
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
