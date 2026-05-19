@@ -68,10 +68,9 @@ const SuperAdminUsers = () => {
 
     const confirmDelete = async () => {
         if (!userToDelete) return;
-        const targetId = userToDelete.user_id ?? userToDelete.sub_admin_id ?? userToDelete.employee_id;
         try {
-            await deleteUser(targetId, userType);
-            setUsersData(prev => prev.filter(u => (u.user_id ?? u.sub_admin_id ?? u.employee_id) !== targetId));
+            await deleteUser(userToDelete.user_id);
+            setUsersData(prev => prev.filter(u => u.user_id !== userToDelete.user_id));
             setShowConfirmModal(false);
             setShowSuccessModal(true);
             setModalMessage("User deleted successfully.");
@@ -93,9 +92,9 @@ const SuperAdminUsers = () => {
 
     const openAddModal = () => {
         const defaultRole = userType === 'Employees'
-            ? 'Staff'
+            ? 'employee'
             : userType === 'SubAdmins'
-                ? 'subadmin'
+                ? 'manager'
                 : 'user';
 
         setSelectedUser({
@@ -115,14 +114,13 @@ const SuperAdminUsers = () => {
         try {
             const payload = {
                 ...formData,
-                role: formData.role || (userType === 'SubAdmins' ? 'subadmin' : 'Staff')
+                role: formData.role || (userType === 'SubAdmins' ? 'manager' : 'employee')
             };
 
             if (modalMode === 'add') {
-                await addUser(payload, userType);
+                await addUser(payload);
             } else {
-                const targetId = formData.user_id ?? formData.sub_admin_id ?? formData.employee_id;
-                await updateUser(targetId, payload, userType);
+                await updateUser(formData.user_id, payload, userType); // ← gi-add ang userType
             }
 
             setShowEditModal(false);
@@ -147,7 +145,7 @@ const SuperAdminUsers = () => {
     };
 
     const renderUserCells = (user) => {
-        const userId = user.user_id ?? user.sub_admin_id ?? user.employee_id;
+        const userId = user.user_id;
         const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A';
 
         const commonCells = (
@@ -167,12 +165,11 @@ const SuperAdminUsers = () => {
                     {commonCells}
                     <td className="px-4 py-3">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${user.role === 'admin' ? 'bg-red-100 text-red-700' :
-                                user.role === 'subadmin' ? 'bg-purple-100 text-purple-700' :
-                                    user.role === 'Staff' ? 'bg-blue-100 text-blue-700' :
-                                        user.role === 'Artist' ? 'bg-orange-100 text-orange-700' :
-                                            'bg-gray-100 text-gray-700'
+                                user.role === 'manager' ? 'bg-purple-100 text-purple-700' :
+                                    user.role === 'staff' ? 'bg-blue-100 text-blue-700' :
+                                        'bg-gray-100 text-gray-700'
                             }`}>
-                            {user.role || (userType === 'SubAdmins' ? 'subadmin' : 'Staff')}
+                            {user.role || 'employee'}
                         </span>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{user.contact_number || '-'}</td>
@@ -253,7 +250,7 @@ const SuperAdminUsers = () => {
 
                         <tbody className="divide-y divide-gray-50">
                             {loading ? (
-                                <tr key="loading-row">
+                                <tr>
                                     <td colSpan="10" className="text-center py-20">
                                         <div className="flex flex-col items-center gap-3">
                                             <div className="w-8 h-8 border-2 border-gray-200 border-t-yellow-500 rounded-full animate-spin" />
@@ -262,8 +259,8 @@ const SuperAdminUsers = () => {
                                     </td>
                                 </tr>
                             ) : usersData.length > 0 ? (
-                                usersData.map((user, index) => (
-                                    <tr key={user.user_id ?? user.sub_admin_id ?? user.employee_id ?? `user-${index}`} className="hover:bg-gray-50/50 transition-colors group">
+                                usersData.map(user => (
+                                    <tr key={user.user_id} className="hover:bg-gray-50/50 transition-colors group">
                                         {renderUserCells(user)}
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-2">
@@ -286,7 +283,7 @@ const SuperAdminUsers = () => {
                                     </tr>
                                 ))
                             ) : (
-                                <tr key="empty-row">
+                                <tr>
                                     <td colSpan="10" className="text-center py-20">
                                         <p className="font-bold text-gray-400 uppercase">No records found for {userType}.</p>
                                     </td>
@@ -302,8 +299,8 @@ const SuperAdminUsers = () => {
                     user={selectedUser}
                     mode={modalMode}
                     userType={userType}
-                    showRoleField={userType === 'Employees'}
-                    roleOptions={['Staff', 'Artist']}
+                    showRoleField={userType === 'SubAdmins'}
+                    roleOptions={['admin', 'manager', 'staff']}
                     onClose={() => setShowEditModal(false)}
                     onSave={handleSave}
                 />
