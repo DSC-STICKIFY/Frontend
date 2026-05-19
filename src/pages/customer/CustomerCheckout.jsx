@@ -168,12 +168,13 @@ const MessagesSection = ({ currentUser, orderItems }) => {
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState("");
-  const chatEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
   const fileInputRef = useRef(null);
 
-
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -209,17 +210,17 @@ const MessagesSection = ({ currentUser, orderItems }) => {
         // (Null check for product_id if it's a general message, but here we want product-specific)
         if (e.message.sender_type === 'admin' && String(e.message.product_id) === String(activeProductId)) {
           setMessages((prev) => {
-             // Deduplicate by body/time if needed, but simple append for now
-             const isDuplicate = prev.some(m => m.text === e.message.body && m.createdAt === e.message.created_at);
-             if (isDuplicate) return prev;
-             
-             return [...prev, {
-                from: "bot",
-                text: e.message.body || "",
-                imageUrl: e.message.image ? `${import.meta.env.VITE_API_URL}/storage/${e.message.image}` : null,
-                createdAt: e.message.created_at,
-                productId: e.message.product_id
-             }];
+            // Deduplicate by body/time if needed, but simple append for now
+            const isDuplicate = prev.some(m => m.text === e.message.body && m.createdAt === e.message.created_at);
+            if (isDuplicate) return prev;
+
+            return [...prev, {
+              from: "bot",
+              text: e.message.body || "",
+              imageUrl: e.message.image ? `${import.meta.env.VITE_API_URL}/storage/${e.message.image}` : null,
+              createdAt: e.message.created_at,
+              productId: e.message.product_id
+            }];
           });
         }
       });
@@ -292,7 +293,7 @@ const MessagesSection = ({ currentUser, orderItems }) => {
           Discussing: {activeProductName}
         </span>
       </div>
-      <div className="flex flex-col gap-3 p-5 min-h-[200px] max-h-[380px] overflow-y-auto bg-white">
+      <div ref={chatContainerRef} className="flex flex-col gap-3 p-5 min-h-[200px] max-h-[380px] overflow-y-auto bg-white">
         {isLoading ? (
           <div className="flex-1 flex items-center justify-center py-10">
             <div className="flex flex-col items-center gap-2 text-gray-400">
@@ -344,7 +345,7 @@ const MessagesSection = ({ currentUser, orderItems }) => {
             <div className="bg-gray-100 text-gray-400 text-xs px-4 py-2.5 rounded-2xl rounded-tl-none">Sending…</div>
           </div>
         )}
-        <div ref={chatEndRef} />
+        {/* Scroll anchor */}
       </div>
       {pendingImg && (
         <div className="px-5 pb-2 flex items-center gap-3 bg-white border-t border-gray-100 pt-2">
@@ -421,12 +422,20 @@ const CustomerCheckout = () => {
   const { clearCart } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
-  const { refreshProducts } = useProducts();
+  const { allProducts, refreshProducts } = useProducts();
 
   const isSubmittingRef = useRef(false); // ← add here, inside CustomerCheckout
 
   const [address, setAddress] = useState(null);
   const [contactNumber, setContactNumber] = useState(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const mainContainer = document.querySelector("main");
+    if (mainContainer) {
+      mainContainer.scrollTo(0, 0);
+    }
+  }, []);
 
   // ── FIX: isEditing starts false — we derive the right value once user loads
   const [isEditing, setIsEditing] = useState(false);
@@ -462,6 +471,10 @@ const CustomerCheckout = () => {
           type: item.type || "",
           category: item.category || "",
           designImage: item.designImage || null,
+          designId: item.designId || null,
+          designName: item.designName || null,
+          qualityId: item.qualityId || null,
+          qualityName: item.qualityName || null,
         })));
       } else if (checkoutData.product) {
         setOrderItems([{
@@ -477,6 +490,10 @@ const CustomerCheckout = () => {
           type: checkoutData.type || "",
           category: checkoutData.category || "",
           designImage: checkoutData.designImage || null,
+          designId: checkoutData.designId || null,
+          designName: checkoutData.designName || null,
+          qualityId: checkoutData.qualityId || null,
+          qualityName: checkoutData.qualityName || null,
         }]);
       }
     }
@@ -608,6 +625,13 @@ const CustomerCheckout = () => {
 
   const totalPayment = merchandiseSubtotal + SHIPPING_FEE - promoDiscount;
 
+  const isCustomizableMode = useMemo(() => {
+    return orderItems.some(item => {
+      const p = allProducts?.find(prod => String(prod.id) === String(item.productId));
+      if (!p) return false;
+      return p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0" && p.is_customizable !== undefined;
+    });
+  }, [orderItems, allProducts]);
   const handleQuantityChange = (index, newQty) => {
     if (newQty < 1) return;
     setOrderItems((prev) =>
@@ -677,6 +701,8 @@ const CustomerCheckout = () => {
       orderData.append(`items[${index}][subtotal]`, String(itemSubtotal));
       orderData.append(`items[${index}][size]`, orderSize);
       orderData.append(`items[${index}][comments]`, "None");
+      if (item.designName) orderData.append(`items[${index}][design_name]`, item.designName);
+      if (item.qualityName) orderData.append(`items[${index}][quality_name]`, item.qualityName);
       if (designFile) orderData.append(`items[${index}][order_image]`, designFile);
     });
 
@@ -747,7 +773,7 @@ const CustomerCheckout = () => {
         />
       )}
 
-      <div className="p-5 mx-auto">
+      <div className="p-5 w-full max-w-7xl mx-auto flex-1 flex flex-col relative">
         <button onClick={() => navigate(-1)}
           className="absolute top-9 right-6 flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition shadow-sm">
           ← Back
@@ -849,7 +875,7 @@ const CustomerCheckout = () => {
                         <div className="flex items-center gap-4">
                           <div className="w-16 h-16 bg-gray-100 rounded-lg border overflow-hidden flex-shrink-0">
                             <img
-                              src={getImageUrl(item.image)}
+                              src={item.designImage instanceof File ? URL.createObjectURL(item.designImage) : (item.designImage ? getImageUrl(item.designImage) : getImageUrl(item.image))}
                               alt={item.title || "Product"}
                               className="w-full h-full object-cover"
                               onError={(e) => { e.target.src = "/placeholder.png"; }}
@@ -861,6 +887,8 @@ const CustomerCheckout = () => {
                               {item.size && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Size: {item.size}</span>}
                               {item.type && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{item.type}</span>}
                               {item.pieces > 0 && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{item.pieces} pcs</span>}
+                              {item.designName && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full truncate max-w-[120px]" title={item.designName}>Design: {item.designName}</span>}
+                              {item.qualityName && <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">Quality: {item.qualityName}</span>}
                             </div>
                             <div className="sm:hidden flex flex-col mt-1">
                               <p className="text-xs text-gray-400">
@@ -871,8 +899,13 @@ const CustomerCheckout = () => {
                         </div>
                       </td>
                       <td className="p-5 text-gray-500 hidden sm:table-cell">
-                        {[item.type || null, item.size ? `Size: ${item.size}` : null, item.pieces ? `${item.pieces} pcs` : null]
-                          .filter(Boolean).join(" • ") || "—"}
+                        {[
+                          item.type || null, 
+                          item.size ? `Size: ${item.size}` : null, 
+                          item.pieces ? `${item.pieces} pcs` : null,
+                          item.designName ? `Design: ${item.designName}` : null,
+                          item.qualityName ? `Quality: ${item.qualityName}` : null
+                        ].filter(Boolean).join(" • ") || "—"}
                       </td>
                       <td className="p-5 text-right text-gray-700 hidden sm:table-cell">
                         ₱{Number(item.originalPrice || item.price).toLocaleString("en-PH")}
@@ -992,12 +1025,24 @@ const CustomerCheckout = () => {
               </div>
             </section>
 
-            <MessagesSection currentUser={currentUser} orderItems={orderItems} />
+            {isCustomizableMode ? (
+              <MessagesSection currentUser={currentUser} orderItems={orderItems} />
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center mt-6">
+                <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 13l4 4L19 7" />
+                </svg>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Standard / Readymade Order</h3>
+                <p className="text-gray-500">
+                  This is a readymade product. No custom design upload is required.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* ── RIGHT COLUMN — Order Summary ── */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-8">
+          <div className="lg:col-span-1 sticky top-8 h-fit">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-semibold mb-4 text-gray-900">Order Summary</h2>
               <div className="space-y-2 mb-4 pb-4 border-b border-gray-100">
                 {orderItems.map((item, index) => (

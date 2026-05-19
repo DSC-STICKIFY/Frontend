@@ -4,6 +4,7 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from '../context/CustomerAuthContext';
 import { useUI } from "../context/UIContext";
 import LoginRegisterModal from "../components/LoginRegisterModal";
+import { getImageUrl } from "../services/api";
 
 const CHECKOUT_STORAGE_KEY = "stickify_checkout_data";
 
@@ -12,8 +13,7 @@ const EmptyCart = () => {
   // ... same as original ...
 };
 
-// ─── Cart Item Row – now shows original price + discount if present ──────────
-const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
+const CartItem = ({ item, onUpdateQuantity, onRemove, isSelected, onToggle }) => {
   const quantity = Number(item.quantity) || 1;
   const currentPrice = Number(item.price) || 0;
   const originalPrice = item.originalPrice ? Number(item.originalPrice) : null;
@@ -23,12 +23,18 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
   const originalLineTotal = hasDiscount ? originalPrice * quantity : null;
 
   return (
-    <div className="flex gap-5 py-6 border-b border-gray-100 last:border-none">
+    <div className={`flex gap-5 py-6 border-b border-gray-100 last:border-none items-center ${isSelected ? '' : 'opacity-75'}`}>
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={onToggle}
+        className="w-5 h-5 rounded border-gray-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer accent-[#FFE100] transition flex-shrink-0"
+      />
       {/* Image section – unchanged */}
       <div className="w-24 h-24 rounded-xl bg-gray-50 border border-gray-100 overflow-hidden flex-shrink-0">
         {item.designImage || item.image ? (
           <img
-            src={item.designImage || item.image}
+            src={item.designImage ? getImageUrl(item.designImage) : getImageUrl(item.image)}
             alt={item.title}
             className="w-full h-full object-contain p-1"
             onError={(e) => { e.target.src = '/placeholder.png'; }}
@@ -122,20 +128,43 @@ const CartItem = ({ item, onUpdateQuantity, onRemove }) => {
 
 // ─── Cart Page – updated to preserve discount info in checkout payload ───────
 const CartPage = () => {
-  const { cartItems, removeItem, updateQuantity, clearCart, subtotal, totalItems } = useCart();
+  const { cartItems, removeItem, updateQuantity, clearCart } = useCart();
   const { currentUser } = useAuth();
   const { setCheckoutData } = useUI();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [uncheckedCartIds, setUncheckedCartIds] = useState([]);
   const navigate = useNavigate();
 
-  const shippingFee      = 100;
-  const hasFreeShipping  = cartItems.some(item => item.discountType === "free_shipping");
+  const selectedItems = cartItems.filter(item => !uncheckedCartIds.includes(item.cartId));
+  const subtotal = selectedItems.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+  const totalItems = selectedItems.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+
+  const shippingFee      = selectedItems.length > 0 ? 100 : 0;
+  const hasFreeShipping  = selectedItems.some(item => item.discountType === "free_shipping");
   const shippingDiscount = hasFreeShipping ? 100 : 0;
   const total            = (Number(subtotal) || 0) + shippingFee - shippingDiscount;
 
+  const isAllSelected = cartItems.length > 0 && selectedItems.length === cartItems.length;
+
+  const handleToggleAll = () => {
+    if (isAllSelected) {
+      setUncheckedCartIds(cartItems.map(item => item.cartId));
+    } else {
+      setUncheckedCartIds([]);
+    }
+  };
+
+  const handleToggleItem = (cartId) => {
+    if (uncheckedCartIds.includes(cartId)) {
+      setUncheckedCartIds(prev => prev.filter(id => id !== cartId));
+    } else {
+      setUncheckedCartIds(prev => [...prev, cartId]);
+    }
+  };
+
   // Build checkout payload that includes discounted price + original price and promo info
   const buildCartCheckoutData = () => ({
-    cartItems: cartItems.map((item) => ({
+    cartItems: selectedItems.map((item) => ({
       productId:    item.productId,
       title:        item.title || "Product",
       price:        Number(item.price) || 0,          // discounted price
@@ -152,6 +181,7 @@ const CartPage = () => {
   });
 
   const handleCheckout = () => {
+    if (selectedItems.length === 0) return;
     if (!currentUser) {
       try {
         sessionStorage.setItem(
@@ -181,10 +211,16 @@ const CartPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
           </button>
+          <input
+            type="checkbox"
+            checked={isAllSelected}
+            onChange={handleToggleAll}
+            className="w-5 h-5 rounded border-gray-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer accent-[#FFE100] transition"
+          />
           <h1 className="text-2xl font-bold text-gray-900">My Cart</h1>
-          {totalItems > 0 && (
+          {cartItems.length > 0 && (
             <span className="text-base text-gray-400 font-medium">
-              ({totalItems} {totalItems === 1 ? "item" : "items"})
+              ({selectedItems.length} of {cartItems.length} selected)
             </span>
           )}
           {cartItems.length > 0 && (
@@ -208,6 +244,8 @@ const CartPage = () => {
                 <CartItem
                   key={item.cartId}
                   item={item}
+                  isSelected={!uncheckedCartIds.includes(item.cartId)}
+                  onToggle={() => handleToggleItem(item.cartId)}
                   onUpdateQuantity={updateQuantity}
                   onRemove={removeItem}
                 />
@@ -250,9 +288,14 @@ const CartPage = () => {
 
               <button
                 onClick={handleCheckout}
-                className="mt-10 w-full py-4 bg-[#FFE100] text-black font-bold rounded-xl hover:bg-yellow-400 active:scale-95 transition-all text-lg shadow-md"
+                disabled={selectedItems.length === 0}
+                className={`mt-10 w-full py-4 font-bold rounded-xl active:scale-95 transition-all text-lg shadow-md ${
+                  selectedItems.length > 0
+                    ? "bg-[#FFE100] text-black hover:bg-yellow-400"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                }`}
               >
-                Checkout Now
+                Checkout Now ({selectedItems.length})
               </button>
 
               <p className="text-center text-xs text-gray-400 mt-6">Secure checkout powered by DSC</p>

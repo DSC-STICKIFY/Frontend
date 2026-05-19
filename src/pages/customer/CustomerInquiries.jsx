@@ -130,39 +130,24 @@ const InquiryCard = ({ inquiry, onView, onRate }) => {
               </div>
             </div>
           )}
-
-          {/* ── Needs rating banner ── */}
-          {needsRating && (
-            <div className="bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-2xl px-4 py-3 mb-4 flex items-center gap-3">
-              <div className="flex gap-0.5 flex-shrink-0">
-                {[1,2,3,4,5].map(n => <Star key={n} className="w-3.5 h-3.5 text-black fill-black" />)}
-              </div>
-              <div>
-                <p className="text-[9px] font-black text-black uppercase tracking-widest leading-none">Rate this service!</p>
-                <p className="text-[9px] text-black/60 font-bold mt-0.5">Share your experience</p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ── Action buttons ── */}
-        <div className="flex flex-col gap-2 mt-2">
+        <div className="flex flex-col gap-2 mt-3">
           {needsRating && (
             <button
               onClick={(e) => { e.stopPropagation(); onRate(inquiry); }}
-              className="w-full py-3.5 bg-yellow-400 hover:bg-yellow-500 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all shadow-lg shadow-yellow-200 flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="w-full py-3 bg-yellow-400 hover:bg-yellow-500 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
             >
-              <Star className="w-4 h-4 fill-black" />
+              <Star className="w-3.5 h-3.5 fill-black" />
               Rate This Service
             </button>
           )}
-
           <button
             onClick={() => onView(inquiry)}
-            className={`w-full py-3 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-1.5 group/btn
-              ${needsRating ? 'bg-gray-800 hover:bg-gray-900' : 'bg-gray-900 hover:bg-black'}`}
+            className="w-full py-3 text-white bg-gray-900 hover:bg-black rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-1.5"
           >
-            <Eye className="w-3.5 h-3.5 group-hover/btn:scale-110 transition-transform" />
+            <Eye className="w-3.5 h-3.5" />
             View Details
           </button>
         </div>

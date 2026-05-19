@@ -132,8 +132,8 @@ const PromoTag = ({ promo }) => {
   }
 
   return (
-    <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
-      <span className="bg-[#FDE31E] text-black text-[10px] font-black px-2.5 py-1 rounded-lg shadow-sm uppercase tracking-wide">
+    <div className="absolute bottom-3 left-3 flex flex-col gap-1 z-10">
+      <span className="bg-red-600 text-white text-[9px] font-black px-2.5 py-1 rounded-lg shadow-md uppercase tracking-wider border border-red-700/20 select-none">
         {label}
       </span>
     </div>

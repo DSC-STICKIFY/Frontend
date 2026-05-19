@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect , useRef} from "react";
 import { useNavigate } from "react-router-dom";
-import { useUI } from "../context/UIContext";
-import { useAuth } from '../context/CustomerAuthContext';
-import { useCart } from "../context/CartContext";
-import LoginRegisterModal from "./LoginRegisterModal";
-import DesignChatbox from "./DesignChatbox";
-import { getBestPromo, getDiscountedPrice } from "../components/PromoTag";
-import PromoApi from "../services/PromoApi";
+import { useUI } from "../../context/UIContext";
+import { useAuth } from '../../context/CustomerAuthContext';
+import { useCart } from "../../context/CartContext";
+import LoginRegisterModal from "../LoginRegisterModal";
+import DesignChatbox from "../DesignChatbox";
+import { getBestPromo, getDiscountedPrice } from "../PromoTag";
+import PromoApi from "../../services/PromoApi";
 
-import { getImageUrl } from "../services/api";
+import { getImageUrl } from "../../services/api";
 const CHECKOUT_STORAGE_KEY = "stickify_checkout_data";
 
 const DEFAULT_CALLING_CARD_OPTIONS = [
@@ -16,13 +16,28 @@ const DEFAULT_CALLING_CARD_OPTIONS = [
   { pcs: 100, price: 700, type: "Front & Back" },
 ];
 
-import CartToast from "./CartToast";
+import CartToast from "../CartToast";
 
 const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
+  const rightPanelRef = useRef(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (rightPanelRef.current) {
+        rightPanelRef.current.scrollTop = 0;
+        // Also scroll the window/body just in case
+        window.scrollTo(0, 0);
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, []);
+
   const navigate = useNavigate();
   const { setCheckoutData } = useUI();
   const { currentUser } = useAuth();
   const { addItem } = useCart();
+
+  const isCustomizableProduct = giveaways.is_customizable !== 0 && giveaways.is_customizable !== false && giveaways.is_customizable !== "0" && giveaways.is_customizable !== undefined;
+  const isCustomMode = isCustomizableProduct;
 
   const options = DEFAULT_CALLING_CARD_OPTIONS;
   const [selectedOption, setSelectedOption] = useState(null);
@@ -84,7 +99,7 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
   };
 
   const validateOrder = (checkPaymentMethod = true) => {
-    if (!uploadedImage?.preview) { setSubmitError("Please upload your design first."); return false; }
+    if (isCustomMode && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return false; }
     if (!selectedOption) { setSubmitError("Please select an option."); return false; }
     if (checkPaymentMethod && !paymentMethod) { setSubmitError("Please select a payment method."); return false; }
     setSubmitError(null); return true;
@@ -103,7 +118,8 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
     pieces:      selectedOption?.pcs || 0,
     category:    "Giveaways",
     type:        cardType,
-    designImage: uploadedImage?.preview || null,
+    customMode:  isCustomMode ? "custom" : "standard",
+    designImage: isCustomMode ? (uploadedImage?.preview || null) : null,
     originalPrice: hasDiscount ? selectedOption.rawPrice : null,
     promoApplied: promo?.name || null,
     discountType: promo?.discount_type || null,
@@ -124,7 +140,8 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
     type:     cardType,
     subtotal,
     initialPaymentMethod: paymentMethod,
-    designImage: uploadedImage?.preview || null,
+    customMode:  isCustomMode ? "custom" : "standard",
+    designImage: isCustomMode ? (uploadedImage?.preview || null) : null,
   });
 
   const handleBuyNow = () => {
@@ -213,18 +230,28 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
               </div>
 
               <div className="flex-1 min-h-0 bg-white">
-                <DesignChatbox 
-                  onImageUpload={(img) => {
-                    setUploadedImage({ preview: img });
-                    setSubmitError(null);
-                  }} 
-                  productId={giveaways.product_id || giveaways.id}
-                />
+                {isCustomMode ? (
+                  <DesignChatbox 
+                    onImageUpload={(img) => {
+                      setUploadedImage({ preview: img });
+                      setSubmitError(null);
+                    }} 
+                    productId={giveaways.product_id || giveaways.id}
+                  />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center p-6 bg-white rounded-3xl border border-gray-100 shadow-sm text-center">
+                    <span className="text-4xl mb-3">📦</span>
+                    <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Standard / Readymade Order</h4>
+                    <p className="text-xs text-gray-400 mt-2 max-w-[280px]">
+                      This product will be printed using the standard/default design shown in the preview. No design files or artist approvals are needed.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* RIGHT Panel – Summary + Actions */}
-            <div className="w-full md:w-1/2 p-8 overflow-y-auto custom-scrollbar bg-white flex flex-col">
+            <div ref={rightPanelRef} className="w-full md:w-1/2 p-8 overflow-y-auto custom-scrollbar bg-white flex flex-col">
               <div className="flex-1 space-y-6">
                 <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group">
                   <img src={getImageUrl(giveaways.product_image || giveaways.image)} className="w-full h-48 object-cover transition-transform duration-700 group-hover:scale-105" alt={giveaways.type} />
@@ -284,20 +311,20 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
               <div className="mt-8 space-y-4">
                 <button 
                   onClick={handleBuyNow} 
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || !uploadedImage?.preview} 
+                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)} 
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
-                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || !uploadedImage?.preview)
+                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 cursor-not-allowed shadow-none"
                       : "bg-[#FFE100] text-black hover:bg-yellow-400 shadow-yellow-100"
                     }`}
                 >
-                  {!uploadedImage?.preview ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
+                  {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
                 <button 
                   onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || !uploadedImage?.preview} 
+                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)} 
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                    ${!uploadedImage?.preview ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                    ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >
                   Add to Cart
                 </button>

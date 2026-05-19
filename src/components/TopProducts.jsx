@@ -40,18 +40,25 @@ const TopProducts = ({
             (promo.discount_type === "percentage" || promo.discount_type === "fixed") &&
             discountedPrice !== null &&
             discountedPrice < originalPrice;
-
           return (
             <div
               key={item.id || item.product_id}
-              className="flex-shrink-0 w-[300px] min-w-[300px] rounded-xl hover:shadow-lg transition duration-200 cursor-pointer border border-gray-100 pb-4 flex flex-col"
+              className="flex-shrink-0 w-[300px] min-w-[300px] rounded-xl hover:shadow-lg transition-all duration-300 cursor-pointer border border-gray-100 pb-4 flex flex-col group"
               onClick={() => onProductClick(item)}
             >
-              <div className="relative h-[250px] w-full rounded-t-xl overflow-hidden bg-gray-50 mb-3">
+                <div className="relative h-[250px] w-full rounded-t-xl overflow-hidden bg-gray-50 mb-3">
                 <PromoTag promo={promo} />
-                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
-                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
-                      </span>
+                {!((item.category || item.product_category || '').toLowerCase().includes('decal') || (item.category || item.product_category || '').toLowerCase().includes('wrap')) && (
+                  (item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? (
+                    <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#FDE31E] text-black border border-yellow-400/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#ffe838] select-none pointer-events-none">
+                      Customizable
+                    </span>
+                  ) : (
+                    <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#0B132A] text-white border border-slate-700/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#152244] select-none pointer-events-none">
+                      Ready Made
+                    </span>
+                  )
+                )}
                 <img
                   src={getImageUrl(item.image || item.product_image)}
                   alt={item.name || item.product_name || "Product"}

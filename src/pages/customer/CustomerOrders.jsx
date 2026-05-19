@@ -76,14 +76,14 @@ const DesignApprovalModal = ({ order, onClose, onApprove, onRevision }) => {
                             </div>
                         )}
                         <div className="absolute top-6 right-6 flex gap-2">
-                             <a 
-                                href={finalDesignUrl} 
-                                download 
+                            <a
+                                href={finalDesignUrl}
+                                download
                                 target="_blank"
                                 className="w-12 h-12 rounded-2xl bg-white/90 backdrop-blur shadow-xl border border-white flex items-center justify-center hover:bg-[#FDE31E] transition-all active:scale-90"
-                             >
+                            >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                             </a>
+                            </a>
                         </div>
                     </div>
 
@@ -96,14 +96,14 @@ const DesignApprovalModal = ({ order, onClose, onApprove, onRevision }) => {
                 </div>
 
                 <div className="p-8 border-t border-gray-100 bg-gray-50/50 flex gap-4">
-                    <button 
+                    <button
                         onClick={handleRevision}
                         disabled={submitting}
                         className="flex-1 py-5 rounded-2xl border-2 border-gray-200 text-gray-500 font-black text-xs uppercase tracking-widest hover:bg-white hover:border-red-400 hover:text-red-500 transition-all active:scale-95 disabled:opacity-40"
                     >
                         {submitting ? '...' : 'Request Revision'}
                     </button>
-                    <button 
+                    <button
                         onClick={handleApprove}
                         disabled={submitting || !finalDesignUrl}
                         className="flex-[2] py-5 bg-[#FDE31E] text-black font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-yellow-400 transition-all shadow-xl shadow-yellow-100 active:scale-95 disabled:opacity-40"
@@ -364,8 +364,18 @@ const OrderDetailsModal = ({ order, onClose }) => {
                                     <div className="flex-1 min-w-0">
                                         <p className="font-bold text-sm text-gray-900 leading-snug">{item.product_name}</p>
                                         {item.size && (
-                                            <span className="inline-block mt-1 text-[10px] bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                                            <span className="inline-block mt-1 mr-1 text-[10px] bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium">
                                                 Size: {item.size}
+                                            </span>
+                                        )}
+                                        {item.design_name && (
+                                            <span className="inline-block mt-1 mr-1 text-[10px] bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                                                Design: {item.design_name}
+                                            </span>
+                                        )}
+                                        {item.quality_name && (
+                                            <span className="inline-block mt-1 mr-1 text-[10px] bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                                                Material: {item.quality_name}
                                             </span>
                                         )}
                                         {item.product_type && (
@@ -497,10 +507,10 @@ const OrderDetailsModal = ({ order, onClose }) => {
 const RateModal = ({ order, onClose, onSubmit, onSuccess }) => {
     const [rating, setRating] = useState(0);
     const [review, setReview] = useState('');
-    
+
     const [artistRating, setArtistRating] = useState(0);
     const [artistReview, setArtistReview] = useState('');
-    
+
     const [riderRating, setRiderRating] = useState(0);
     const [riderReview, setRiderReview] = useState('');
 
@@ -540,7 +550,7 @@ const RateModal = ({ order, onClose, onSubmit, onSuccess }) => {
                     </div>
                     <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition"><svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg></button>
                 </div>
-                
+
                 <div className="p-8 space-y-8 flex-1 overflow-y-auto custom-scrollbar">
                     {/* SECTION 1: Product Review */}
                     <div className="border border-gray-100 rounded-[32px] p-6 space-y-4 bg-gray-50/50">
@@ -590,7 +600,7 @@ const RateModal = ({ order, onClose, onSubmit, onSuccess }) => {
                     </div>
 
                     {error && <p className="text-red-500 text-sm text-center font-bold">{error}</p>}
-                    
+
                     <button type="button" onClick={handleSubmit} disabled={rating === 0 || submitting}
                         className="w-full py-5 bg-[#FDE31E] hover:bg-yellow-400 text-black font-black text-xs uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-yellow-100 active:scale-95 disabled:opacity-40 disabled:scale-100">
                         {submitting ? 'Submitting Experience...' : '✓ Submit Full Review'}
@@ -785,9 +795,9 @@ const OrderCard = ({
                 <TrackingModal order={order} onClose={() => setShowTracking(false)} />
             )}
             {showDesignApproval && (
-                <DesignApprovalModal 
-                    order={order} 
-                    onClose={() => setShowDesignApproval(false)} 
+                <DesignApprovalModal
+                    order={order}
+                    onClose={() => setShowDesignApproval(false)}
                     onApprove={async (id) => {
                         await approveDesign(id);
                         onSuccess?.('Design approved! We will now prepare your shipment.');
@@ -799,16 +809,16 @@ const OrderCard = ({
                 />
             )}
 
-            <div className={isMobile 
-                ? "bg-white border-b border-gray-100 active:bg-gray-50 transition-colors" 
+            <div className={isMobile
+                ? "bg-white border-b border-gray-100 active:bg-gray-50 transition-colors"
                 : "bg-white rounded-2xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"}>
-                
+
                 <div className={`flex gap-4 p-4 cursor-pointer ${isMobile ? 'items-center' : 'items-start'}`} onClick={() => setShowDetails(true)}>
                     <div className="relative flex-shrink-0">
-                        <OrderImage 
-                            src={order.product_image} 
-                            alt={order.product_name} 
-                            className={`rounded-2xl border border-gray-100 shadow-sm ${isMobile ? 'w-24 h-24' : 'w-28 h-28'}`} 
+                        <OrderImage
+                            src={order.product_image}
+                            alt={order.product_name}
+                            className={`rounded-2xl border border-gray-100 shadow-sm ${isMobile ? 'w-24 h-24' : 'w-28 h-28'}`}
                         />
                         {order.quantity > 1 && (
                             <span className="absolute -top-2 -right-2 bg-gray-900 text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center shadow-lg ring-2 ring-white">
@@ -823,7 +833,7 @@ const OrderCard = ({
                                 {order.product_name}
                             </h3>
                         </div>
-                        
+
                         <div className="flex items-center gap-2 flex-wrap mt-0.5">
                             <span className={`px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest rounded-lg border ${getStatusColor(order.status)}`}>
                                 {normalizeStatus(order.status)}
@@ -834,6 +844,16 @@ const OrderCard = ({
                         {order.size && (
                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
                                 Size: <span className="text-gray-900">{order.size}</span>
+                            </p>
+                        )}
+                        {order.design_name && (
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+                                Design: <span className="text-gray-900">{order.design_name}</span>
+                            </p>
+                        )}
+                        {order.quality_name && (
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+                                Quality: <span className="text-gray-900">{order.quality_name}</span>
                             </p>
                         )}
 
@@ -894,8 +914,8 @@ const OrderCard = ({
 
                     {/* Chat with Artist Button - only show if artist is assigned */}
                     {order.artist_id && (canCancel || needsApproval || normalizeStatus(order.status) === 'To Ship' || normalizeStatus(order.status) === 'In Progress') && (
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             onClick={e => { e.stopPropagation(); onChatWithArtist?.(order); }}
                             className="w-full py-3.5 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2 group"
                         >
@@ -1025,7 +1045,7 @@ const OrderCard = ({
 // ─────────────────────────────────────────────────────────────────────────────
 //  Main CustomerOrders
 // ─────────────────────────────────────────────────────────────────────────────
-const CustomerOrders = () => {
+const CustomerOrders = ({ isModal = false, onClose }) => {
     const { currentUser, isVerified } = useAuth();
     const { setCheckoutData } = useUI();
     const navigate = useNavigate();
@@ -1066,6 +1086,8 @@ const CustomerOrders = () => {
                     rating: order.rating || 0,
                     admin_reply: order.admin_reply || null,
                     size: order.size || null,
+                    design_name: order.design_name || null,
+                    quality_name: order.quality_name || null,
                     product_type: order.product_type || null,
                     specifications: order.specifications || null,
                     pieces: order.pieces || null,
@@ -1133,6 +1155,8 @@ const CustomerOrders = () => {
                         product_name: product.product_name || item.product_name || 'Product',
                         product_image: product.product_image || item.product_image || null,
                         size: item.size || null,
+                        design_name: item.design_name || null,
+                        quality_name: item.quality_name || null,
                         quantity: item.quantity || 1,
                         item_price: unitPrice,
                         total_price: itemFinalTotal,
@@ -1435,73 +1459,132 @@ const CustomerOrders = () => {
         <>
             {toast && <Toast message={toast} onDone={() => setToast(null)} />}
 
-            {/* DESKTOP */}
-            <div className="hidden lg:flex rounded-3xl my-5 mr-5 ml-1 h-[calc(100vh-40px)] bg-white shadow-lg overflow-hidden">
-                <div className="flex flex-col w-full h-full">
-                    <div className="flex-shrink-0 p-6 border-b border-gray-200 bg-white">
-                        <div className="flex items-center justify-between mb-5">
-                            <h2 className="text-2xl font-bold">My Orders</h2>
-                            <button onClick={() => loadOrders(true)} disabled={refreshing}
-                                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 hover:border-gray-400 rounded-2xl text-sm font-medium transition disabled:opacity-70">
-                                <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.58 11H1M12 3v2m0 16v2m9-9H15" /></svg>
-                                {refreshing ? 'Refreshing...' : 'Refresh'}
+            {isModal ? (
+                /* MODAL CONTAINER OVERLAY */
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={onClose}>
+                    <div
+                        className="bg-white rounded-[32px] shadow-2xl max-w-5xl w-full flex flex-col overflow-hidden relative animate-in zoom-in-95 duration-200"
+                        style={{ height: "90vh", maxHeight: "90vh" }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header of Modal */}
+                        <div className="flex items-center justify-between px-8 py-6 border-b border-gray-100 flex-shrink-0">
+                            <div>
+                                <h2 className="text-2xl font-bold tracking-tight text-gray-900">My Orders</h2>
+                                <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-black">View and manage all your orders</p>
+                            </div>
+                            <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 hover:bg-gray-100 transition">
+                                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
-                        <div className="flex gap-3 overflow-x-auto scrollbar-hide">
-                            {tabs.map(tab => (
-                                <button key={tab} onClick={() => setActiveTab(tab)}
-                                    className={`px-5 py-2.5 rounded-full font-medium whitespace-nowrap transition ${activeTab === tab ? 'bg-[#FDE31E] text-black shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                                    {tab}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto bg-gray-50 p-6 space-y-4">
-                        {loading ? (
-                            <Spinner />
-                        ) : filteredOrders.length === 0 ? (
-                            <EmptyState />
-                        ) : (
-                            filteredOrders.map((order, i) => (
-                                <OrderCard key={`${order.order_id}-${order.order_item_id || i}`} order={order} {...sharedCardProps} />
-                            ))
-                        )}
-                    </div>
-                </div>
-            </div>
 
-            {/* MOBILE */}
-            <div className="lg:hidden pt-[70px] min-h-screen bg-gray-50">
-                <div className="bg-white shadow-sm border-b border-gray-300 sticky top-[70px] z-10">
-                    <div className="p-5 flex items-center justify-between">
-                        <h2 className="text-2xl font-bold">My Orders</h2>
-                        <button onClick={() => loadOrders(true)} disabled={refreshing}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-300 hover:border-gray-400 rounded-xl text-sm transition disabled:opacity-70">
-                            <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.58 11H1M12 3v2m0 16v2m9-9H15" /></svg>
-                            Refresh
-                        </button>
-                    </div>
-                    <div className="flex gap-3 px-5 pb-4 overflow-x-auto scrollbar-hide">
-                        {tabs.map(tab => (
-                            <button key={tab} onClick={() => setActiveTab(tab)}
-                                className={`px-4 py-2 rounded-full whitespace-nowrap transition text-sm ${activeTab === tab ? 'bg-[#FDE31E] text-black font-medium' : 'bg-gray-100 text-gray-700'}`}>
-                                {tab}
-                            </button>
-                        ))}
+                        {/* Main Content Area */}
+                        <div className="flex-1 flex flex-col min-h-0 bg-gray-50 overflow-hidden">
+                            {/* Navigation Tabs and Refresh */}
+                            <div className="flex-shrink-0 p-6 bg-white border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1">
+                                    {tabs.map(tab => (
+                                        <button key={tab} onClick={() => setActiveTab(tab)}
+                                            className={`px-4 py-2 rounded-full font-medium whitespace-nowrap transition text-sm ${activeTab === tab ? 'bg-[#FDE31E] text-black shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                                            {tab}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button onClick={() => loadOrders(true)} disabled={refreshing}
+                                    className="flex-shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-300 hover:border-gray-400 rounded-xl text-sm font-medium transition disabled:opacity-70">
+                                    <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.58 11H1M12 3v2m0 16v2m9-9H15" /></svg>
+                                    {refreshing ? 'Refreshing...' : 'Refresh'}
+                                </button>
+                            </div>
+
+                            {/* Scrollable list of orders */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                {loading ? (
+                                    <Spinner />
+                                ) : filteredOrders.length === 0 ? (
+                                    <EmptyState />
+                                ) : (
+                                    filteredOrders.map((order, i) => (
+                                        <OrderCard key={`${order.order_id}-${order.order_item_id || i}`} order={order} {...sharedCardProps} />
+                                    ))
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div className="overflow-y-auto px-2" style={{ maxHeight: 'calc(100vh - 200px)' }}>
-                    {loading ? (
-                        <Spinner mobile />
-                    ) : filteredOrders.length === 0 ? (
-                        <EmptyState mobile />
-                    ) : (
-                        filteredOrders.map((order, i) => (
-                            <OrderCard key={`${order.order_id}-${order.order_item_id || i}`} order={order} isMobile {...sharedCardProps} />
-                        ))
-                    )}
-                </div>
-            </div>
+            ) : (
+                <>
+                    {/* DESKTOP */}
+                    <div className="hidden lg:flex rounded-3xl my-5 mr-5 ml-1 h-[calc(100vh-40px)] bg-white shadow-lg overflow-hidden">
+                        <div className="flex flex-col w-full h-full">
+                            <div className="flex-shrink-0 p-6 border-b border-gray-200 bg-white">
+                                <div className="flex items-center justify-between mb-5">
+                                    <h2 className="text-2xl font-bold">My Orders</h2>
+                                    <button onClick={() => loadOrders(true)} disabled={refreshing}
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-300 hover:border-gray-400 rounded-2xl text-sm font-medium transition disabled:opacity-70">
+                                        <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.58 11H1M12 3v2m0 16v2m9-9H15" /></svg>
+                                        {refreshing ? 'Refreshing...' : 'Refresh'}
+                                    </button>
+                                </div>
+                                <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                                    {tabs.map(tab => (
+                                        <button key={tab} onClick={() => setActiveTab(tab)}
+                                            className={`px-5 py-2.5 rounded-full font-medium whitespace-nowrap transition ${activeTab === tab ? 'bg-[#FDE31E] text-black shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                                            {tab}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex-1 overflow-y-auto bg-gray-50 p-6 space-y-4">
+                                {loading ? (
+                                    <Spinner />
+                                ) : filteredOrders.length === 0 ? (
+                                    <EmptyState />
+                                ) : (
+                                    filteredOrders.map((order, i) => (
+                                        <OrderCard key={`${order.order_id}-${order.order_item_id || i}`} order={order} {...sharedCardProps} />
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* MOBILE */}
+                    <div className="lg:hidden pt-[70px] min-h-screen bg-gray-50">
+                        <div className="bg-white shadow-sm border-b border-gray-300 sticky top-[70px] z-10">
+                            <div className="p-5 flex items-center justify-between">
+                                <h2 className="text-2xl font-bold">My Orders</h2>
+                                <button onClick={() => loadOrders(true)} disabled={refreshing}
+                                    className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-300 hover:border-gray-400 rounded-xl text-sm transition disabled:opacity-70">
+                                    <svg className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.58 11H1M12 3v2m0 16v2m9-9H15" /></svg>
+                                    Refresh
+                                </button>
+                            </div>
+                            <div className="flex gap-3 px-5 pb-4 overflow-x-auto scrollbar-hide">
+                                {tabs.map(tab => (
+                                    <button key={tab} onClick={() => setActiveTab(tab)}
+                                        className={`px-4 py-2 rounded-full whitespace-nowrap transition text-sm ${activeTab === tab ? 'bg-[#FDE31E] text-black font-medium' : 'bg-gray-100 text-gray-700'}`}>
+                                        {tab}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="overflow-y-auto px-2" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                            {loading ? (
+                                <Spinner mobile />
+                            ) : filteredOrders.length === 0 ? (
+                                <EmptyState mobile />
+                            ) : (
+                                filteredOrders.map((order, i) => (
+                                    <OrderCard key={`${order.order_id}-${order.order_item_id || i}`} order={order} isMobile {...sharedCardProps} />
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
 
             {selectedReturnOrder && (
                 <ReturnRefundDetailModal
@@ -1534,11 +1617,11 @@ const CustomerOrders = () => {
                             </button>
                         </div>
                         <div className="flex-1 overflow-hidden">
-                            <DesignChatbox 
+                            <DesignChatbox
                                 productId={selectedChatOrder.product_id}
                                 orderId={selectedChatOrder.order_id}
                                 orderStatus={selectedChatOrder.status}
-                                onImageUpload={() => {}}
+                                onImageUpload={() => { }}
                             />
                         </div>
                     </div>

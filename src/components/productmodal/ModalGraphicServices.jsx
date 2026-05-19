@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo , useRef} from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/CustomerAuthContext";
-import { useCart } from "../context/CartContext";
-import { sendCustomerMessage } from "../services/MessageAPI";
-import { useUI } from "../context/UIContext";
-import { getImageUrl } from "../services/api";
-import LoginRegisterModal from "./LoginRegisterModal";
-import CartToast from "./CartToast";
-import DesignChatbox from "./DesignChatbox";
-import { getDiscountedPrice } from "./PromoTag";
-import check from "../assets/servicesImgIcon/graphicservices/check.svg";
+import { useAuth } from "../../context/CustomerAuthContext";
+import { useCart } from "../../context/CartContext";
+import { sendCustomerMessage } from "../../services/MessageAPI";
+import { useUI } from "../../context/UIContext";
+import { getImageUrl } from "../../services/api";
+import LoginRegisterModal from "../LoginRegisterModal";
+import CartToast from "../CartToast";
+import DesignChatbox from "../DesignChatbox";
+import { getDiscountedPrice } from "../PromoTag";
+import check from "../../assets/servicesImgIcon/graphicservices/check.svg";
 
 const formatPrice = (price) => {
   if (price === undefined || price === null) return "0.00";
@@ -19,10 +19,25 @@ const formatPrice = (price) => {
 const CHECKOUT_STORAGE_KEY = "stickify_checkout_data";
 
 const ModalGraphicServices = ({ product, onClose }) => {
+  const rightPanelRef = useRef(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (rightPanelRef.current) {
+        rightPanelRef.current.scrollTop = 0;
+        // Also scroll the window/body just in case
+        window.scrollTo(0, 0);
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, []);
+
   const navigate = useNavigate();
   const { setCheckoutData } = useUI();
   const { currentUser, isVerified } = useAuth();
   const { addItem } = useCart();
+
+  const isCustomizableProduct = product.is_customizable !== 0 && product.is_customizable !== false && product.is_customizable !== "0" && product.is_customizable !== undefined;
+  const isCustomMode = isCustomizableProduct;
 
   const title = product.type || "Graphic Services";
   const tier = product.name || product.product_name || "Service";
@@ -80,12 +95,13 @@ const ModalGraphicServices = ({ product, onClose }) => {
     type: product.type || "Graphic Service",
     subtotal,
     initialPaymentMethod: paymentMethod,
-    designImage: uploadedImage?.preview || null,
+    customMode: isCustomMode ? "custom" : "standard",
+    designImage: isCustomMode ? (uploadedImage?.preview || null) : null,
     timestamp: Date.now()
   });
 
   const handleBuyNow = async () => {
-    if (!uploadedImage?.preview) { setSubmitError("Please upload your design first."); return; }
+    if (isCustomMode && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return; }
     if (!paymentMethod) { setSubmitError("Please select a payment method."); return; }
     if (!currentUser) {
       sessionStorage.setItem(CHECKOUT_STORAGE_KEY, JSON.stringify(buildPayload()));
@@ -99,7 +115,7 @@ const ModalGraphicServices = ({ product, onClose }) => {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      if (uploadedImage?.preview) {
+      if (isCustomMode && uploadedImage?.preview) {
         const inquiryBody = `[DESIGN] Interested in graphic service: ${title}. Qty: ${quantity}. Subtotal: ₱${formatPrice(subtotal)}.`;
         await sendCustomerMessage(inquiryBody, null, product.id || product.product_id);
       }
@@ -115,7 +131,7 @@ const ModalGraphicServices = ({ product, onClose }) => {
   };
 
   const handleAddToCart = () => {
-    if (!uploadedImage?.preview) { setSubmitError("Please upload your design first."); return; }
+    if (isCustomMode && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return; }
     if (!paymentMethod) { setSubmitError("Please select a payment method."); return; }
     const p = buildPayload();
     addItem({
@@ -126,6 +142,7 @@ const ModalGraphicServices = ({ product, onClose }) => {
       quantity: p.quantity,
       category: p.category,
       type: p.type,
+      customMode: isCustomMode ? "custom" : "standard",
       designImage: p.designImage,
       originalPrice: p.product.originalPrice,
       promoApplied: p.product.promoApplied,
@@ -201,18 +218,28 @@ const ModalGraphicServices = ({ product, onClose }) => {
 
               {/* Chatbox — fills remaining height */}
               <div className="flex-1 min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
-                <DesignChatbox 
-                  onImageUpload={(img) => {
-                    setUploadedImage({ preview: img });
-                    setSubmitError(null);
-                  }} 
-                  productId={product.id || product.product_id}
-                />
+                {isCustomMode ? (
+                  <DesignChatbox 
+                    onImageUpload={(img) => {
+                      setUploadedImage({ preview: img });
+                      setSubmitError(null);
+                    }} 
+                    productId={product.id || product.product_id}
+                  />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center p-6 bg-white rounded-3xl border border-gray-100 shadow-sm text-center">
+                    <span className="text-4xl mb-3">📦</span>
+                    <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Standard / Readymade Order</h4>
+                    <p className="text-xs text-gray-400 mt-2 max-w-[280px]">
+                      This product will be printed using the standard/default design shown in the preview. No design files or artist approvals are needed.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* RIGHT Panel */}
-            <div className="w-full md:w-1/2 p-6 overflow-y-auto custom-scrollbar bg-white flex flex-col">
+            <div ref={rightPanelRef} className="w-full md:w-1/2 p-6 overflow-y-auto custom-scrollbar bg-white flex flex-col">
               <div className="flex-1 space-y-4">
                 <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group">
                   <img src={getImageUrl(product.image || product.product_image)} className="w-full h-48 object-cover transition-transform duration-700 group-hover:scale-105" alt={title} />
@@ -257,20 +284,20 @@ const ModalGraphicServices = ({ product, onClose }) => {
               <div className="mt-4 space-y-4">
                 <button
                   onClick={handleBuyNow}
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || !uploadedImage?.preview}
+                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
-                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || !uploadedImage?.preview)
+                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed"
                       : "bg-[#FFE100] text-black hover:bg-yellow-400 "
                     }`}
                 >
-                  {!uploadedImage?.preview ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
+                  {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
                 <button 
                   onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || !paymentMethod || !uploadedImage?.preview} 
+                  disabled={subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)} 
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                    ${!uploadedImage?.preview ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                    ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >
                   Add to Cart
                 </button>

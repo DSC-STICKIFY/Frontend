@@ -48,6 +48,7 @@ const transformOrder = (order) => {
       // Return policy window from backend (null = no policy / not returnable)
       return_window_seconds: item.return_window_seconds ?? order.return_window_seconds ?? null,
       return_deadline: item.return_deadline ?? order.return_deadline ?? null,
+      is_customizable: item.is_customizable !== undefined ? item.is_customizable : (product.is_customizable !== undefined ? product.is_customizable : null),
     };
   });
 

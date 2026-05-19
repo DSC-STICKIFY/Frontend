@@ -12,22 +12,22 @@ import { IMAGE_BASE_URL } from "../../services/api";
 import CustomerOrders from "./CustomerOrders.jsx";
 
 // Sticker modals
-import ModalAssortedHologram from "../../components/ModalAssortedHologram.jsx";
-import ModalMoreStickers from "../../components/ModalMoreStickers.jsx";
+import ModalAssortedHologram from "../../components/productmodal/ModalAssortedHologram.jsx";
+import ModalMoreStickers from "../../components/productmodal/ModalMoreStickers.jsx";
 // Signage modal
-import ModalSignage from "../../components/ModalSignage.jsx";
+import ModalSignage from "../../components/productmodal/ModalSignage.jsx";
 // Graphic Services modal
-import ModalGraphicServices from "../../components/ModalGraphicServices.jsx";
+import ModalGraphicServices from "../../components/productmodal/ModalGraphicServices.jsx";
 // Vehicle Inquiry modals
-import ModalCarServiceInquiry from "../../components/ModalCarServiceInquiry.jsx";
+import ModalCarServiceInquiry from "../../components/productmodal/ModalCarServiceInquiry.jsx";
 import ModalMotorServiceInquiry from "../../components/modals/ModalMotorServiceInquiry.jsx";
 // Giveaway modals
-import ModalGiveawaysMugnShirt from "../../components/ModalGiveawaysMugnShirt.jsx";
-import ModalGiveawaysStandeenTarpulin from "../../components/ModalGiveawaysStandeenTarpulin.jsx";
-import ModalGiveawayMore from "../../components/ModalGiveawayMore.jsx";
-import ModalGiveawayCallingCard from "../../components/ModalGiveawayCallingCard.jsx";
+import ModalGiveawaysMugnShirt from "../../components/productmodal/ModalGiveawaysMugnShirt.jsx";
+import ModalGiveawaysStandeenTarpulin from "../../components/productmodal/ModalGiveawaysStandeenTarpulin.jsx";
+import ModalGiveawayMore from "../../components/productmodal/ModalGiveawayMore.jsx";
+import ModalGiveawayCallingCard from "../../components/productmodal/ModalGiveawayCallingCard.jsx";
 // Printing modal
-import ModalPrinting from "../../components/ModalPrinting.jsx";
+import ModalPrinting from "../../components/productmodal/ModalPrinting.jsx";
 
 // ────────────── PROMO CAROUSEL HELPERS (added) ──────────────────────────────
 const PROMO_GRADIENTS = [
@@ -374,19 +374,24 @@ const CustomerDashboard = () => {
     getOrders();
   }, []);
 
-  // Unified handler for product clicks
+  // Unified handler for product clicks (now navigates to Landing Page view)
+  const handleNavigateToProduct = (item) => {
+    console.log("🛠️ Dashboard - Navigating to Product:", item);
+    if (!item) return;
+    const uuid = item.uuid || item.product_id || item.id;
+    if (uuid) {
+      navigate(`/?product=${uuid}`);
+    } else {
+      navigate("/");
+    }
+  };
+
   const handleOpenModal = (item) => {
     console.log("🛠️ Dashboard - Opening Modal for:", item);
     const modalType = getModalType(item);
-    if (modalType === "sticker") { setSelectedSticker(buildStickerPayload(item)); return; }
-    if (modalType === "signage") { setSelectedSignage(buildSignagePayload(item)); return; }
-    if (modalType === "graphic") { setSelectedGraphicItem(buildGraphicPayload(item)); return; }
     if (modalType === "car-decal") { setSelectedCarInquiry(item); return; }
     if (modalType === "motor-decal") { setSelectedMotorInquiry(item); return; }
-    if (modalType === "giveaway") { setSelectedGiveaway(buildGiveawayPayload(item)); return; }
-    if (modalType === "printing") { setSelectedPrinting(buildPrintingPayload(item)); return; }
 
-    console.warn("Unknown product category, defaulting to MoreStickers:", item);
     setSelectedSticker(buildStickerPayload(item));
   };
 
@@ -458,7 +463,13 @@ const CustomerDashboard = () => {
                               </p>
                             )}
                             <button 
-                              onClick={() => navigate("/products")}
+                              onClick={() => {
+                                if (promo.product_uuids && promo.product_uuids.length > 0) {
+                                  navigate(`/?product=${promo.product_uuids[0]}`);
+                                } else {
+                                  navigate("/");
+                                }
+                              }}
                               className={`mt-4 flex items-center gap-2 px-4 py-2 rounded-[8px] text-[12px] font-bold w-fit transition shadow-md
                                 ${promoImg ? "bg-[#FDE31E] text-black hover:bg-yellow-400" : (textColor === "text-white" ? "bg-white text-black hover:bg-gray-100" : "bg-black text-white hover:bg-gray-800")}`}>
                               Shop Now <img src={newItem} alt="" className="h-4" />
@@ -574,7 +585,7 @@ const CustomerDashboard = () => {
         <div className="rounded-xl mt-6 ">
           <TopProducts
             products={allProducts}
-            onProductClick={handleOpenModal}
+            onProductClick={handleNavigateToProduct}
             onOrderNowClick={handleOpenModal}
             onViewAll={() => navigate("/products")}
           />
@@ -636,7 +647,13 @@ const CustomerDashboard = () => {
                               </p>
                             )}
                             <button 
-                              onClick={() => navigate("/products")}
+                              onClick={() => {
+                                if (promo.product_uuids && promo.product_uuids.length > 0) {
+                                  navigate(`/?product=${promo.product_uuids[0]}`);
+                                } else {
+                                  navigate("/");
+                                }
+                              }}
                               className={`mt-4 px-5 py-2.5 rounded-lg font-bold text-sm flex items-center gap-2 w-fit shadow-md
                                 ${promoImg ? "bg-[#FDE31E] text-black hover:bg-yellow-400" : (textColor === "text-white" ? "bg-white text-black" : "bg-black text-white")}`}>
                               Shop Now <img src={newItem} alt="" className="h-4" />
@@ -757,7 +774,7 @@ const CustomerDashboard = () => {
           <div className="bg-white rounded-2xl shadow-sm p-5">
             <TopProducts
               products={allProducts}
-              onProductClick={handleOpenModal}
+              onProductClick={handleNavigateToProduct}
               onOrderNowClick={handleOpenModal}
               onViewAll={() => navigate("/products")}
             />

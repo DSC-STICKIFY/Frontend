@@ -1,11 +1,23 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect , useRef} from "react";
 import { useNavigate } from "react-router-dom";
-import { submitInquiry } from "../services/InquiryAPI";
-import { useAuth } from "../context/CustomerAuthContext";
-import LoginRegisterModal from "./LoginRegisterModal";
-import { getImageUrl, PLACEHOLDER_IMAGE } from "../services/api";
+import { submitInquiry } from "../../services/InquiryAPI";
+import { useAuth } from "../../context/CustomerAuthContext";
+import LoginRegisterModal from "../LoginRegisterModal";
+import { getImageUrl, PLACEHOLDER_IMAGE } from "../../services/api";
 
 const ModalCarServiceInquiry = ({ onClose, product }) => {
+  const rightPanelRef = useRef(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (rightPanelRef.current) {
+        rightPanelRef.current.scrollTop = 0;
+        // Also scroll the window/body just in case
+        window.scrollTo(0, 0);
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, []);
+
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);

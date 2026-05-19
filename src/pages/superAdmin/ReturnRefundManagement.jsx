@@ -230,6 +230,11 @@ const RequestRow = ({ item, selected, onClick }) => {
     const customer    = item.user || {};
     const custName    = `${customer.first_name || ""} ${customer.last_name || ""}`.trim() || "Customer";
 
+    const messages = Array.isArray(item.messages) ? item.messages : [];
+    const hasSubAdminRequest = messages.some(msg => 
+        msg.message && msg.message.includes("[SUB-ADMIN REQUEST]")
+    );
+
     return (
         <button
             onClick={onClick}
@@ -238,7 +243,14 @@ const RequestRow = ({ item, selected, onClick }) => {
             <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-0.5">
                     <p className="text-sm font-bold text-gray-900 truncate">{productName}</p>
-                    <StatusBadge status={item.status} />
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <StatusBadge status={item.status} />
+                        {hasSubAdminRequest && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200 animate-pulse">
+                                ⚡ Sub-Admin Req
+                            </span>
+                        )}
+                    </div>
                 </div>
                 <p className="text-xs text-gray-500 truncate">{custName}</p>
                 <p className="text-[10px] text-gray-400 truncate mt-0.5">{item.reason}</p>
@@ -335,7 +347,12 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
     const [acting, setActing] = useState(false);
     const [tab, setTab]       = useState("details");
     const [proof, setProof]   = useState(null);
+    const [requestSent, setRequestSent] = useState(false);
     const fileRef             = useRef(null);
+
+    useEffect(() => {
+        setRequestSent(false);
+    }, [item?.id]);
 
     if (!item) {
         return (
@@ -367,13 +384,25 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
         }
     };
 
+    const messages = Array.isArray(item.messages) ? item.messages : [];
+    const hasSubAdminRequest = messages.some(msg => 
+        msg.message && msg.message.includes("[SUB-ADMIN REQUEST]")
+    );
+
     return (
         <div className="h-full flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-4">
                 <div>
                     <p className="text-xs text-gray-400 uppercase font-semibold">Return Request</p>
-                    <h3 className="text-lg font-bold text-gray-900 mt-0.5">#{item.id}</h3>
+                    <div className="flex items-center gap-2.5 mt-0.5">
+                        <h3 className="text-lg font-bold text-gray-900">#{item.id}</h3>
+                        {hasSubAdminRequest && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200 animate-pulse">
+                                ⚡ Sub-Admin Confirmation Requested
+                            </span>
+                        )}
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <StatusBadge status={item.status} />
@@ -462,24 +491,67 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
 
                         {/* Admin Actions */}
                         {item.status === "pending" && (
-                            <div className="pt-2">
+                            <div className="pt-2 space-y-3.5">
+                                {currentUser?.role === 'subadmin' && (
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
+                                        <div className="flex gap-3 items-start">
+                                            <span className="text-base select-none mt-0.5">⚠️</span>
+                                            <div>
+                                                <p className="text-xs font-black text-yellow-800 uppercase tracking-widest">Super Admin Approval Required</p>
+                                                <p className="text-xs text-yellow-700 leading-relaxed mt-1">
+                                                    As a Sub-Admin, you do not have permission to approve or reject return/refund requests directly. Please ask the Super Admin for authorization or confirmation.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={async () => {
+                                                if (requestSent) return;
+                                                setActing(true);
+                                                try {
+                                                    await sendReturnMessage(item.id, `[SUB-ADMIN REQUEST] Sub-Admin has reviewed Return Request #${item.id} and is requesting Super Admin approval/confirmation.`);
+                                                    setRequestSent(true);
+                                                } catch (e) {
+                                                    console.error("Failed to send approval request", e);
+                                                } finally {
+                                                    setActing(false);
+                                                }
+                                            }}
+                                            disabled={acting || requestSent}
+                                            className={`w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition shadow-sm border ${
+                                                requestSent 
+                                                    ? "bg-green-50 border-green-200 text-green-700 cursor-default select-none"
+                                                    : "bg-yellow-400 hover:bg-yellow-500 text-black border-yellow-500 animate-pulse hover:animate-none"
+                                            }`}
+                                        >
+                                            {acting ? "Sending Request..." : requestSent ? "✓ Approval Request Sent to Admin" : "📣 Request Approval from Super Admin"}
+                                        </button>
+                                    </div>
+                                )}
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => handleAction("approved")}
-                                        disabled={acting}
-                                        className="flex-1 py-3.5 bg-[#FDE31E] hover:bg-yellow-400 text-gray-900 font-bold rounded-2xl transition disabled:opacity-50 shadow-sm border border-yellow-500">
+                                        disabled={acting || currentUser?.role === 'subadmin'}
+                                        className={`flex-1 py-3.5 font-bold rounded-2xl transition shadow-sm border ${
+                                            currentUser?.role === 'subadmin'
+                                                ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed select-none"
+                                                : "bg-[#FDE31E] hover:bg-yellow-400 text-gray-900 border-yellow-500"
+                                        }`}>
                                         ✓ Approve Return
                                     </button>
                                     <button
                                         onClick={() => handleAction("rejected")}
-                                        disabled={acting}
-                                        className="flex-1 py-3.5 bg-white hover:bg-red-50 text-red-600 font-bold rounded-2xl transition disabled:opacity-50 border border-red-100">
+                                        disabled={acting || currentUser?.role === 'subadmin'}
+                                        className={`flex-1 py-3.5 font-bold rounded-2xl transition border ${
+                                            currentUser?.role === 'subadmin'
+                                                ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed select-none"
+                                                : "bg-white hover:bg-red-50 text-red-600 border-red-100"
+                                        }`}>
                                         ✕ Reject
                                     </button>
                                 </div>
                             </div>
                         )}
-
+ 
                         {item.status === "approved" && (
                             <div className="space-y-4">
                                 <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
@@ -491,19 +563,33 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
                                         The return claim has been accepted. Please send the refund amount to the customer's provided payment source.
                                     </p>
                                 </div>
-
+ 
                                 {/* Manual Refund Step */}
-                                <div className="bg-white border border-[#DCDCDC] rounded-2xl p-4 shadow-sm">
-                                    <p className="text-xs font-bold text-gray-400 uppercase mb-3">Manual Refund Verification</p>
+                                <div className="bg-white border border-[#DCDCDC] rounded-2xl p-4 shadow-sm space-y-3.5">
+                                    <p className="text-xs font-bold text-gray-400 uppercase">Manual Refund Verification</p>
                                     
+                                    {currentUser?.role === 'subadmin' && (
+                                        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex gap-2.5 items-start">
+                                            <span className="text-xs select-none">⚠️</span>
+                                            <p className="text-xs text-yellow-700 leading-relaxed">
+                                                Verification of manual refunds is restricted to the Super Admin. Please forward GCash details or manual receipts to them for completion.
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {!proof ? (
                                         <button 
-                                            onClick={() => fileRef.current?.click()}
-                                            className="w-full py-6 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center hover:bg-gray-50 transition gap-2">
+                                            onClick={() => { if (currentUser?.role !== 'subadmin') fileRef.current?.click(); }}
+                                            disabled={currentUser?.role === 'subadmin'}
+                                            className={`w-full py-6 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 transition ${
+                                                currentUser?.role === 'subadmin'
+                                                    ? "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed select-none"
+                                                    : "border-gray-200 hover:bg-gray-50 text-gray-500"
+                                            }`}>
                                             <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                             </svg>
-                                            <span className="text-xs text-gray-500 font-medium">Click to upload refund screenshot</span>
+                                            <span className="text-xs font-medium">Click to upload refund screenshot</span>
                                             <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={e => setProof(e.target.files[0])} />
                                         </button>
                                     ) : (
@@ -514,8 +600,12 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
                                             </div>
                                             <button 
                                                 onClick={() => handleAction("refunded", proof)}
-                                                disabled={acting}
-                                                className="w-full py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition shadow-md flex items-center justify-center gap-2">
+                                                disabled={acting || currentUser?.role === 'subadmin'}
+                                                className={`w-full py-3.5 font-bold rounded-xl transition shadow-md flex items-center justify-center gap-2 ${
+                                                    currentUser?.role === 'subadmin'
+                                                        ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed select-none"
+                                                        : "bg-green-600 hover:bg-green-700 text-white"
+                                                }`}>
                                                 {acting ? "Updating..." : "✓ Mark as Refunded"}
                                             </button>
                                         </div>

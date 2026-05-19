@@ -1,4 +1,4 @@
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import {
     BrowserRouter as Router,
     Routes,
@@ -309,6 +309,17 @@ const AppContent = () => {
     );
 };
 
+// ─── Scroll To Top ────────────────────────────────────────────────────────────
+const ScrollToTop = () => {
+    const { pathname } = useLocation();
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [pathname]);
+
+    return null;
+};
+
 // ─── App Root ─────────────────────────────────────────────────────────────────
 function App() {
     return (
@@ -317,6 +328,7 @@ function App() {
         <UIProvider>
             <CartProvider>
                 <Router>
+                    <ScrollToTop />
                     <AppContent />
                 </Router>
             </CartProvider>

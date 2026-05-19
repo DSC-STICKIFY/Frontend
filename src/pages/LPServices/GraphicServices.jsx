@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useProducts } from '../../context/ProductsContext';
 import cart from '../../assets/servicesImgIcon/graphicservices/cart.svg';
-import ModalGraphicServices from '../../components/ModalGraphicServices.jsx';
+import ModalMoreStickers from '../../components/productmodal/ModalMoreStickers.jsx';
 import StoreLocation from '../../components/StoreLocation.jsx';
 import { getImageUrl } from '../../services/api.js';
 import PromoTag from '../../components/PromoTag'; 
@@ -256,21 +256,10 @@ const GraphicServices = () => {
 
             <StoreLocation />
 
-            {/* Modal */}
             {selectedItem && (
-                <ModalGraphicServices
+                <ModalMoreStickers
+                    sticker={selectedItem}
                     onClose={() => setSelectedItem(null)}
-                    product={{
-                        ...selectedItem,
-                        category: selectedItem.category,
-                        price: selectedItem.discounted_price ?? selectedItem.price,
-                        originalPrice: selectedItem.originalPrice,
-                        tier: selectedItem.tier,
-                        type: selectedItem.type,
-                        packageInclusions: selectedItem.packageInclusions,
-                        timeline: selectedItem.timeline,
-                        payment: selectedItem.payment,
-                    }}
                 />
             )}
         </>
@@ -282,7 +271,7 @@ const ServiceCard = ({ item, onSelect, isMoto }) => {
     const hasDiscount = item.discounted_price !== null && item.discounted_price < item.originalPrice;
     
     return (
-        <div className='w-full cursor-pointer' onClick={() => onSelect(item)}>
+        <div className='w-full cursor-pointer group' onClick={() => onSelect(item)}>
             <div className='rounded-2xl overflow-hidden h-[160px] sm:h-[250px] relative bg-gray-50'>
                 <img 
                     src={getImageUrl(item.image)} 
@@ -290,9 +279,15 @@ const ServiceCard = ({ item, onSelect, isMoto }) => {
                     className='w-full h-full object-contain transition hover:scale-110' 
                 />
                 <PromoTag promo={item.promo} />
-                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
-                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
-                      </span>
+                      {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#FDE31E] text-black border border-yellow-400/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#ffe838] select-none pointer-events-none">
+                          Customizable
+                        </span>
+                      ) : (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#0B132A] text-white border border-slate-700/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#152244] select-none pointer-events-none">
+                          Ready Made
+                        </span>
+                      )}
             </div>
             <div className='font-semibold mt-2'>
                 <p className='text-md'>{item.tier}</p>

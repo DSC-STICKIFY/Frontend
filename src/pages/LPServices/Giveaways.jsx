@@ -1,10 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useProducts } from '../../context/ProductsContext';
 import cart from '../../assets/servicesImgIcon/graphicservices/cart.svg';
-import ModalGiveawaysMugnShirt from '../../components/ModalGiveawaysMugnShirt.jsx';
-import ModalGiveawaysStandeenTarpulin from '../../components/ModalGiveawaysStandeenTarpulin.jsx'
-import ModalGiveawayMore from '../../components/ModalGiveawayMore.jsx';
-import ModalGiveawayCallingCard from '../../components/ModalGiveawayCallingCard.jsx';
+import ModalMoreStickers from '../../components/productmodal/ModalMoreStickers.jsx';
 import StoreLocation from '../../components/StoreLocation.jsx';
 import defaultImg from '../../assets/servicesImgIcon/giveaways/standee.png';
 import { getImageUrl } from '../../services/api';
@@ -175,20 +172,10 @@ const Giveaways = () => {
             <StoreLocation />
 
             {selectedGiveaways && (
-                <>
-                    {selectedGiveaways.modalType === "standee-tarpulinModal" && (
-                        <ModalGiveawaysStandeenTarpulin giveaways={selectedGiveaways} onClose={() => setSelectedGiveaways(null)} />
-                    )}
-                    {selectedGiveaways.modalType === "mug-shirtModal" && (
-                        <ModalGiveawaysMugnShirt giveaways={selectedGiveaways} onClose={() => setSelectedGiveaways(null)} />
-                    )}
-                    {selectedGiveaways.modalType === "moreModal" && (
-                        <ModalGiveawayMore giveaways={selectedGiveaways} allMore={moreProducts} onClose={() => setSelectedGiveaways(null)} />
-                    )}
-                    {selectedGiveaways.modalType === "callingcardModal" && (
-                        <ModalGiveawayCallingCard giveaways={selectedGiveaways} onClose={() => setSelectedGiveaways(null)} />
-                    )}
-                </>
+                <ModalMoreStickers
+                    sticker={selectedGiveaways}
+                    onClose={() => setSelectedGiveaways(null)}
+                />
             )}
         </div>
     );
@@ -198,7 +185,7 @@ const GiveawayCard = ({ item, onSelect }) => {
     const hasDiscount = item.discounted_price !== null && item.discounted_price < item.originalPrice;
 
     return (
-        <div className="relative w-full">
+        <div className="relative w-full group">
             <div className='mt-4 h-fit rounded-[16px]'>
                 <div className="relative">
                     <img
@@ -208,9 +195,15 @@ const GiveawayCard = ({ item, onSelect }) => {
                         className='rounded-2xl w-full h-[250px] object-cover'
                     />
                     <PromoTag promo={item.promo} />
-                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
-                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
-                      </span>
+                                            {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#FDE31E] text-black border border-yellow-400/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#ffe838] select-none pointer-events-none">
+                          Customizable
+                        </span>
+                      ) : (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#0B132A] text-white border border-slate-700/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#152244] select-none pointer-events-none">
+                          Ready Made
+                        </span>
+                      )}
                 </div>
                 <div className="flex flex-col justify-between font-semibold mt-2">
                     <div>

@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import CustDBProductsLayout from '../../../layouts/CustDBProductsLayout.jsx';
 import { useProducts } from '../../../context/ProductsContext';
 import { getImageUrl, PLACEHOLDER_IMAGE } from '../../../services/api';
-import ModalCarServiceInquiry from '../../../components/ModalCarServiceInquiry.jsx';
+import ModalCarServiceInquiry from '../../../components/productmodal/ModalCarServiceInquiry.jsx';
 import ModalMotorServiceInquiry from '../../../components/modals/ModalMotorServiceInquiry.jsx';
 import StoreLocation from '../../../components/StoreLocation.jsx';
 
@@ -322,23 +322,6 @@ const DecalnWrap = () => {
             <div className="mb-32">
                 <SectionHeading 
                     sub="Cars & SUVs"
-                    filterDropdown={
-                        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
-                            {['All', 'Ready Made', 'Customizable'].map((opt) => (
-                                <button
-                                    key={opt}
-                                    onClick={() => setCarNatureFilter(opt)}
-                                    className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
-                                        carNatureFilter === opt 
-                                            ? 'bg-black text-white shadow-md' 
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
-                                >
-                                    {opt}
-                                </button>
-                            ))}
-                        </div>
-                    }
                 >Car Services</SectionHeading>
 
                 <div className="flex flex-col gap-8">
@@ -357,23 +340,6 @@ const DecalnWrap = () => {
             <div className="mb-32">
                 <SectionHeading 
                     sub="Bikes & Scooters"
-                    filterDropdown={
-                        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
-                            {['All', 'Ready Made', 'Customizable'].map((opt) => (
-                                <button
-                                    key={opt}
-                                    onClick={() => setMotorNatureFilter(opt)}
-                                    className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
-                                        motorNatureFilter === opt 
-                                            ? 'bg-black text-white shadow-md' 
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
-                                >
-                                    {opt}
-                                </button>
-                            ))}
-                        </div>
-                    }
                 >Motorbike Wrap & Decals</SectionHeading>
 
                 {motorServices.length === 0 ? (

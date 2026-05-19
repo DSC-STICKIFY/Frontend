@@ -7,6 +7,7 @@ import {
   deleteProduct,
 } from "../../services/ProductsService";
 import { getImageUrl, toArray, PLACEHOLDER_IMAGE } from "../../services/api";
+import ProductVariationsModal from "./ProductVariationsModal";
 
 
 const columnOrder = [
@@ -187,9 +188,9 @@ const Toast = ({ type = "success", message, onClose }) => {
   if (!message) return null;
 
   const colorMap = {
-    error:   { wrap: "bg-red-50 border-red-200 text-red-700",     bar: "bg-red-400" },
+    error: { wrap: "bg-red-50 border-red-200 text-red-700", bar: "bg-red-400" },
     deleted: { wrap: "bg-orange-50 border-orange-200 text-orange-700", bar: "bg-orange-400" },
-    updated: { wrap: "bg-blue-50 border-blue-200 text-blue-700",   bar: "bg-blue-400" },
+    updated: { wrap: "bg-blue-50 border-blue-200 text-blue-700", bar: "bg-blue-400" },
     success: { wrap: "bg-green-50 border-green-200 text-green-700", bar: "bg-green-400" },
   };
   const colors = colorMap[type] ?? colorMap.success;
@@ -235,6 +236,7 @@ const SuperAdminProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState("Stickers");
   const [selectedType, setSelectedType] = useState("Hologram");
   const [newProductImage, setNewProductImage] = useState(null);
+  const [activeVariationsProduct, setActiveVariationsProduct] = useState(null);
   const [formValues, setFormValues] = useState({
     product_name: "",
     product_price: "",
@@ -278,12 +280,12 @@ const SuperAdminProducts = () => {
       if (selectedType === "Car Service Layout") {
         setIsCarService(true);
         setIsMotorService(false);
-        setCarPriceMode(false); 
+        setCarPriceMode(false);
         setMultiPriceMode(false);
       } else if (selectedType === "Motor Service Layout") {
         setIsMotorService(true);
         setIsCarService(false);
-        setMultiPriceMode(false); 
+        setMultiPriceMode(false);
         setCarPriceMode(false);
       } else {
         setIsCarService(false);
@@ -611,7 +613,7 @@ const SuperAdminProducts = () => {
     formData.append("product_type", selectedType);
     formData.append("product_description", formValues.product_description || "");
     formData.append("is_customizable", formValues.is_customizable ? "1" : "0");
-    
+
     // Service Layout Fields
     formData.append("is_car_service", isCarService ? "1" : "0");
     formData.append("is_motor_service", isMotorService ? "1" : "0");
@@ -780,7 +782,7 @@ const SuperAdminProducts = () => {
 
       if (hasNewImage) formData.append("product_image", newImageFile);
       if (hasNewMap) formData.append("price_map_image", newMapFile);
-      
+
       dataToSend = formData;
     } else {
       dataToSend = { ...normalized, is_customizable: normalized.is_customizable ? 1 : 0 };
@@ -822,7 +824,7 @@ const SuperAdminProducts = () => {
       );
 
       const updatedImage = hasNewImage
-         ? `${updatedProduct.product_image}?t=${Date.now()}`
+        ? `${updatedProduct.product_image}?t=${Date.now()}`
         : updatedProduct.product_image;
 
       updateProductInState({ ...updatedProduct, product_image: updatedImage });
@@ -916,22 +918,20 @@ const SuperAdminProducts = () => {
               <button
                 key={cat}
                 onClick={() => setStatusFilter(cat)}
-                className={`pb-2 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                  statusFilter === cat
+                className={`pb-2 border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${statusFilter === cat
                     ? "border-[#FDE31E] font-bold text-gray-900"
                     : count === 0
-                    ? "text-gray-300 border-transparent hover:text-gray-400 hover:border-gray-200"
-                    : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
-                }`}
+                      ? "text-gray-300 border-transparent hover:text-gray-400 hover:border-gray-200"
+                      : "text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300"
+                  }`}
               >
                 {cat}
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                  statusFilter === cat
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${statusFilter === cat
                     ? 'bg-yellow-100 text-yellow-700'
                     : count === 0
-                    ? 'bg-gray-100 text-gray-300'
-                    : 'bg-gray-100 text-gray-500'
-                }`}>
+                      ? 'bg-gray-100 text-gray-300'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}>
                   {count}
                 </span>
               </button>
@@ -1038,6 +1038,17 @@ const SuperAdminProducts = () => {
           withBust={withBust}
           confirmDelete={confirmDelete}
           setConfirmDelete={setConfirmDelete}
+          setActiveVariationsProduct={setActiveVariationsProduct}
+        />
+      )}
+
+      {activeVariationsProduct && (
+        <ProductVariationsModal
+          product={activeVariationsProduct}
+          onClose={() => {
+            setActiveVariationsProduct(null);
+            loadProducts();
+          }}
         />
       )}
     </div>
@@ -1452,6 +1463,7 @@ const AddProductForm = ({
         )}
 
         {/* Product Nature */}
+        {selectedCategory !== "Decals & Wrap" && (
         <div>
           <label className="block text-sm font-semibold mb-2 text-gray-700">
             Product Nature <span className="text-red-500">*</span>
@@ -1470,6 +1482,7 @@ const AddProductForm = ({
             <option value="ready_made">Ready Made</option>
           </select>
         </div>
+        )}
 
         {/* Image (Standard) */}
         {!isCarService && !isMotorService && (
@@ -1522,6 +1535,7 @@ const ProductTable = ({
   withBust,
   confirmDelete,
   setConfirmDelete,
+  setActiveVariationsProduct,
 }) => (
   <div className="flex flex-col w-full overflow-hidden flex-1 rounded-2xl border border-gray-100 bg-white shadow-sm">
     <div className="border-b border-gray-100 px-6 py-4 bg-gray-50/50 flex items-center justify-between">
@@ -1548,9 +1562,11 @@ const ProductTable = ({
                   .replace(/\b\w/g, (l) => l.toUpperCase())}
               </th>
             ))}
-            <th className="px-4 py-4 text-center text-[10px] font-bold text-gray-400 uppercase w-[110px]">
-              Nature
-            </th>
+            {statusFilter !== "Decals & Wrap" && (
+              <th className="px-4 py-4 text-center text-[10px] font-bold text-gray-400 uppercase w-[110px]">
+                Nature
+              </th>
+            )}
             <th className="px-4 py-4 text-center text-[10px] font-bold text-gray-400 uppercase w-[90px]">
               Action
             </th>
@@ -1811,8 +1827,13 @@ const ProductTable = ({
                     ))}
 
                     {/* Nature / is_customizable column */}
+                    {statusFilter !== "Decals & Wrap" && (
                     <td className="px-4 py-4 text-center">
-                      {isEditing ? (
+                      {((item.product_category || '').toLowerCase().includes('decal') || (item.product_category || '').toLowerCase().includes('wrap') || item.is_car_service || item.is_motor_service) ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-lg text-[9px] font-black uppercase text-gray-400 border border-gray-200 bg-gray-50">
+                          Service Only
+                        </span>
+                      ) : isEditing ? (
                         <select
                           value={
                             tempValues.is_customizable !== undefined
@@ -1838,15 +1859,15 @@ const ProductTable = ({
                           <option value="ready_made">Ready Made</option>
                         </select>
                       ) : (
-                        <span className={`inline-flex items-center px-2 py-1 rounded-lg text-[9px] font-black uppercase ${
-                          item.is_customizable
+                        <span className={`inline-flex items-center px-2 py-1 rounded-lg text-[9px] font-black uppercase ${item.is_customizable
                             ? 'bg-blue-50 text-blue-600 border border-blue-100'
                             : 'bg-green-50 text-green-600 border border-green-100'
-                        }`}>
+                          }`}>
                           {item.is_customizable ? 'Customizable' : 'Ready Made'}
                         </span>
                       )}
                     </td>
+                    )}
 
                     <td className="px-4 py-4">
                       <div className="flex flex-col gap-1.5 items-center">
@@ -1891,6 +1912,12 @@ const ProductTable = ({
                               className="w-full bg-gray-900 text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase hover:bg-black transition-all shadow-sm active:scale-95"
                             >
                               Edit
+                            </button>
+                            <button
+                              onClick={() => setActiveVariationsProduct(item)}
+                              className="w-full bg-[#FDE31E] text-gray-900 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase hover:bg-yellow-400 transition-all shadow-sm active:scale-95"
+                            >
+                              Variations
                             </button>
                             {confirmDelete === item.product_id ? (
                               <div className="flex flex-col gap-1 w-full">

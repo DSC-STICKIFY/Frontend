@@ -47,7 +47,9 @@ export const CartProvider = ({ children }) => {
               (i) =>
                 i.productId === guestItem.productId &&
                 i.size === guestItem.size &&
-                i.type === guestItem.type
+                i.type === guestItem.type &&
+                i.designId === guestItem.designId &&
+                i.qualityId === guestItem.qualityId
             );
             if (existingIdx !== -1) {
               merged[existingIdx] = {
@@ -95,7 +97,9 @@ export const CartProvider = ({ children }) => {
         (i) =>
           i.productId === item.productId &&
           i.size === item.size &&
-          i.type === item.type
+          i.type === item.type &&
+          i.designId === item.designId &&
+          i.qualityId === item.qualityId
       );
       if (existingIdx !== -1) {
         const updated = [...prev];
@@ -122,6 +126,10 @@ export const CartProvider = ({ children }) => {
           type:          item.type          || "",
           category:      item.category      || "",
           designImage:   item.designImage   || null,
+          designId:      item.designId      || null,
+          designName:    item.designName    || null,
+          qualityId:     item.qualityId     || null,
+          qualityName:   item.qualityName   || null,
           cartId:        `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         },
       ];

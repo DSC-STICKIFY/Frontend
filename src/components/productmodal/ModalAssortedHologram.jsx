@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo , useRef} from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/CustomerAuthContext";
-import { useCart } from "../context/CartContext";
-import { sendCustomerMessage } from "../services/MessageAPI";
-import { useUI } from "../context/UIContext";
-import LoginRegisterModal from "./LoginRegisterModal";
-import CartToast from "./CartToast";
-import DesignChatbox from "./DesignChatbox";
-import { getDiscountedPrice } from "./PromoTag";
-import { getImageUrl } from "../services/api";
+import { useAuth } from "../../context/CustomerAuthContext";
+import { useCart } from "../../context/CartContext";
+import { sendCustomerMessage } from "../../services/MessageAPI";
+import { useUI } from "../../context/UIContext";
+import LoginRegisterModal from "../LoginRegisterModal";
+import CartToast from "../CartToast";
+import DesignChatbox from "../DesignChatbox";
+import { getDiscountedPrice } from "../PromoTag";
+import { getImageUrl } from "../../services/api";
 
 const formatPrice = (price) => {
   if (price === undefined || price === null) return "0.00";
@@ -21,6 +21,18 @@ const formatPrice = (price) => {
 const CHECKOUT_STORAGE_KEY = "stickify_checkout_data";
 
 const ModalAssortedHologram = ({ sticker, product, onClose }) => {
+  const rightPanelRef = useRef(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (rightPanelRef.current) {
+        rightPanelRef.current.scrollTop = 0;
+        // Also scroll the window/body just in case
+        window.scrollTo(0, 0);
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, []);
+
   const navigate = useNavigate();
   const { setCheckoutData } = useUI();
   const { currentUser, isVerified } = useAuth();
@@ -30,6 +42,10 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
 
   const title = item.product_name || item.title || "Hologram Set";
   const category = item.category || "Hologram";
+  
+  const isCustomizableProduct = item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined;
+  const isCustomMode = isCustomizableProduct;
+
   const rawPrice = useMemo(() => {
     const raw = item.product_price || item.price || "0";
     return parseFloat(String(raw).replace(/[^0-9.]/g, '')) || 0;
@@ -70,12 +86,13 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
     type: item.type || "Hologram",
     subtotal,
     initialPaymentMethod: paymentMethod,
-    designImage: uploadedImage?.preview || null,
+    customMode: isCustomMode ? "custom" : "standard",
+    designImage: isCustomMode ? (uploadedImage?.preview || null) : null,
     timestamp: Date.now()
   });
 
   const handleBuyNow = async () => {
-    if (!uploadedImage?.preview) { setSubmitError("Please upload your design first."); return; }
+    if (isCustomMode && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return; }
     if (!paymentMethod) {
       setSubmitError("Please select a payment method.");
       return;
@@ -94,7 +111,7 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
     setSubmitError(null);
 
     try {
-      if (uploadedImage?.preview) {
+      if (isCustomMode && uploadedImage?.preview) {
         const inquiryBody = `[DESIGN] Interested in hologram set: ${title}. Qty: ${quantity}. Subtotal: ₱${formatPrice(subtotal)}.`;
         await sendCustomerMessage(inquiryBody, null, item.product_id || item.id);
       }
@@ -110,7 +127,7 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
   };
 
   const handleAddToCart = () => {
-    if (!uploadedImage?.preview) { setSubmitError("Please upload your design first."); return; }
+    if (isCustomMode && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return; }
     if (!paymentMethod) { setSubmitError("Please select a payment method."); return; }
     const p = buildPayload();
     addItem({
@@ -125,6 +142,7 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
       quantity: p.quantity,
       category: p.category,
       type: p.type,
+      customMode: p.customMode,
       designImage: p.designImage
     });
     setShowToast(true);
@@ -206,21 +224,30 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
                   </div>
                 </div>
               </div>
-
-              {/* Design Chatbox — takes all remaining vertical space */}
-              <div className="flex-1 min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
-                <DesignChatbox 
-                  onImageUpload={(img) => {
-                    setUploadedImage({ preview: img });
-                    setSubmitError(null);
-                  }} 
-                  productId={item.product_id || item.id}
-                />
+                   {/* Design Chatbox — takes all remaining vertical space */}
+              <div className="flex-1 min-h-[300px] md:min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
+                {isCustomMode ? (
+                  <DesignChatbox 
+                    onImageUpload={(img) => {
+                      setUploadedImage({ preview: img });
+                      setSubmitError(null);
+                    }} 
+                    productId={item.product_id || item.id}
+                  />
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center p-6 bg-white rounded-3xl border border-gray-100 shadow-sm text-center">
+                    <span className="text-4xl mb-3">📦</span>
+                    <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Standard / Readymade Order</h4>
+                    <p className="text-xs text-gray-400 mt-2 max-w-[280px]">
+                      This product will be printed using the standard/default design shown in the preview. No design files or artist approvals are needed.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* RIGHT panel */}
-            <div className="w-full md:w-1/2 p-6 overflow-y-auto custom-scrollbar bg-white flex flex-col">
+            <div ref={rightPanelRef} className="w-full md:w-1/2 p-6 overflow-y-auto custom-scrollbar bg-white flex flex-col">
               <div className="flex-1 space-y-4">
                 <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group">
                   <img
@@ -286,20 +313,20 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
               <div className="mt-4 space-y-4">
                 <button
                   onClick={handleBuyNow}
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || !uploadedImage?.preview}
+                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
-                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || !uploadedImage?.preview)
+                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed"
                       : "bg-[#FFE100] text-black hover:bg-yellow-400 "
                     }`}
                 >
-                  {!uploadedImage?.preview ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
+                  {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
                 <button
                   onClick={handleAddToCart}
-                  disabled={subtotal <= 0 || !uploadedImage?.preview}
+                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                    ${!uploadedImage?.preview ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                    ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >
                   Add to Cart
                 </button>

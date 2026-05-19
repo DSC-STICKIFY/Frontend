@@ -7,8 +7,7 @@ import PromoTag from '../../../components/PromoTag';
 import bg from '../../../assets/servicesImgIcon/stickers/servicesBG.png';
 import cart from '../../../assets/servicesImgIcon/stickers/cart.svg';
 
-import ModalAssortedHologram from '../../../components/ModalAssortedHologram.jsx';
-import ModalMoreStickers from '../../../components/ModalMoreStickers.jsx';
+import ModalMoreStickers from '../../../components/productmodal/ModalMoreStickers.jsx';
 import { getImageUrl } from '../../../services/api';
 
 // ── Price Display — only shows strikethrough if discounted < original ─────────
@@ -230,9 +229,15 @@ const Sticker = () => {
                     onClick={() => handleSelect(item)}
                   >
                     <PromoTag promo={item.applied_promo} />
-                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
-                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
-                      </span>
+                                            {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#FDE31E] text-black border border-yellow-400/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#ffe838] select-none pointer-events-none">
+                          Customizable
+                        </span>
+                      ) : (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#0B132A] text-white border border-slate-700/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#152244] select-none pointer-events-none">
+                          Ready Made
+                        </span>
+                      )}
                     <img
                       src={getImageUrl(item.image)}
                       className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
@@ -312,9 +317,15 @@ const Sticker = () => {
                     onClick={() => handleSelect(item)}
                   >
                     <PromoTag promo={item.applied_promo} />
-                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
-                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
-                      </span>
+                                            {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#FDE31E] text-black border border-yellow-400/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#ffe838] select-none pointer-events-none">
+                          Customizable
+                        </span>
+                      ) : (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#0B132A] text-white border border-slate-700/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#152244] select-none pointer-events-none">
+                          Ready Made
+                        </span>
+                      )}
                     <img
                       src={getImageUrl(item.image)}
                       className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
@@ -365,11 +376,7 @@ const Sticker = () => {
         </div>
       )}
 
-      {/* Modals */}
-      {selectedSticker?.modalType === "assorted" && (
-        <ModalAssortedHologram sticker={selectedSticker} onClose={() => setSelectedSticker(null)} />
-      )}
-      {selectedSticker?.modalType === "more" && (
+      {selectedSticker && (
         <ModalMoreStickers sticker={selectedSticker} onClose={() => setSelectedSticker(null)} />
       )}
 

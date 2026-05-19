@@ -113,6 +113,62 @@ export const fetchGraphicServices = async () =>
   fetchCategory("/productGraphicServices");
 export const fetchGiveaways = async () => fetchCategory("/productGiveaways");
 
+/* ================= VARIATION FUNCTIONS ================= */
+
+export const addDesign = async (productId, formData) => {
+  try {
+    const response = await api.post(`/products/${productId}/designs`, formData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const removeDesign = async (designId) => {
+  try {
+    const response = await api.delete(`/products/designs/${designId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const addQuality = async (productId, data) => {
+  try {
+    const response = await api.post(`/products/${productId}/qualities`, data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const removeQuality = async (qualityId) => {
+  try {
+    const response = await api.delete(`/products/qualities/${qualityId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const addSize = async (productId, data) => {
+  try {
+    const response = await api.post(`/products/${productId}/sizes`, data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const removeSize = async (sizeId) => {
+  try {
+    const response = await api.delete(`/products/sizes/${sizeId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export default {
   fetchProductList,
   fetchAllProducts,
@@ -120,4 +176,10 @@ export default {
   addProduct,
   updateProduct,
   deleteProduct,
+  addDesign,
+  removeDesign,
+  addQuality,
+  removeQuality,
+  addSize,
+  removeSize,
 };

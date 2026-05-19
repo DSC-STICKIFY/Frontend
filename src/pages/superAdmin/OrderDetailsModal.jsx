@@ -211,6 +211,18 @@ const OrderDetailsModal = ({ order, onClose }) => {
                               <p className="font-semibold text-gray-900 capitalize">{item.size}</p>
                             </div>
                           )}
+                          {item.design_name && (
+                            <div>
+                              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Design</span>
+                              <p className="font-semibold text-gray-900 capitalize">{item.design_name}</p>
+                            </div>
+                          )}
+                          {item.quality_name && (
+                            <div>
+                              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Material/Quality</span>
+                              <p className="font-semibold text-gray-900 capitalize">{item.quality_name}</p>
+                            </div>
+                          )}
                           {item.pieces && item.pieces !== "0" && (
                             <div>
                               <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Pieces</span>
@@ -241,6 +253,7 @@ const OrderDetailsModal = ({ order, onClose }) => {
                                 "order_id", "created_at", "updated_at", "product", "category",
                                 "productName", "name", "title", "product_type", "type",
                                 "size", "pieces", "tier", "items_price", "price", "product_price",
+                                "design_name", "quality_name"
                               ];
                               return !skip.includes(key) && value && value !== "None" && value !== "null" && value !== "0";
                             })

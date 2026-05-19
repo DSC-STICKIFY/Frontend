@@ -70,6 +70,7 @@ const flattenOrderToItems = (order) => {
             delivery_deadline:     order.delivery_deadline || null,
             return_window_seconds: order.return_window_seconds ?? null,
             return_deadline:       order.return_deadline ?? null,
+            is_customizable:       order.is_customizable !== undefined ? order.is_customizable : 1,
             _originalOrder:        order,
         });
     } else {
@@ -97,6 +98,7 @@ const flattenOrderToItems = (order) => {
                 delivery_deadline:     order.delivery_deadline || null,
                 return_window_seconds: item.return_window_seconds ?? order.return_window_seconds ?? null,
                 return_deadline:       item.return_deadline ?? order.return_deadline ?? null,
+                is_customizable:       item.is_customizable !== undefined ? item.is_customizable : (product.is_customizable !== undefined ? product.is_customizable : 1),
                 _originalOrder:        order,
             });
         });
@@ -1013,26 +1015,37 @@ const UserOrdersModal = ({ user, statusFilter = "All", onClose, onRefresh, actio
                     </div>
                 );
 
-            case "To Process":
+            case "To Process": {
+                const isCustomizable = row.is_customizable !== 0 && 
+                                       row.is_customizable !== false && 
+                                       row.is_customizable !== "0" && 
+                                       row.is_customizable !== null && 
+                                       row.is_customizable !== undefined;
                 return (
-                    <div className="flex gap-1.5 justify-center flex-wrap">
-                        {row._originalOrder.artist_id ? (
-                            <div className="flex flex-col items-center gap-1">
-                                <span className="text-[10px] font-black text-green-600 uppercase tracking-widest bg-green-50 px-3 py-1.5 rounded-lg border border-green-100">
-                                    Assigned ✓
-                                </span>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); setAssigningOrder(row._originalOrder); setIsAssignModalOpen(true); }}
-                                    className="text-[9px] font-bold text-gray-400 hover:text-black underline uppercase"
-                                >
-                                    Change
+                    <div className="flex gap-1.5 justify-center items-center flex-wrap">
+                        {isCustomizable ? (
+                            row._originalOrder.artist_id ? (
+                                <div className="flex flex-col items-center gap-1">
+                                    <span className="text-[10px] font-black text-green-600 uppercase tracking-widest bg-green-50 px-3 py-1.5 rounded-lg border border-green-100">
+                                        Assigned ✓
+                                    </span>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); setAssigningOrder(row._originalOrder); setIsAssignModalOpen(true); }}
+                                        className="text-[9px] font-bold text-gray-400 hover:text-black underline uppercase"
+                                    >
+                                        Change
+                                    </button>
+                                </div>
+                            ) : (
+                                <button onClick={(e) => { e.stopPropagation(); setAssigningOrder(row._originalOrder); setIsAssignModalOpen(true); }}
+                                    className="bg-yellow-400 hover:bg-yellow-500 text-black text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition shadow-sm">
+                                    Assign Artist
                                 </button>
-                            </div>
+                            )
                         ) : (
-                            <button onClick={(e) => { e.stopPropagation(); setAssigningOrder(row._originalOrder); setIsAssignModalOpen(true); }}
-                                className="bg-yellow-400 hover:bg-yellow-500 text-black text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition shadow-sm">
-                                Assign Artist
-                            </button>
+                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest bg-gray-100 px-2.5 py-1.5 rounded-lg border border-gray-200 select-none">
+                                Ready Made
+                            </span>
                         )}
                         
                         <button onClick={async (e) => {
@@ -1046,6 +1059,7 @@ const UserOrdersModal = ({ user, statusFilter = "All", onClose, onRefresh, actio
                         </button>
                     </div>
                 );
+            }
 
             case "Shipment Approved":
             case "To Ship":

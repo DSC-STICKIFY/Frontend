@@ -84,25 +84,46 @@ const QtyControl = ({ item, updateQuantity }) => (
 );
 
 const CustomerCart = () => {
-    const { cartItems, removeItem, updateQuantity, clearCart, subtotal } = useCart();
+    const { cartItems, removeItem, updateQuantity, clearCart } = useCart();
     const { setCheckoutData } = useUI();
     const navigate = useNavigate();
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [uncheckedCartIds, setUncheckedCartIds] = useState([]);
 
-    const SHIPPING_FEE = 100;
-    const safeSubtotal = Number(subtotal) || 0;
+    const selectedItems = cartItems.filter(item => !uncheckedCartIds.includes(item.cartId));
+    const safeSubtotal = selectedItems.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+    const SHIPPING_FEE = selectedItems.length > 0 ? 100 : 0;
     const total = safeSubtotal + SHIPPING_FEE;
+
+    const isAllSelected = cartItems.length > 0 && selectedItems.length === cartItems.length;
+
+    const handleToggleAll = () => {
+        if (isAllSelected) {
+            setUncheckedCartIds(cartItems.map(item => item.cartId));
+        } else {
+            setUncheckedCartIds([]);
+        }
+    };
+
+    const handleToggleItem = (cartId) => {
+        if (uncheckedCartIds.includes(cartId)) {
+            setUncheckedCartIds(prev => prev.filter(id => id !== cartId));
+        } else {
+            setUncheckedCartIds(prev => [...prev, cartId]);
+        }
+    };
 
     const handleConfirmDelete = () => {
         if (deleteTarget?.cartId) {
             removeItem(deleteTarget.cartId);
+            setUncheckedCartIds(prev => prev.filter(id => id !== deleteTarget.cartId));
             setDeleteTarget(null);
         }
     };
 
-    // Build a consistent checkout payload from the full cart
+    // Build a consistent checkout payload from the selected items
     const buildCheckoutPayload = () => ({
-        cartItems: cartItems.map((item) => ({
+        cartItems: selectedItems.map((item) => ({
             productId:   item.productId,
             title:       item.title       || "Signage Product",
             price:       Number(item.price) || 0,
@@ -116,22 +137,22 @@ const CustomerCart = () => {
         })),
         // Keep legacy single-product fields for backwards compat with checkout page
         product: {
-            id:            cartItems[0]?.productId,
-            title:         cartItems[0]?.title         || "Signage Product",
-            price:         Number(cartItems[0]?.price)  || 0,
-            product_image: cartItems[0]?.image          || null,
+            id:            selectedItems[0]?.productId,
+            title:         selectedItems[0]?.title         || "Signage Product",
+            price:         Number(selectedItems[0]?.price)  || 0,
+            product_image: selectedItems[0]?.image          || null,
         },
-        quantity:            Number(cartItems[0]?.quantity)  || 1,
-        size:                cartItems[0]?.size               || null,
-        pieces:              Number(cartItems[0]?.pieces)     || 0,
-        type:                cartItems[0]?.type               || "Signage",
-        category:            cartItems[0]?.category           || "Signage",
-        designImage:         cartItems[0]?.designImage        || null,
+        quantity:            Number(selectedItems[0]?.quantity)  || 1,
+        size:                selectedItems[0]?.size               || null,
+        pieces:              Number(selectedItems[0]?.pieces)     || 0,
+        type:                selectedItems[0]?.type               || "Signage",
+        category:            selectedItems[0]?.category           || "Signage",
+        designImage:         selectedItems[0]?.designImage        || null,
         initialPaymentMethod: "COD",
     });
 
     const handleCheckout = () => {
-        if (cartItems.length === 0) return;
+        if (selectedItems.length === 0) return;
         setCheckoutData(buildCheckoutPayload());
         navigate("/customer-checkout", { replace: true });
     };
@@ -188,11 +209,19 @@ const CustomerCart = () => {
                     {/* Header */}
                     <div className="px-6 pt-6 pb-4 border-b border-gray-100">
                         <div className="flex items-center justify-between">
-                            <div>
-                                <h1 className="text-2xl font-bold text-gray-800">Shopping Cart</h1>
-                                <p className="text-sm text-gray-400 mt-0.5">
-                                    {cartItems.length} item{cartItems.length !== 1 ? 's' : ''} in your cart
-                                </p>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={isAllSelected}
+                                    onChange={handleToggleAll}
+                                    className="w-5 h-5 rounded border-gray-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer accent-[#FDE31E] transition"
+                                />
+                                <div>
+                                    <h1 className="text-2xl font-bold text-gray-800">Shopping Cart</h1>
+                                    <p className="text-sm text-gray-400 mt-0.5">
+                                        {selectedItems.length} of {cartItems.length} item{cartItems.length !== 1 ? 's' : ''} selected
+                                    </p>
+                                </div>
                             </div>
                             <button
                                 onClick={() => { if (window.confirm("Clear all items from cart?")) clearCart(); }}
@@ -209,15 +238,26 @@ const CustomerCart = () => {
                         {cartItems.map((item) => {
                             const itemPrice = Number(item.price) || 0;
                             const lineTotal = itemPrice * (Number(item.quantity) || 1);
+                            const isSelected = !uncheckedCartIds.includes(item.cartId);
 
                             return (
                                 <div key={item.cartId}
-                                    className="group flex items-center gap-4 p-4 rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-sm transition bg-white">
+                                    className={`group flex items-center gap-4 p-4 rounded-2xl border transition bg-white ${
+                                        isSelected ? 'border-gray-200 shadow-sm' : 'border-gray-100 opacity-75'
+                                    }`}>
+
+                                    {/* Item Checkbox */}
+                                    <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => handleToggleItem(item.cartId)}
+                                        className="w-5 h-5 rounded border-gray-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer accent-[#FDE31E] transition flex-shrink-0"
+                                    />
 
                                     {/* Product Image */}
                                     <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0">
                                         <img
-                                            src={item.designImage || getImageUrl(item.image)}
+                                            src={item.designImage ? getImageUrl(item.designImage) : getImageUrl(item.image)}
                                             alt={item.title || "Product"}
                                             className="w-full h-full object-cover"
                                             onError={(e) => { e.target.src = '/placeholder.png'; }}
@@ -281,7 +321,7 @@ const CustomerCart = () => {
 
                     <div className="flex-1 space-y-3">
                         <div className="flex justify-between text-sm text-gray-500">
-                            <span>Items ({cartItems.length})</span>
+                            <span>Items Selected ({selectedItems.length})</span>
                             <span className="text-gray-700 font-medium">₱{formatPrice(safeSubtotal)}</span>
                         </div>
                         <div className="flex justify-between text-sm text-gray-500">
@@ -299,9 +339,9 @@ const CustomerCart = () => {
                         </div>
                     </div>
 
-                    {/* Mini Breakdown */}
-                    <div className="mt-6 mb-6 space-y-2 text-xs text-gray-400">
-                        {cartItems.map((item) => (
+                    {/* Mini Breakdown of Selected Items */}
+                    <div className="mt-6 mb-6 space-y-2 text-xs text-gray-400 max-h-32 overflow-y-auto pr-1">
+                        {selectedItems.map((item) => (
                             <div key={item.cartId} className="flex justify-between">
                                 <span className="truncate max-w-[170px]">
                                     {item.title || "Item"} × {Number(item.quantity) || 1}
@@ -311,14 +351,22 @@ const CustomerCart = () => {
                                 </span>
                             </div>
                         ))}
+                        {selectedItems.length === 0 && (
+                            <p className="text-center text-gray-300 italic py-2">No items selected</p>
+                        )}
                     </div>
 
                     <div className="space-y-3 mt-auto">
                         <button
                             onClick={handleCheckout}
-                            className="w-full bg-[#FDE31E] hover:bg-yellow-400 text-black py-3.5 rounded-xl font-bold transition shadow-sm"
+                            disabled={selectedItems.length === 0}
+                            className={`w-full py-3.5 rounded-xl font-bold transition shadow-sm flex items-center justify-center gap-2 ${
+                                selectedItems.length > 0
+                                    ? "bg-[#FDE31E] hover:bg-yellow-400 text-black active:scale-95"
+                                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                            }`}
                         >
-                            Proceed to Checkout →
+                            Proceed to Checkout ({selectedItems.length}) →
                         </button>
                         <button
                             onClick={() => navigate('/customer-dashboard')}
@@ -334,11 +382,19 @@ const CustomerCart = () => {
             <div className="lg:hidden pt-16 pb-10 min-h-screen bg-gray-50">
                 {/* Sticky Header */}
                 <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3 shadow-sm flex items-center justify-between">
-                    <div>
-                        <h1 className="text-lg font-bold text-gray-800">Shopping Cart</h1>
-                        <p className="text-xs text-gray-400">
-                            {cartItems.length} item{cartItems.length !== 1 ? 's' : ''}
-                        </p>
+                    <div className="flex items-center gap-3">
+                        <input
+                            type="checkbox"
+                            checked={isAllSelected}
+                            onChange={handleToggleAll}
+                            className="w-5 h-5 rounded border-gray-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer accent-[#FDE31E] transition"
+                        />
+                        <div>
+                            <h1 className="text-lg font-bold text-gray-800">Shopping Cart</h1>
+                            <p className="text-xs text-gray-400">
+                                {selectedItems.length} of {cartItems.length} selected
+                            </p>
+                        </div>
                     </div>
                     <button
                         onClick={() => { if (window.confirm("Clear all items from cart?")) clearCart(); }}
@@ -352,13 +408,24 @@ const CustomerCart = () => {
                     {cartItems.map((item) => {
                         const itemPrice = Number(item.price) || 0;
                         const lineTotal = itemPrice * (Number(item.quantity) || 1);
+                        const isSelected = !uncheckedCartIds.includes(item.cartId);
 
                         return (
-                            <div key={item.cartId} className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex gap-3">
+                            <div key={item.cartId} className={`bg-white border rounded-2xl p-4 shadow-sm flex items-center gap-3 transition ${
+                                isSelected ? 'border-gray-100' : 'border-gray-50 opacity-75'
+                            }`}>
+                                {/* Item Checkbox */}
+                                <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handleToggleItem(item.cartId)}
+                                    className="w-5 h-5 rounded border-gray-300 text-yellow-500 focus:ring-yellow-400 cursor-pointer accent-[#FDE31E] transition flex-shrink-0"
+                                />
+
                                 {/* Image */}
-                                <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0">
+                                <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 flex-shrink-0">
                                     <img
-                                        src={item.designImage || getImageUrl(item.image)}
+                                        src={item.designImage ? getImageUrl(item.designImage) : getImageUrl(item.image)}
                                         alt={item.title || "Product"}
                                         className="w-full h-full object-cover"
                                         onError={(e) => { e.target.src = '/placeholder.png'; }}
@@ -414,7 +481,7 @@ const CustomerCart = () => {
 
                         <div className="space-y-3">
                             <div className="flex justify-between text-sm text-gray-500">
-                                <span>Merchandise Subtotal</span>
+                                <span>Items Selected ({selectedItems.length})</span>
                                 <span className="font-semibold text-gray-700">₱{formatPrice(safeSubtotal)}</span>
                             </div>
                             <div className="flex justify-between text-sm text-gray-500">
@@ -430,9 +497,14 @@ const CustomerCart = () => {
                         <div className="mt-6 space-y-3">
                             <button
                                 onClick={handleCheckout}
-                                className="w-full bg-[#FDE31E] hover:bg-yellow-400 text-black font-bold py-3.5 rounded-xl transition shadow-sm"
+                                disabled={selectedItems.length === 0}
+                                className={`w-full py-3.5 rounded-xl font-bold transition shadow-sm flex items-center justify-center gap-2 ${
+                                    selectedItems.length > 0
+                                        ? "bg-[#FDE31E] hover:bg-yellow-400 text-black"
+                                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                }`}
                             >
-                                Proceed to Checkout →
+                                Proceed to Checkout ({selectedItems.length}) →
                             </button>
                             <button
                                 onClick={() => navigate('/customer-dashboard')}

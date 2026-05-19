@@ -3,16 +3,16 @@ import { useProducts } from "../../context/ProductsContext";
 import { IMAGE_BASE_URL } from "../../services/api";
 import PromoTag, { getBestPromo, getDiscountedPrice } from "../../components/PromoTag";
 import { useState, useCallback } from "react";
-import ModalPrinting from "../../components/ModalPrinting";
-import ModalMoreStickers from "../../components/ModalMoreStickers";
-import ModalGraphicServices from "../../components/ModalGraphicServices";
-import ModalGiveawaysStandeenTarpulin from "../../components/ModalGiveawaysStandeenTarpulin";
-import ModalGiveawaysMugnShirt from "../../components/ModalGiveawaysMugnShirt";
-import ModalGiveawayMore from "../../components/ModalGiveawayMore";
-import ModalSignage from "../../components/ModalSignage";
+import ModalPrinting from "../../components/productmodal/ModalPrinting.jsx";
+import ModalMoreStickers from "../../components/productmodal/ModalMoreStickers.jsx";
+import ModalGraphicServices from "../../components/productmodal/ModalGraphicServices.jsx";
+import ModalGiveawaysStandeenTarpulin from "../../components/productmodal/ModalGiveawaysStandeenTarpulin.jsx";
+import ModalGiveawaysMugnShirt from "../../components/productmodal/ModalGiveawaysMugnShirt.jsx";
+import ModalGiveawayMore from "../../components/productmodal/ModalGiveawayMore.jsx";
+import ModalSignage from "../../components/productmodal/ModalSignage.jsx";
 import { buildReceiptHTML, buildProductPrintHTML, handleBrowserPrint, getLogoBase64, PrintIcon } from '../../services/PrintingService.jsx';
 import noImage from "../../assets/no_image.png";
-import ModalCarServiceInquiry from "../../components/ModalCarServiceInquiry";
+import ModalCarServiceInquiry from "../../components/productmodal/ModalCarServiceInquiry.jsx";
 import ModalMotorServiceInquiry from "../../components/modals/ModalMotorServiceInquiry";
 // HMR Trigger 1
 // HMR Trigger 2
@@ -46,33 +46,7 @@ const CustomerProducts = () => {
     const handleViewProduct = useCallback((product) => {
         const category = (product.category || product.product_category || "").toLowerCase().trim();
 
-        if (category === "stickers" || category === "sticker") {
-            setSelectedSticker({
-                ...product,
-                modalType: "more",
-                title: product.name || product.product_name || "Sticker",
-                image: product.image || product.product_image,
-                price: `₱${parseFloat(product.price || 0).toLocaleString("en-PH")}`,
-                description: product.description || product.product_description || "",
-            });
-        }
-        else if (category.includes("graphic") || category.includes("logo")) {
-            setSelectedGraphicItem(product);
-        }
-        else if (category.includes("giveaway")) {
-            const modalType = getModalType(product.type, product.name);
-            setSelectedGiveaway({ ...product, modalType, giveaways: product });
-        }
-        else if (category.includes("sign")) {
-            setSelectedSignage({
-                modalType: "signageModal",
-                signage: { ...product, title: product.name || product.product_name }
-            });
-        }
-        else if (category === "printing" || category.includes("print")) {
-            setSelectedPrintingItem(product);
-        }
-        else if (category.includes("decal") || category.includes("wrap")) {
+        if (category.includes("decal") || category.includes("wrap")) {
             const name = (product.name || product.product_name || "").toLowerCase();
             const type = (product.type || product.product_type || "").toLowerCase();
             if (name.includes("motor") || name.includes("bike") || name.includes("mio") || name.includes("yamaha") || name.includes("honda") || name.includes("scooter") || type.includes("motor")) {
@@ -80,6 +54,15 @@ const CustomerProducts = () => {
             } else {
                 setSelectedCarInquiry(product);
             }
+        } else {
+            setSelectedSticker({
+                ...product,
+                modalType: "more",
+                title: product.name || product.product_name || "Product",
+                image: product.image || product.product_image,
+                price: parseFloat(product.price || product.product_price || 0),
+                description: product.description || product.product_description || "",
+            });
         }
     }, []);
 
@@ -163,9 +146,15 @@ const CustomerProducts = () => {
                         }}
                     />
                     <PromoTag promo={bestPromo} />
-                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
-                        {(product.is_customizable !== 0 && product.is_customizable !== false && product.is_customizable !== "0" && product.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
-                      </span>
+                      {(product.is_customizable !== 0 && product.is_customizable !== false && product.is_customizable !== "0" && product.is_customizable !== undefined) ? (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#FDE31E] text-black border border-yellow-400">
+                          Customizable
+                        </span>
+                      ) : (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#0B132A] text-white border border-slate-700">
+                          Ready Made
+                        </span>
+                      )}
                     {product.featured && (
                         <span className="absolute top-3 right-3 bg-yellow-400 text-black text-xs font-bold px-3 py-1 rounded-full">
                             Featured
@@ -222,9 +211,15 @@ const CustomerProducts = () => {
                         }}
                     />
                     <PromoTag promo={bestPromo} />
-                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
-                        {(product.is_customizable !== 0 && product.is_customizable !== false && product.is_customizable !== "0" && product.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
-                      </span>
+                      {(product.is_customizable !== 0 && product.is_customizable !== false && product.is_customizable !== "0" && product.is_customizable !== undefined) ? (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#FDE31E] text-black border border-yellow-400">
+                          Customizable
+                        </span>
+                      ) : (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#0B132A] text-white border border-slate-700">
+                          Ready Made
+                        </span>
+                      )}
                 </div>
                 <div className="flex flex-col justify-between flex-1 min-w-0">
                     <div>

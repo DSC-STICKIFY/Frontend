@@ -5,10 +5,7 @@ import { useProducts } from '../../../context/ProductsContext';
 import PromoTag from '../../../components/PromoTag'; 
 
 // Components
-import ModalGiveawaysMugnShirt from '../../../components/ModalGiveawaysMugnShirt.jsx';
-import ModalGiveawaysStandeenTarpulin from '../../../components/ModalGiveawaysStandeenTarpulin.jsx';
-import ModalGiveawayMore from '../../../components/ModalGiveawayMore.jsx';
-import ModalGiveawayCallingCard from '../../../components/ModalGiveawayCallingCard.jsx';
+import ModalMoreStickers from '../../../components/productmodal/ModalMoreStickers.jsx';
 
 import defaultImage from '../../../assets/servicesImgIcon/giveaways/standee.png';
 
@@ -179,7 +176,7 @@ const Giveaways = () => {
                             {bestSellers.length > 0 ? (
                                 <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
                                     {bestSellers.map((item) => (
-                                    <div key={item.product_id} className="relative w-full">
+                                    <div key={item.product_id} className="relative w-full group">
                                         <div className='mt-4 h-fit rounded-[16px]'>
                                             {/*  */}
                                             <div className="relative">
@@ -190,9 +187,8 @@ const Giveaways = () => {
                                                     onError={(e) => { e.target.src = defaultImage; }}
                                                 />
                                                 <PromoTag promo={item.promo} />
-                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
-                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
-                      </span>
+
+
                                             </div>
                                             <div className="flex flex-col justify-between font-semibold mt-2">
                                                 <div>
@@ -253,7 +249,7 @@ const Giveaways = () => {
                             {moreProducts.length > 0 ? (
                                 <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full'>
                                     {moreProducts.map((item) => (
-                                    <div key={item.product_id} className="relative w-full">
+                                    <div key={item.product_id} className="relative w-full group">
                                         <div className='mt-4 h-fit rounded-[16px]'>
                                             <div className="relative">
                                                 <img
@@ -263,9 +259,15 @@ const Giveaways = () => {
                                                     onError={(e) => { e.target.src = defaultImage; }}
                                                 />
                                                 <PromoTag promo={item.promo} />
-                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
-                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
-                      </span>
+                                            {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#FDE31E] text-black border border-yellow-400/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#ffe838] select-none pointer-events-none">
+                          Customizable
+                        </span>
+                      ) : (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#0B132A] text-white border border-slate-700/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#152244] select-none pointer-events-none">
+                          Ready Made
+                        </span>
+                      )}
                                             </div>
                                             <div className="flex flex-col justify-between font-semibold mt-2">
                                                 <div>
@@ -308,29 +310,9 @@ const Giveaways = () => {
                 </>
             )}
 
-            {/* Modals - Dynamic Data Passing */}
-            {selectedGiveaways && selectedGiveaways.modalType === "standee-tarpulinModal" && (
-                <ModalGiveawaysStandeenTarpulin
-                    giveaways={selectedGiveaways}
-                    onClose={() => setSelectedGiveaways(null)}
-                />
-            )}
-            {selectedGiveaways && selectedGiveaways.modalType === "mug-shirtModal" && (
-                <ModalGiveawaysMugnShirt
-                    giveaways={selectedGiveaways}
-                    onClose={() => setSelectedGiveaways(null)}
-                />
-            )}
-            {selectedGiveaways && selectedGiveaways.modalType === "callingcardModal" && (
-                <ModalGiveawayCallingCard
-                    giveaways={selectedGiveaways}
-                    onClose={() => setSelectedGiveaways(null)}
-                />
-            )}
-            {selectedGiveaways && selectedGiveaways.modalType === "moreModal" && (
-                <ModalGiveawayMore
-                    giveaways={selectedGiveaways}
-                    allMore={moreProducts}
+            {selectedGiveaways && (
+                <ModalMoreStickers
+                    sticker={selectedGiveaways}
                     onClose={() => setSelectedGiveaways(null)}
                 />
             )}

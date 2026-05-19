@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import CustDBProductsLayout from '../../../layouts/CustDBProductsLayout.jsx';
 import bg from '../../../assets/servicesImgIcon/signage/signageBG.png';
 import cart from '../../../assets/servicesImgIcon/stickers/cart.svg';
-import ModalSignage from '../../../components/ModalSignage.jsx';
+import ModalMoreStickers from '../../../components/productmodal/ModalMoreStickers.jsx';
 import { useProducts } from '../../../context/ProductsContext';
 import { fetchCurrentUser } from '../../../services/authService';
 import { getImageUrl } from '../../../services/api';
@@ -206,9 +206,18 @@ const Signage = () => {
         onClick={() => handleSelect(item)}
       >
         <PromoTag promo={item.applied_promo} />
-                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
-                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
-                      </span>
+                                            {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#FDE31E] text-black border border-yellow-400/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#ffe838] select-none pointer-events-none">
+                          Customizable
+                        </span>
+                      ) : (
+                        <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-md bg-[#0B132A] text-white border border-slate-700/50 transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg group-hover:bg-[#152244] select-none pointer-events-none">
+                          Ready Made
+                        </span>
+                      )}
+
+
+
         <img
           src={getImageUrl(item.image) || defaultImg}
           className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
@@ -373,10 +382,9 @@ const Signage = () => {
           </div>
         )}
 
-      {/* Modal */}
-      {selectedSignage?.modalType === "signageModal" && (
-        <ModalSignage
-          signage={selectedSignage}
+      {selectedSignage && (
+        <ModalMoreStickers
+          sticker={selectedSignage}
           onClose={() => setSelectedSignage(null)}
         />
       )}

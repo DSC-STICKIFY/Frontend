@@ -12,12 +12,12 @@ const CATEGORIES = [
 ];
 
 const TYPES_BY_CATEGORY = {
-  Stickers:           ["Hologram", "Glossy", "Matte", "Transparent", "Glitter", "Scratch", "Cut out", "Visor"],
-  "Decals & Wrap":    ["Car Wrap","Motorbike Decal","Full Wrap","Partial Wrap","Window Decal"],
-  Signage:            ["Acrylic Signage","Neon Lights Signage","Panaflex Signage"],
-  Giveaways:          ["Keychain","ID Lace","T-Shirt","Calling Cards","Caps","Mugs","Tarpulin","Sintra Board"],
-  Printing:           ["Flyers","Brochures","Business Cards","Posters","Banners"],
-  "Graphic Services": ["Business Logo","Moto Vlog Logo"],
+  Stickers:           ["Hologram", "Glossy", "Matte", "Transparent", "Glitter", "Scratch", "Cut out", "Visor", "Assorted"],
+  "Decals & Wrap":    ["Car Service Layout", "Motor Service Layout", "Car Wrap", "Motorbike Decal", "Full Wrap", "Partial Wrap", "Window Decal"],
+  Signage:            ["Acrylic Signage", "Neon Lights Signage", "Panaflex Signage"],
+  Giveaways:          ["Keychain", "ID Lace", "T-Shirt", "Calling Cards", "Caps", "Mugs", "Tarpulin", "Sintra Board"],
+  Printing:           ["Flyers", "Brochures", "Business Cards", "Posters", "Banners"],
+  "Graphic Services": ["Business Logo", "Moto Vlog Logo"],
 };
 
 const EMPTY_PRODUCT_FORM = {
