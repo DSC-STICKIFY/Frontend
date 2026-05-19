@@ -29,6 +29,8 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
   const { currentUser } = useAuth();
   const { addItem } = useCart();
 
+  const isCustomizable = sticker.is_customizable !== 0 && sticker.is_customizable !== false && sticker.is_customizable !== "0" && sticker.is_customizable !== undefined;
+
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState("1.5 × 1.5");
   const [paymentMethod, setPaymentMethod] = useState(null);
@@ -114,7 +116,7 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
   }, []);
 
   const validateOrder = (checkPaymentMethod = true) => {
-    if (!uploadedImage?.preview) { setSubmitError("Please upload your design first."); return false; }
+    if (isCustomizable && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return false; }
     if (!selectedSize) { setSubmitError("Please select a sticker size first."); return false; }
     if (checkPaymentMethod && !paymentMethod) { setSubmitError("Please select a payment method."); return false; }
     setSubmitError(null); return true;
@@ -138,7 +140,7 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
     type: "more",
     subtotal,
     initialPaymentMethod: paymentMethod,
-    designImage: uploadedImage?.preview || null,
+    designImage: isCustomizable ? (uploadedImage?.preview || null) : null,
     timestamp: Date.now()
   });
 
@@ -154,7 +156,7 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
     category: "Stickers",
     type: "more",
     subtotal,
-    designImage: uploadedImage?.preview || null,
+    designImage: isCustomizable ? (uploadedImage?.preview || null) : null,
     originalPrice: hasDiscount ? rawPrice : null,
     promotion_id: promo?.promotion_id || null,
     promoApplied: promo?.name || null,
@@ -220,7 +222,7 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
             {/* LEFT Panel (Info & Pricing) */}
             <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 md:overflow-hidden bg-gray-50/30">
 
-              <div className="flex-shrink-0 p-5 sm:p-8 pb-4 flex flex-col gap-4 md:overflow-y-auto custom-scrollbar" style={{ maxHeight: window.innerWidth >= 768 ? "55%" : "none" }}>
+              <div className={`p-5 sm:p-8 pb-4 flex flex-col gap-4 md:overflow-y-auto custom-scrollbar ${isCustomizable ? 'flex-shrink-0' : 'flex-1'}`} style={{ maxHeight: (isCustomizable && window.innerWidth >= 768) ? "55%" : "none" }}>
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">{sticker?.title || "More Stickers"}</h2>
                   <p className="text-xs sm:text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">Premium Sticker Sheets</p>
@@ -272,15 +274,17 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
               </div>
 
               {/* Chatbox Panel */}
-              <div className="flex-1 min-h-[300px] md:min-h-0 px-5 sm:px-8 pb-8 pt-2">
-                <DesignChatbox 
-                  onImageUpload={(img) => {
-                    setUploadedImage({ preview: img });
-                    setSubmitError(null);
-                  }} 
-                  productId={sticker.product_id || sticker.id}
-                />
-              </div>
+              {isCustomizable && (
+                <div className="flex-1 min-h-[300px] md:min-h-0 px-5 sm:px-8 pb-8 pt-2">
+                  <DesignChatbox 
+                    onImageUpload={(img) => {
+                      setUploadedImage({ preview: img });
+                      setSubmitError(null);
+                    }} 
+                    productId={sticker.product_id || sticker.id}
+                  />
+                </div>
+              )}
             </div>
 
             {/* RIGHT Panel (Configuration & Checkout) */}
@@ -349,20 +353,20 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
               <div className="mt-8 space-y-3 sm:space-y-4">
                 <button 
                   onClick={handleBuyNow} 
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || !uploadedImage?.preview} 
+                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomizable && !uploadedImage?.preview)} 
                   className={`w-full py-5 sm:py-6 rounded-[20px] sm:rounded-[24px] font-black uppercase tracking-widest text-xs sm:text-sm transition-all active:scale-[0.98] shadow-xl
-                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || !uploadedImage?.preview)
+                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomizable && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 cursor-not-allowed"
                       : "bg-[#FFE100] text-black hover:bg-yellow-400"
                     }`}
                 >
-                  {!uploadedImage?.preview ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
+                  {(isCustomizable && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
                 <button 
                   onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || !uploadedImage?.preview} 
+                  disabled={subtotal <= 0 || (isCustomizable && !uploadedImage?.preview)} 
                   className={`w-full py-5 sm:py-6 rounded-[20px] sm:rounded-[24px] font-black uppercase tracking-widest text-xs sm:text-sm border-2 transition-all
-                    ${!uploadedImage?.preview ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                    ${(isCustomizable && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >
                   Add to Cart
                 </button>

@@ -29,6 +29,8 @@ const ModalSignage = ({ signage, onClose }) => {
   const { currentUser, isVerified } = useAuth();
   const { addItem } = useCart();
 
+  const isCustomizable = signage.is_customizable !== 0 && signage.is_customizable !== false && signage.is_customizable !== "0" && signage.is_customizable !== undefined;
+
   const [quantity, setQuantity] = useState(1);
   const [width, setWidth] = useState("1");
   const [height, setHeight] = useState("1");
@@ -90,7 +92,7 @@ const ModalSignage = ({ signage, onClose }) => {
   };
 
   const validateOrder = (checkPaymentMethod = true) => {
-    if (!uploadedImage?.preview) { setSubmitError("Please upload your design first."); return false; }
+    if (isCustomizable && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return false; }
     if (subtotal <= 0) { setSubmitError("Please enter valid dimensions and quantity."); return false; }
     if (checkPaymentMethod && !paymentMethod) { setSubmitError("Please select a payment method."); return false; }
     setSubmitError(null);
@@ -114,7 +116,7 @@ const ModalSignage = ({ signage, onClose }) => {
     type: category,
     subtotal,
     initialPaymentMethod: paymentMethod,
-    designImage: uploadedImage?.preview || null,
+    designImage: isCustomizable ? (uploadedImage?.preview || null) : null,
     timestamp: Date.now()
   });
 
@@ -130,7 +132,7 @@ const ModalSignage = ({ signage, onClose }) => {
     category: "Signage",
     type: category,
     subtotal,
-    designImage: uploadedImage?.preview || null,
+    designImage: isCustomizable ? (uploadedImage?.preview || null) : null,
     originalPrice: hasDiscount ? rawSqftPrice : null,
     promoApplied: promo?.name || null,
     discountType: promo?.discount_type || null,
@@ -186,7 +188,7 @@ const ModalSignage = ({ signage, onClose }) => {
             <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 overflow-hidden">
 
               {/* Static top info */}
-              <div className="flex-shrink-0 p-8 pb-4 bg-gray-50/30 flex flex-col gap-4">
+              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizable ? 'flex-shrink-0' : 'flex-1'}`}>
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{title}</h2>
                   <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">{category}</p>
@@ -236,15 +238,17 @@ const ModalSignage = ({ signage, onClose }) => {
               </div>
 
               {/* Chatbox — fills remaining height */}
-              <div className="flex-1 min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
-                <DesignChatbox 
-                  onImageUpload={(img) => {
-                    setUploadedImage({ preview: img });
-                    setSubmitError(null);
-                  }} 
-                  productId={signage.id}
-                />
-              </div>
+              {isCustomizable && (
+                <div className="flex-1 min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
+                  <DesignChatbox 
+                    onImageUpload={(img) => {
+                      setUploadedImage({ preview: img });
+                      setSubmitError(null);
+                    }} 
+                    productId={signage.id}
+                  />
+                </div>
+              )}
             </div>
 
             {/* RIGHT Panel */}
@@ -304,20 +308,20 @@ const ModalSignage = ({ signage, onClose }) => {
               <div className="mt-8 space-y-4">
                 <button
                   onClick={handleBuyNow}
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || !uploadedImage?.preview}
+                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomizable && !uploadedImage?.preview)}
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
-                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || !uploadedImage?.preview)
+                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomizable && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed"
                       : "bg-[#FFE100] text-black hover:bg-yellow-400 "
                     }`}
                 >
-                  {!uploadedImage?.preview ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
+                  {(isCustomizable && !uploadedImage?.preview) ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
                 <button 
                   onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || !uploadedImage?.preview} 
+                  disabled={subtotal <= 0 || (isCustomizable && !uploadedImage?.preview)} 
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                    ${!uploadedImage?.preview ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                    ${(isCustomizable && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >
                   Add to Cart
                 </button>

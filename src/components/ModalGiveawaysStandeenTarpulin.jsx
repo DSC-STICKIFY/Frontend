@@ -18,6 +18,8 @@ const ModalGiveawaysStandeenTarpulin = ({ giveaways, onClose }) => {
   const { currentUser } = useAuth();
   const { addItem } = useCart();
 
+  const isCustomizable = giveaways.is_customizable !== 0 && giveaways.is_customizable !== false && giveaways.is_customizable !== "0" && giveaways.is_customizable !== undefined;
+
   const [quantity, setQuantity] = useState(1);
   const [width, setWidth] = useState("1");
   const [height, setHeight] = useState("1");
@@ -69,7 +71,7 @@ const ModalGiveawaysStandeenTarpulin = ({ giveaways, onClose }) => {
   const formatPrice = (num) => num.toLocaleString("en-PH", { minimumFractionDigits: 2 });
 
   const validateOrder = () => {
-    if (!uploadedImage?.preview) { setSubmitError("Please upload your design first."); return false; }
+    if (isCustomizable && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return false; }
     if (subtotal <= 0) { setSubmitError("Please enter valid dimensions and quantity."); return false; }
     if (!paymentMethod) { setSubmitError("Please select a payment method."); return false; }
     setSubmitError(null); return true;
@@ -90,7 +92,7 @@ const ModalGiveawaysStandeenTarpulin = ({ giveaways, onClose }) => {
     pieces: quantity,
     category: "Giveaways",
     type: giveaways.type,
-    designImage: uploadedImage?.preview || null,
+    designImage: isCustomizable ? (uploadedImage?.preview || null) : null,
     originalPrice: hasDiscount ? rawPrice : null,
     promotion_id: promo?.promotion_id || null,
     promoApplied: promo?.name || null,
@@ -115,7 +117,7 @@ const ModalGiveawaysStandeenTarpulin = ({ giveaways, onClose }) => {
     type: giveaways.type,
     subtotal,
     initialPaymentMethod: paymentMethod,
-    designImage: uploadedImage?.preview || null,
+    designImage: isCustomizable ? (uploadedImage?.preview || null) : null,
     width: isStandee ? parseFloat(width) : null,
     height: isStandee ? parseFloat(height) : null,
   });
@@ -156,7 +158,7 @@ const ModalGiveawaysStandeenTarpulin = ({ giveaways, onClose }) => {
             <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 overflow-hidden">
 
               {/* Static top info */}
-              <div className="flex-shrink-0 p-8 pb-4 bg-gray-50/30 flex flex-col gap-4">
+              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizable ? 'flex-shrink-0' : 'flex-1'}`}>
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{productTitle}</h2>
                   <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">{giveaways.type || "Professional Printing"}</p>
@@ -204,15 +206,17 @@ const ModalGiveawaysStandeenTarpulin = ({ giveaways, onClose }) => {
               </div>
 
               {/* Chatbox — fills remaining height */}
-              <div className="flex-1 min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
-                <DesignChatbox 
-                  onImageUpload={(img) => {
-                    setUploadedImage({ preview: img });
-                    setSubmitError(null);
-                  }} 
-                  productId={giveaways.product_id || giveaways.id}
-                />
-              </div>
+              {isCustomizable && (
+                <div className="flex-1 min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
+                  <DesignChatbox 
+                    onImageUpload={(img) => {
+                      setUploadedImage({ preview: img });
+                      setSubmitError(null);
+                    }} 
+                    productId={giveaways.product_id || giveaways.id}
+                  />
+                </div>
+              )}
             </div>
 
             {/* RIGHT Panel */}
@@ -281,20 +285,20 @@ const ModalGiveawaysStandeenTarpulin = ({ giveaways, onClose }) => {
               <div className="mt-8 space-y-4">
                 <button 
                   onClick={handleBuyNow} 
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || !uploadedImage?.preview} 
+                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomizable && !uploadedImage?.preview)} 
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
-                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || !uploadedImage?.preview)
+                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomizable && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed"
                       : "bg-[#FFE100] text-black hover:bg-yellow-400 shadow-yellow-100"
                     }`}
                 >
-                  {!uploadedImage?.preview ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
+                  {(isCustomizable && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
                 <button 
                   onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || !uploadedImage?.preview} 
+                  disabled={subtotal <= 0 || (isCustomizable && !uploadedImage?.preview)} 
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                    ${!uploadedImage?.preview ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                    ${(isCustomizable && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >
                   Add to Cart
                 </button>

@@ -24,6 +24,8 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
   const { currentUser } = useAuth();
   const { addItem } = useCart();
 
+  const isCustomizable = giveaways.is_customizable !== 0 && giveaways.is_customizable !== false && giveaways.is_customizable !== "0" && giveaways.is_customizable !== undefined;
+
   const options = DEFAULT_CALLING_CARD_OPTIONS;
   const [selectedOption, setSelectedOption] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(null);
@@ -84,7 +86,7 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
   };
 
   const validateOrder = (checkPaymentMethod = true) => {
-    if (!uploadedImage?.preview) { setSubmitError("Please upload your design first."); return false; }
+    if (isCustomizable && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return false; }
     if (!selectedOption) { setSubmitError("Please select an option."); return false; }
     if (checkPaymentMethod && !paymentMethod) { setSubmitError("Please select a payment method."); return false; }
     setSubmitError(null); return true;
@@ -103,7 +105,7 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
     pieces:      selectedOption?.pcs || 0,
     category:    "Giveaways",
     type:        cardType,
-    designImage: uploadedImage?.preview || null,
+    designImage: isCustomizable ? (uploadedImage?.preview || null) : null,
     originalPrice: hasDiscount ? selectedOption.rawPrice : null,
     promoApplied: promo?.name || null,
     discountType: promo?.discount_type || null,
@@ -124,7 +126,7 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
     type:     cardType,
     subtotal,
     initialPaymentMethod: paymentMethod,
-    designImage: uploadedImage?.preview || null,
+    designImage: isCustomizable ? (uploadedImage?.preview || null) : null,
   });
 
   const handleBuyNow = () => {
@@ -163,7 +165,7 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
           <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
             {/* LEFT Panel – Info + Pricing Table + Chat */}
             <div className="w-full md:w-1/2 p-8 bg-gray-50/30 flex flex-col gap-6 h-full overflow-hidden border-r border-gray-100">
-              <div className="overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-4 flex-shrink-0 max-h-[45%]">
+              <div className={`overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-4 ${isCustomizable ? 'flex-shrink-0 max-h-[45%]' : 'flex-1 max-h-none'}`}>
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{giveaways.product_name || giveaways.title || giveaways.category || "Calling Card"}</h2>
                   <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">{giveaways.type || "Professional Printing"}</p>
@@ -212,15 +214,17 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest italic">Minimum of 100 pcs per order</p>
               </div>
 
-              <div className="flex-1 min-h-0 bg-white">
-                <DesignChatbox 
-                  onImageUpload={(img) => {
-                    setUploadedImage({ preview: img });
-                    setSubmitError(null);
-                  }} 
-                  productId={giveaways.product_id || giveaways.id}
-                />
-              </div>
+              {isCustomizable && (
+                <div className="flex-1 min-h-0 bg-white">
+                  <DesignChatbox 
+                    onImageUpload={(img) => {
+                      setUploadedImage({ preview: img });
+                      setSubmitError(null);
+                    }} 
+                    productId={giveaways.product_id || giveaways.id}
+                  />
+                </div>
+              )}
             </div>
 
             {/* RIGHT Panel – Summary + Actions */}
@@ -284,20 +288,20 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
               <div className="mt-8 space-y-4">
                 <button 
                   onClick={handleBuyNow} 
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || !uploadedImage?.preview} 
+                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomizable && !uploadedImage?.preview)} 
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
-                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || !uploadedImage?.preview)
+                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomizable && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 cursor-not-allowed shadow-none"
                       : "bg-[#FFE100] text-black hover:bg-yellow-400 shadow-yellow-100"
                     }`}
                 >
-                  {!uploadedImage?.preview ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
+                  {(isCustomizable && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
                 <button 
                   onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || !uploadedImage?.preview} 
+                  disabled={subtotal <= 0 || (isCustomizable && !uploadedImage?.preview)} 
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                    ${!uploadedImage?.preview ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                    ${(isCustomizable && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >
                   Add to Cart
                 </button>
