@@ -290,6 +290,9 @@ const ServiceCard = ({ item, onSelect, isMoto }) => {
                     className='w-full h-full object-contain transition hover:scale-110' 
                 />
                 <PromoTag promo={item.promo} />
+                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
+                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
+                      </span>
             </div>
             <div className='font-semibold mt-2'>
                 <p className='text-md'>{item.tier}</p>

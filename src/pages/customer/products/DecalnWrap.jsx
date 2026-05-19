@@ -190,7 +190,8 @@ const DecalnWrap = () => {
     const [showCarModal, setShowCarModal] = useState(false);
     const [showMotorModal, setShowMotorModal] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [productNatureFilter, setProductNatureFilter] = useState("All");
+    const [carNatureFilter, setCarNatureFilter] = useState("All");
+    const [motorNatureFilter, setMotorNatureFilter] = useState("All");
 
     const openCarInquiry = (p) => { setSelectedProduct(p); setShowCarModal(true); };
     const openMotorInquiry = (p) => { setSelectedProduct(p); setShowMotorModal(true); };
@@ -201,15 +202,9 @@ const DecalnWrap = () => {
     }, [refreshProducts]);
 
     const { carServices, motorServices } = useMemo(() => {
-        let relevant = allProducts.filter(p =>
+        const relevant = allProducts.filter(p =>
             (p.category || p.product_category || '').toLowerCase() === 'decals & wrap'
         );
-
-        if (productNatureFilter === "Customizable") {
-            relevant = relevant.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
-        } else if (productNatureFilter === "Ready Made") {
-            relevant = relevant.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
-        }
 
         const cars = [], motors = [];
 
@@ -254,16 +249,31 @@ const DecalnWrap = () => {
             dechroming: { title: 'Dechroming', priceImg: dechromingPrc, carImage: dechroming },
         };
 
-        const finalCars = cars.map(c => {
+        let finalCars = cars.map(c => {
             if (c.is_legacy_car && legacyMap[c.legacy_key]) {
                 const m = legacyMap[c.legacy_key];
-                return { id: c.product_id, name: m.title, price_map_image: m.priceImg, product_image: m.carImage, is_fixed: true };
+                return { id: c.product_id, name: m.title, price_map_image: m.priceImg, product_image: m.carImage, is_fixed: true, is_customizable: c.is_customizable };
             }
             return c;
         });
 
-        return { carServices: finalCars, motorServices: motors };
-    }, [allProducts, productNatureFilter]);
+        // Filter cars based on carNatureFilter
+        if (carNatureFilter === "Customizable") {
+            finalCars = finalCars.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
+        } else if (carNatureFilter === "Ready Made") {
+            finalCars = finalCars.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
+        }
+
+        // Filter motors based on motorNatureFilter
+        let finalMotors = motors;
+        if (motorNatureFilter === "Customizable") {
+            finalMotors = finalMotors.filter(p => p.is_customizable !== 0 && p.is_customizable !== false && p.is_customizable !== "0");
+        } else if (motorNatureFilter === "Ready Made") {
+            finalMotors = finalMotors.filter(p => p.is_customizable === 0 || p.is_customizable === false || p.is_customizable === "0");
+        }
+
+        return { carServices: finalCars, motorServices: finalMotors };
+    }, [allProducts, carNatureFilter, motorNatureFilter]);
 
     if (loading) {
         return (
@@ -317,9 +327,9 @@ const DecalnWrap = () => {
                             {['All', 'Ready Made', 'Customizable'].map((opt) => (
                                 <button
                                     key={opt}
-                                    onClick={() => setProductNatureFilter(opt)}
+                                    onClick={() => setCarNatureFilter(opt)}
                                     className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
-                                        productNatureFilter === opt 
+                                        carNatureFilter === opt 
                                             ? 'bg-black text-white shadow-md' 
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }`}
@@ -347,14 +357,14 @@ const DecalnWrap = () => {
             <div className="mb-32">
                 <SectionHeading 
                     sub="Bikes & Scooters"
-                    filterDropdown={carServices.length === 0 ? (
+                    filterDropdown={
                         <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
                             {['All', 'Ready Made', 'Customizable'].map((opt) => (
                                 <button
                                     key={opt}
-                                    onClick={() => setProductNatureFilter(opt)}
+                                    onClick={() => setMotorNatureFilter(opt)}
                                     className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-bold transition-colors whitespace-nowrap ${
-                                        productNatureFilter === opt 
+                                        motorNatureFilter === opt 
                                             ? 'bg-black text-white shadow-md' 
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     }`}
@@ -363,7 +373,7 @@ const DecalnWrap = () => {
                                 </button>
                             ))}
                         </div>
-                    ) : null}
+                    }
                 >Motorbike Wrap & Decals</SectionHeading>
 
                 {motorServices.length === 0 ? (

@@ -94,6 +94,9 @@ const Products = ({ onProductClick, onOrderNowClick, products = [] }) => {
                     {/* Image + Badge */}
                     <div className="relative h-[250px] w-full rounded-t-xl overflow-hidden bg-gray-50 flex-shrink-0">
                       <PromoTag promo={promo} />
+                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
+                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
+                      </span>
                       <img
                         src={getImageUrl(item.image || item.product_image)}
                         alt={item.name}
@@ -122,11 +125,7 @@ const Products = ({ onProductClick, onOrderNowClick, products = [] }) => {
                             {item.description}
                           </p>
                         )}
-                        {promo && (
-                          <p className="text-[10px] text-yellow-600 font-bold uppercase tracking-wide mt-1">
-                            🏷 {promo.name}
-                          </p>
-                        )}
+                        
                       </div>
 
                       <div className="mt-auto">

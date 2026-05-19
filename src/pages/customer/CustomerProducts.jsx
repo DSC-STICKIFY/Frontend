@@ -120,13 +120,20 @@ const CustomerProducts = () => {
         const hasDiscount = discountedPrice !== null && discountedPrice < product.price;
         if (hasDiscount) {
             return (
-                <div className="flex items-center gap-2">
-                    <span className="text-gray-400 line-through text-sm">
-                        ₱{product.price.toLocaleString("en-PH")}
-                    </span>
-                    <span className="text-xl font-bold text-red-600">
-                        ₱{discountedPrice.toLocaleString("en-PH")}
-                    </span>
+                <div className="flex flex-col">
+                    <div className="flex items-baseline gap-1.5 flex-wrap">
+                        <span className="text-xl font-bold text-red-600">
+                            ₱{discountedPrice.toLocaleString("en-PH")}
+                        </span>
+                        <span className="text-gray-400 line-through text-xs">
+                            ₱{product.price.toLocaleString("en-PH")}
+                        </span>
+                    </div>
+                    {promo && (promo.discount_type === "percentage" || promo.discount_type === "fixed") && (
+                        <span className="text-[10px] text-red-600 font-bold text-left block mt-0.5">
+                            {promo.discount_type === "percentage" ? `${promo.discount_value}% OFF` : `₱${promo.discount_value} OFF`}
+                        </span>
+                    )}
                 </div>
             );
         }
@@ -156,6 +163,9 @@ const CustomerProducts = () => {
                         }}
                     />
                     <PromoTag promo={bestPromo} />
+                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
+                        {(product.is_customizable !== 0 && product.is_customizable !== false && product.is_customizable !== "0" && product.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
+                      </span>
                     {product.featured && (
                         <span className="absolute top-3 right-3 bg-yellow-400 text-black text-xs font-bold px-3 py-1 rounded-full">
                             Featured
@@ -212,6 +222,9 @@ const CustomerProducts = () => {
                         }}
                     />
                     <PromoTag promo={bestPromo} />
+                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
+                        {(product.is_customizable !== 0 && product.is_customizable !== false && product.is_customizable !== "0" && product.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
+                      </span>
                 </div>
                 <div className="flex flex-col justify-between flex-1 min-w-0">
                     <div>

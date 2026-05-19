@@ -18,12 +18,19 @@ const PriceDisplay = ({ price, discountedPrice, promo, className = "text-lg" }) 
   if (hasDiscount) {
     return (
       <div className="flex flex-col gap-0.5">
-        <span className={`${className} text-gray-400 line-through text-sm`}>
-          ₱{original.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-        </span>
-        <span className={`${className} font-black text-red-500`}>
-          ₱{discounted.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-        </span>
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          <span className={`${className} font-black text-red-500`}>
+            ₱{discounted.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+          </span>
+          <span className="text-[11px] text-gray-400 line-through">
+            ₱{original.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+          </span>
+        </div>
+        {promo && (promo.discount_type === "percentage" || promo.discount_type === "fixed") && (
+          <span className="text-[10px] text-red-600 font-bold text-left block">
+            {promo.discount_type === "percentage" ? `${promo.discount_value}% OFF` : `₱${promo.discount_value} OFF`}
+          </span>
+        )}
       </div>
     );
   }
@@ -217,6 +224,9 @@ const ProductCard = ({ item, onSelect }) => (
         onClick={() => onSelect(item)}
       >
         <PromoTag promo={item.applied_promo} />
+                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
+                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
+                      </span>
         <img
           src={getImageUrl(item.image)}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -231,9 +241,7 @@ const ProductCard = ({ item, onSelect }) => (
             {item.type && (
                 <span className="text-blue-500 font-semibold text-xs truncate">{item.type}</span>
             )}
-            {item.applied_promo && (
-                <span className="text-[10px] text-yellow-600 font-bold uppercase tracking-wide">🏷 {item.applied_promo.name}</span>
-            )}
+            
         </div>
         {item.description && (
           <p className="text-gray-500 text-[11px] line-clamp-2 leading-relaxed mt-1">

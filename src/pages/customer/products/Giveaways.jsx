@@ -108,14 +108,22 @@ const Giveaways = () => {
     const renderPrice = (product) => {
         const hasDiscount = product.discountedPrice !== null && product.discountedPrice < product.originalPrice;
         if (hasDiscount) {
+            const promo = product.promo || product.applied_promo;
             return (
-                <div className="flex items-center gap-2">
-                    <span className="text-gray-400 line-through text-sm">
-                        ₱{product.originalPrice.toLocaleString("en-PH")}
-                    </span>
-                    <span className="text-xl font-bold text-red-600">
-                        ₱{product.discountedPrice.toLocaleString("en-PH")}
-                    </span>
+                <div className="flex flex-col">
+                    <div className="flex items-baseline gap-1.5 flex-wrap">
+                        <span className="text-xl font-bold text-red-600">
+                            ₱{product.discountedPrice.toLocaleString("en-PH")}
+                        </span>
+                        <span className="text-gray-400 line-through text-xs">
+                            ₱{product.originalPrice.toLocaleString("en-PH")}
+                        </span>
+                    </div>
+                    {promo && (promo.discount_type === "percentage" || promo.discount_type === "fixed") && (
+                        <span className="text-[10px] text-red-600 font-bold text-left block mt-0.5">
+                            {promo.discount_type === "percentage" ? `${promo.discount_value}% OFF` : `₱${promo.discount_value} OFF`}
+                        </span>
+                    )}
                 </div>
             );
         }
@@ -182,6 +190,9 @@ const Giveaways = () => {
                                                     onError={(e) => { e.target.src = defaultImage; }}
                                                 />
                                                 <PromoTag promo={item.promo} />
+                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
+                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
+                      </span>
                                             </div>
                                             <div className="flex flex-col justify-between font-semibold mt-2">
                                                 <div>
@@ -252,6 +263,9 @@ const Giveaways = () => {
                                                     onError={(e) => { e.target.src = defaultImage; }}
                                                 />
                                                 <PromoTag promo={item.promo} />
+                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
+                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
+                      </span>
                                             </div>
                                             <div className="flex flex-col justify-between font-semibold mt-2">
                                                 <div>

@@ -23,12 +23,19 @@ const PriceDisplay = ({ price, discountedPrice, promo, className = "text-lg" }) 
   if (hasDiscount) {
     return (
       <div className="flex flex-col gap-0.5">
-        <span className={`${className} text-gray-400 line-through`}>
-          ₱{original.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-        </span>
-        <span className={`${className} font-black text-red-500`}>
-          ₱{discounted.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-        </span>
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          <span className={`${className} font-black text-red-500`}>
+            ₱{discounted.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+          </span>
+          <span className="text-[11px] text-gray-400 line-through">
+            ₱{original.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+          </span>
+        </div>
+        {promo && (promo.discount_type === "percentage" || promo.discount_type === "fixed") && (
+          <span className="text-[10px] text-red-600 font-bold text-left block">
+            {promo.discount_type === "percentage" ? `${promo.discount_value}% OFF` : `₱${promo.discount_value} OFF`}
+          </span>
+        )}
       </div>
     );
   }
@@ -196,6 +203,9 @@ const Sticker = () => {
                   onClick={() => handleSelect(item)}
                 >
                   <PromoTag promo={item.applied_promo} />
+                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
+                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
+                      </span>
                   <img
                     src={getImageUrl(item.image)}
                     className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
@@ -213,11 +223,7 @@ const Sticker = () => {
                   {item.type && (
                     <p className="text-blue-500 font-semibold text-xs mt-0.5 truncate">{item.type}</p>
                   )}
-                  {item.applied_promo && (
-                    <p className="text-[10px] text-yellow-600 font-bold uppercase tracking-wide mt-0.5">
-                      🏷 {item.applied_promo.name}
-                    </p>
-                  )}
+                  
                   <div className="flex justify-between items-center mt-1 gap-2">
                     <PriceDisplay
                       price={item.price}
@@ -274,6 +280,9 @@ const Sticker = () => {
                   onClick={() => handleSelect(item)}
                 >
                   <PromoTag promo={item.applied_promo} />
+                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
+                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
+                      </span>
                   <img
                     src={getImageUrl(item.image)}
                     className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
@@ -286,11 +295,7 @@ const Sticker = () => {
                   {item.type && (
                     <p className="text-blue-500 font-semibold text-xs mt-0.5 truncate">{item.type}</p>
                   )}
-                  {item.applied_promo && (
-                    <p className="text-[10px] text-yellow-600 font-bold uppercase tracking-wide mt-0.5">
-                      🏷 {item.applied_promo.name}
-                    </p>
-                  )}
+                  
                   <div className="flex justify-between items-center mt-1 gap-2">
                     <PriceDisplay
                       price={item.price}

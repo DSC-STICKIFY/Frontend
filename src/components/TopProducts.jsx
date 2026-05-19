@@ -49,6 +49,9 @@ const TopProducts = ({
             >
               <div className="relative h-[250px] w-full rounded-t-xl overflow-hidden bg-gray-50 mb-3">
                 <PromoTag promo={promo} />
+                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
+                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
+                      </span>
                 <img
                   src={getImageUrl(item.image || item.product_image)}
                   alt={item.name || item.product_name || "Product"}
@@ -77,14 +80,21 @@ const TopProducts = ({
                     {(item.category || item.product_category || "").toLowerCase().includes("decal") ? (
                       <span className="text-sm font-bold text-gray-400 italic">Service Inquiry Only</span>
                     ) : hasDiscount ? (
-                      <>
-                        <span className="text-gray-400 text-sm line-through">
-                          ₱{originalPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                        </span>
-                        <span className="text-red-500 font-black text-sm">
-                          ₱{discountedPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
-                        </span>
-                      </>
+                      <div className="flex flex-col">
+                        <div className="flex items-baseline gap-1.5 flex-wrap">
+                          <span className="text-red-500 font-black text-sm">
+                            ₱{discountedPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                          </span>
+                          <span className="text-gray-400 text-xs line-through">
+                            ₱{originalPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        {promo && (promo.discount_type === "percentage" || promo.discount_type === "fixed") && (
+                          <span className="text-[10px] text-red-600 font-bold text-left block mt-0.5">
+                            {promo.discount_type === "percentage" ? `${promo.discount_value}% OFF` : `₱${promo.discount_value} OFF`}
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-gray-900 font-bold text-sm">
                         Starts at ₱{originalPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })}

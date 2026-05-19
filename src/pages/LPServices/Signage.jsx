@@ -290,6 +290,9 @@ const SignageItem = ({ item, onSelect }) => {
         onClick={() => onSelect(item)}
       >
         <PromoTag promo={item.applied_promo} />
+                      <span className="absolute top-3 left-3 z-10 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full shadow-sm bg-black text-white backdrop-blur-sm">
+                        {(item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined) ? "Customizable" : "Ready Made"}
+                      </span>
         <img
           src={getImageUrl(item.image)}
           className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
@@ -307,11 +310,7 @@ const SignageItem = ({ item, onSelect }) => {
             {item.type}
           </p>
         )}
-        {item.applied_promo && (
-          <p className="text-[10px] text-yellow-600 font-bold uppercase tracking-wide mt-0.5">
-            🏷 {item.applied_promo.name}
-          </p>
-        )}
+        
         <div className="flex justify-between items-center mt-1 gap-2">
           {/* Price display – inline (no external component) */}
           <div className="flex flex-col gap-0.5">
