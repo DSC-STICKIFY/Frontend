@@ -47,7 +47,7 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
 
   const [selectedDesign, setSelectedDesign] = useState(null);
   const [selectedQuality, setSelectedQuality] = useState(null);
-  
+
   const defaultLegacySize = "1.5 × 1.5";
   const [selectedSizeObj, setSelectedSizeObj] = useState(hasDbSizes ? sticker.sizes[0] : null);
   const [selectedLegacySize, setSelectedLegacySize] = useState(hasDbSizes ? null : defaultLegacySize);
@@ -106,7 +106,7 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
 
   const activeBasePrice = (!isCustomMode && selectedDesign) ? parseFloat(selectedDesign.additional_price || 0) : dbPrice;
   const qualityAddon = 0;
-  
+
   let sizeAddon = 0;
   let currentSizeName = "";
   let currentPieces = 0;
@@ -263,8 +263,8 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button - Responsive Position */}
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="absolute top-4 right-5 sm:top-8 sm:right-10 z-30 w-10 h-10 flex items-center justify-center bg-white/80 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none rounded-full text-2xl font-bold text-gray-400 hover:text-black transition-all shadow-sm sm:shadow-none"
           >
             ×
@@ -330,11 +330,11 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
               {/* Chatbox Panel */}
               <div className="flex-1 min-h-[300px] md:min-h-0 px-5 sm:px-8 pb-8 pt-2">
                 {isCustomMode ? (
-                  <DesignChatbox 
+                  <DesignChatbox
                     onImageUpload={(img) => {
                       setUploadedImage({ preview: img });
                       setSubmitError(null);
-                    }} 
+                    }}
                     productId={sticker.product_id || sticker.id}
                   />
                 ) : (
@@ -392,7 +392,7 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
 
                 <div>
                   <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 italic">Configuration</h3>
-                  
+
                   <div className="space-y-6">
                     {/* DESIGN SELECTOR */}
                     {(!isCustomizableProduct || hasDbDesigns) && (
@@ -453,7 +453,7 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                         <button onClick={() => setQuantity(q => q + 1)} className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-gray-400 hover:bg-white hover:shadow-sm rounded-xl transition-all text-xl font-bold">+</button>
                       </div>
                     </div>
-                    
+
                     <div className="flex justify-between text-xs sm:text-sm pt-2 px-1">
                       <span className="text-gray-500">Sheet Unit Price</span>
                       <div className="flex flex-col items-end">
@@ -496,9 +496,9 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
               </div>
 
               <div className="mt-8 space-y-3 sm:space-y-4">
-                <button 
-                  onClick={handleBuyNow} 
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)} 
+                <button
+                  onClick={handleBuyNow}
+                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-5 sm:py-6 rounded-[20px] sm:rounded-[24px] font-black uppercase tracking-widest text-xs sm:text-sm transition-all active:scale-[0.98] shadow-xl
                     ${(isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 cursor-not-allowed"
@@ -507,9 +507,9 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                 >
                   {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
-                <button 
-                  onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)} 
+                <button
+                  onClick={handleAddToCart}
+                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-5 sm:py-6 rounded-[20px] sm:rounded-[24px] font-black uppercase tracking-widest text-xs sm:text-sm border-2 transition-all
                     ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >
@@ -517,7 +517,7 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                 </button>
                 {submitError && <p className="text-red-500 text-[9px] sm:text-[10px] text-center font-black uppercase tracking-widest mt-4">{submitError}</p>}
               </div>
-              
+
               {/* Extra spacer for mobile bottom padding */}
               <div className="h-10 md:hidden" />
             </div>

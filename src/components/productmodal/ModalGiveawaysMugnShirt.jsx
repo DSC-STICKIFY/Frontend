@@ -228,7 +228,7 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
 
           <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
             <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 overflow-hidden">
-              <div className="flex-shrink-0 p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar" style={{ maxHeight: "55%" }}>
+              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizable ? 'flex-shrink-0' : 'flex-1'}`} style={isCustomizable ? { maxHeight: "55%" } : {}}>
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{giveaways.category || giveaways.title}</h2>
                   <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">{giveaways.type}</p>

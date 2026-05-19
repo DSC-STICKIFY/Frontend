@@ -1,4 +1,4 @@
-import React, { useState, useEffect , useRef} from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUI } from "../../context/UIContext";
 import { useAuth } from '../../context/CustomerAuthContext';
@@ -71,9 +71,9 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
 
   useEffect(() => {
     if (!selectedOption) {
-      const isBack = giveaways?.type?.toLowerCase().includes("back") || 
-                     giveaways?.title?.toLowerCase().includes("back");
-      const initial = optionsWithDiscount.find(opt => 
+      const isBack = giveaways?.type?.toLowerCase().includes("back") ||
+        giveaways?.title?.toLowerCase().includes("back");
+      const initial = optionsWithDiscount.find(opt =>
         isBack ? opt.type === "Front & Back" : opt.type === "Front"
       ) || optionsWithDiscount[0];
       setSelectedOption(initial);
@@ -110,15 +110,15 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
   const hasDiscount = selectedOption && selectedOption.rawPrice !== selectedOption.discountedPrice;
 
   const buildCartItem = () => ({
-    productId:   giveaways.product_id || giveaways.id || "unknown",
-    title:       giveaways.product_name || giveaways.title || giveaways.category || "Calling Card",
-    price:       finalPrice,
-    image:       giveaways.product_image || giveaways.image || null,
-    quantity:    1,
-    pieces:      selectedOption?.pcs || 0,
-    category:    "Giveaways",
-    type:        cardType,
-    customMode:  isCustomMode ? "custom" : "standard",
+    productId: giveaways.product_id || giveaways.id || "unknown",
+    title: giveaways.product_name || giveaways.title || giveaways.category || "Calling Card",
+    price: finalPrice,
+    image: giveaways.product_image || giveaways.image || null,
+    quantity: 1,
+    pieces: selectedOption?.pcs || 0,
+    category: "Giveaways",
+    type: cardType,
+    customMode: isCustomMode ? "custom" : "standard",
     designImage: isCustomMode ? (uploadedImage?.preview || null) : null,
     originalPrice: hasDiscount ? selectedOption.rawPrice : null,
     promoApplied: promo?.name || null,
@@ -127,7 +127,7 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
 
   const buildCheckoutPayload = () => ({
     product: {
-      id:    giveaways.product_id || giveaways.id || "unknown",
+      id: giveaways.product_id || giveaways.id || "unknown",
       title: giveaways.product_name || giveaways.title || giveaways.category || "Calling Card",
       price: finalPrice,
       image: giveaways.product_image || giveaways.image || null,
@@ -135,12 +135,12 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
       promoApplied: promo?.name || null,
     },
     quantity: 1,
-    pieces:   selectedOption?.pcs || 0,
+    pieces: selectedOption?.pcs || 0,
     category: "Giveaways",
-    type:     cardType,
+    type: cardType,
     subtotal,
     initialPaymentMethod: paymentMethod,
-    customMode:  isCustomMode ? "custom" : "standard",
+    customMode: isCustomMode ? "custom" : "standard",
     designImage: isCustomMode ? (uploadedImage?.preview || null) : null,
   });
 
@@ -180,7 +180,7 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
           <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
             {/* LEFT Panel – Info + Pricing Table + Chat */}
             <div className="w-full md:w-1/2 p-8 bg-gray-50/30 flex flex-col gap-6 h-full overflow-hidden border-r border-gray-100">
-              <div className="overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-4 flex-shrink-0 max-h-[45%]">
+              <div className={`overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-4 ${isCustomizable ? 'flex-shrink-0 max-h-[45%]' : 'flex-1 max-h-none'}`}>
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{giveaways.product_name || giveaways.title || giveaways.category || "Calling Card"}</h2>
                   <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">{giveaways.type || "Professional Printing"}</p>
@@ -204,10 +204,10 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
                         return (
                           <tr key={opt.type} className={`group cursor-pointer transition-colors ${isSelected ? 'bg-yellow-50/30' : 'hover:bg-gray-50/50'}`} onClick={() => setSelectedOption(opt)}>
                             <td className="py-3 font-bold flex items-center gap-2">
-                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-[#FFE100]' : 'border-gray-200'}`}>
-                                    {isSelected && <div className="w-2 h-2 rounded-full bg-[#FFE100]" />}
-                                </div>
-                                <span className="text-gray-700">{opt.type}</span>
+                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-[#FFE100]' : 'border-gray-200'}`}>
+                                {isSelected && <div className="w-2 h-2 rounded-full bg-[#FFE100]" />}
+                              </div>
+                              <span className="text-gray-700">{opt.type}</span>
                             </td>
                             <td className="py-3 text-right">
                               {itemHasDiscount ? (
@@ -231,11 +231,11 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
 
               <div className="flex-1 min-h-0 bg-white">
                 {isCustomMode ? (
-                  <DesignChatbox 
+                  <DesignChatbox
                     onImageUpload={(img) => {
                       setUploadedImage({ preview: img });
                       setSubmitError(null);
-                    }} 
+                    }}
                     productId={giveaways.product_id || giveaways.id}
                   />
                 ) : (
@@ -264,12 +264,12 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
                       <span className="text-gray-500">Package Price</span>
                       <div className="flex flex-col items-end">
                         {hasDiscount ? (
-                            <>
-                                <span className="text-[10px] line-through text-gray-400">₱ {formatPrice(selectedOption?.rawPrice)}</span>
-                                <span className="font-bold text-gray-900">₱ {formatPrice(selectedOption?.discountedPrice)}</span>
-                            </>
+                          <>
+                            <span className="text-[10px] line-through text-gray-400">₱ {formatPrice(selectedOption?.rawPrice)}</span>
+                            <span className="font-bold text-gray-900">₱ {formatPrice(selectedOption?.discountedPrice)}</span>
+                          </>
                         ) : (
-                            <span className="font-bold text-gray-900">₱ {formatPrice(selectedOption?.rawPrice)}</span>
+                          <span className="font-bold text-gray-900">₱ {formatPrice(selectedOption?.rawPrice)}</span>
                         )}
                       </div>
                     </div>
@@ -309,9 +309,9 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
               </div>
 
               <div className="mt-8 space-y-4">
-                <button 
-                  onClick={handleBuyNow} 
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)} 
+                <button
+                  onClick={handleBuyNow}
+                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
                     ${(isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 cursor-not-allowed shadow-none"
@@ -320,9 +320,9 @@ const ModalGiveawayCallingCard = ({ giveaways, onClose }) => {
                 >
                   {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
-                <button 
-                  onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)} 
+                <button
+                  onClick={handleAddToCart}
+                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
                     ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >

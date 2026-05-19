@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo , useRef} from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/CustomerAuthContext";
 import { useCart } from "../../context/CartContext";
@@ -184,7 +184,7 @@ const ModalPrinting = ({ product, onClose }) => {
             <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 overflow-hidden">
 
               {/* Static top info */}
-              <div className="flex-shrink-0 p-8 pb-4 bg-gray-50/30 flex flex-col gap-4">
+              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizable ? 'flex-shrink-0' : 'flex-1'}`}>
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{title}</h2>
                   <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1">{category}</p>
@@ -217,22 +217,22 @@ const ModalPrinting = ({ product, onClose }) => {
                   </div>
                 </div>
 
-                  {selectedSubtype && (
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Selected Type</span>
-                      <span className="font-bold text-gray-900 italic text-sm">{selectedSubtype}</span>
-                    </div>
-                  )}
+                {selectedSubtype && (
+                  <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex justify-between items-center">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Selected Type</span>
+                    <span className="font-bold text-gray-900 italic text-sm">{selectedSubtype}</span>
+                  </div>
+                )}
               </div>
 
               {/* Chatbox — fills remaining height */}
               <div className="flex-1 min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
                 {isCustomMode ? (
-                  <DesignChatbox 
+                  <DesignChatbox
                     onImageUpload={(img) => {
                       setUploadedImage({ preview: img });
                       setSubmitError(null);
-                    }} 
+                    }}
                     productId={product.id || product.product_id}
                   />
                 ) : (
@@ -302,9 +302,9 @@ const ModalPrinting = ({ product, onClose }) => {
                 >
                   {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
-                <button 
-                  onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)} 
+                <button
+                  onClick={handleAddToCart}
+                  disabled={subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
                     ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >

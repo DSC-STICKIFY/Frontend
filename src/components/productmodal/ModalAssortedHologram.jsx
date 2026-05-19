@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo , useRef} from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/CustomerAuthContext";
 import { useCart } from "../../context/CartContext";
@@ -40,9 +40,11 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
 
   const item = sticker || product;
 
+  const isCustomizable = item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined;
+
   const title = item.product_name || item.title || "Hologram Set";
   const category = item.category || "Hologram";
-  
+
   const isCustomizableProduct = item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined;
   const isCustomMode = isCustomizableProduct;
 
@@ -174,8 +176,8 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
             {/* LEFT panel */}
             <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 overflow-hidden">
 
-              {/* Static top info — no scroll here */}
-              <div className="flex-shrink-0 p-8 pb-4 bg-gray-50/30 flex flex-col gap-4">
+              {/* Static top info — scroll only if not customizable */}
+              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizable ? 'flex-shrink-0' : 'flex-1'}`}>
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{title}</h2>
                   <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">{category}</p>
@@ -224,14 +226,14 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
                   </div>
                 </div>
               </div>
-                   {/* Design Chatbox — takes all remaining vertical space */}
+              {/* Design Chatbox — takes all remaining vertical space */}
               <div className="flex-1 min-h-[300px] md:min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
                 {isCustomMode ? (
-                  <DesignChatbox 
+                  <DesignChatbox
                     onImageUpload={(img) => {
                       setUploadedImage({ preview: img });
                       setSubmitError(null);
-                    }} 
+                    }}
                     productId={item.product_id || item.id}
                   />
                 ) : (
@@ -282,8 +284,8 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
                       <label
                         key={id}
                         className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${paymentMethod === id
-                            ? "border-[#FFE100] bg-yellow-50/30"
-                            : "border-gray-50 hover:border-gray-100"
+                          ? "border-[#FFE100] bg-yellow-50/30"
+                          : "border-gray-50 hover:border-gray-100"
                           }`}
                       >
                         <input
