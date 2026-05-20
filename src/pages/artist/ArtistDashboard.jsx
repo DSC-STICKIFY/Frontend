@@ -42,7 +42,7 @@ export default function ArtistDashboard() {
                     total: orders.length,
                     inProgress: orders.filter(o => o.status === 'In Progress' || o.status === 'Design In Progress' || o.status === 'Accepted').length,
                     pendingApproval: orders.filter(o => o.status === 'Awaiting Shipment Approval' || o.status === 'Finalizing').length,
-                    completed: orders.filter(o => o.status === 'Shipment Approved' || o.status === 'Completed' || o.status === 'To Receive' || o.status === 'Shipped').length
+                    completed: orders.filter(o => o.status === 'To Shipping' || o.status === 'Completed' || o.status === 'To Receive' || o.status === 'Shipped').length
                 });
 
                 const active = orders.filter(o => {
@@ -102,7 +102,7 @@ export default function ArtistDashboard() {
             'Finalizing': 'text-yellow-800 bg-yellow-50 border-yellow-300',
             'For Revision': 'text-red-750 bg-red-50 border-red-200',
             'Awaiting Shipment Approval': 'text-orange-700 bg-orange-50 border-orange-250',
-            'Shipment Approved': 'text-emerald-800 bg-emerald-50 border-emerald-300',
+            'To Shipping': 'text-emerald-800 bg-emerald-50 border-emerald-300',
             'To Receive': 'text-emerald-850 bg-emerald-50 border-emerald-250',
             'Shipped': 'text-emerald-850 bg-emerald-50 border-emerald-250',
             'Completed': 'text-emerald-850 bg-emerald-50 border-emerald-250',
@@ -113,7 +113,7 @@ export default function ArtistDashboard() {
     // Helper to determine active queue button text
     const getActionButtonText = (status) => {
         const s = (status || "").toLowerCase();
-        if (['to receive', 'shipment approved', 'shipped', 'completed'].includes(s)) {
+        if (['to receive', 'to shipping', 'shipped', 'completed'].includes(s)) {
             return "👁️ View Final Design";
         }
         if (['awaiting shipment approval', 'finalizing'].includes(s)) {
@@ -198,7 +198,7 @@ export default function ArtistDashboard() {
                                     const clientName = `${task.user?.first_name || 'Guest'} ${task.user?.last_name || ''}`.trim();
                                     
                                     const statusLower = (task.status || "").toLowerCase();
-                                    const isFinishedPhase = ['to receive', 'shipment approved', 'shipped', 'completed', 'awaiting shipment approval', 'finalizing'].includes(statusLower);
+                                    const isFinishedPhase = ['to receive', 'to shipping', 'shipped', 'completed', 'awaiting shipment approval', 'finalizing'].includes(statusLower);
                                     
                                     return (
                                         <div key={task.order_id} className="bg-white border-l-[6px] border-l-yellow-450 border border-slate-200 rounded-xl p-5 flex flex-col justify-between hover:border-slate-400 hover:shadow-sm transition-all duration-200">

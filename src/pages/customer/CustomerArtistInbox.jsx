@@ -12,7 +12,7 @@ const StatusBadge = ({ status }) => {
         'Finalizing': 'bg-yellow-100 text-yellow-700 border-yellow-200',
         'For Revision': 'bg-red-100 text-red-700 border-red-200',
         'Awaiting Shipment Approval': 'bg-orange-100 text-orange-700 border-orange-200',
-        'Shipment Approved': 'bg-green-100 text-green-700 border-green-200',
+        'To Shipping': 'bg-green-100 text-green-700 border-green-200',
         'Cancelled': 'bg-gray-100 text-gray-700 border-gray-200',
     };
 

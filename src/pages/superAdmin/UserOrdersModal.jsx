@@ -18,12 +18,12 @@ const statusColors = {
     "In Progress":                "text-amber-700 bg-amber-50 border-amber-200",
     "Finalizing":                 "text-teal-700 bg-teal-50 border-teal-200",
     "Awaiting Shipment Approval": "text-purple-700 bg-purple-50 border-purple-200",
-    "Shipment Approved":          "text-indigo-700 bg-indigo-50 border-indigo-200",
+    "To Shipping":          "text-indigo-700 bg-indigo-50 border-indigo-200",
 };
 
 const getStatusLabel = (status) => {
     if (!status) return "N/A";
-    if (status === "To Receive" || status === "Shipped" || status === "Shipment Approved") {
+    if (status === "To Receive" || status === "Shipped" || status === "To Shipping") {
         return "Out for Delivery";
     }
     return status;
@@ -92,7 +92,7 @@ const flattenOrderToItems = (order) => {
                 quantity:              item.quantity || 1,
                 item_price:            unitPrice,
                 subtotal:              Number(item.subtotal || (unitPrice * (item.quantity || 1))),
-                item_status:           (['Awaiting Shipment Approval', 'Shipment Approved', 'To Receive', 'Completed', 'Cancelled', 'Return/Refund'].includes(order.status)) ? order.status : (item.status || order.status),
+                item_status:           (['Awaiting Shipment Approval', 'To Shipping', 'To Receive', 'Completed', 'Cancelled', 'Return/Refund'].includes(order.status)) ? order.status : (item.status || order.status),
                 reviews:               order.reviews || [],
                 return_status:         item.return_status || order.return_status || null,
                 delivery_deadline:     order.delivery_deadline || null,
@@ -1061,7 +1061,7 @@ const UserOrdersModal = ({ user, statusFilter = "All", onClose, onRefresh, actio
                 );
             }
 
-            case "Shipment Approved":
+            case "To Shipping":
             case "To Ship":
                 return (
                     <OutForDeliveryButton

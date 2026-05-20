@@ -41,7 +41,7 @@ const OrderDetailsModal = ({ order, onClose }) => {
     "To Process": "bg-blue-100 text-blue-700",
     "To Ship": "bg-purple-100 text-purple-700",
     "To Receive": "bg-indigo-100 text-indigo-700",
-    "Shipment Approved": "bg-indigo-100 text-indigo-700",
+    "To Shipping": "bg-indigo-100 text-indigo-700",
     Shipped: "bg-indigo-100 text-indigo-700",
     Completed: "bg-green-100 text-green-700",
     Cancelled: "bg-red-100 text-red-700",
@@ -104,7 +104,7 @@ const OrderDetailsModal = ({ order, onClose }) => {
                 <div className="flex gap-2 items-center">
                   <span className="text-gray-400 w-16 flex-shrink-0">Status:</span>
                   <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide ${statusStyle[order.status] || "bg-gray-100 text-gray-700"}`}>
-                    {order.status === "Shipment Approved" || order.status === "To Receive" || order.status === "Shipped" ? "Out for Delivery" : order.status}
+                    {order.status === "To Shipping" || order.status === "To Receive" || order.status === "Shipped" ? "Out for Delivery" : order.status}
                   </span>
                 </div>
                 {[

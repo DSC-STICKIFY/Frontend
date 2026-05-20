@@ -345,6 +345,19 @@ export const approveReturn = async (returnId) =>
 export const rejectReturn = async (returnId) =>
   updateReturnStatus(returnId, "rejected");
 
+export const authorizeSubAdmin = async (returnId) => {
+  try {
+    const response = await api.patch(`/returns/${returnId}/authorize`);
+    return response.data;
+  } catch (error) {
+    console.error(
+      `Failed to authorize sub-admin for return #${returnId}:`,
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+
 export const sendReturnMessage = async (returnId, message) => {
   try {
     const response = await api.post(`/returns/${returnId}/messages`, {
@@ -470,6 +483,7 @@ export default {
   updateReturnStatus,
   approveReturn,
   rejectReturn,
+  authorizeSubAdmin,
   sendReturnMessage,
   fetchReturnMessages,
   submitReview,

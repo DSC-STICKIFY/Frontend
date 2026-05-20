@@ -4,6 +4,7 @@ import {
     updateReturnStatus,
     sendReturnMessage,
     fetchReturnMessages,
+    authorizeSubAdmin,
 } from "../../services/OrdersAPI";
 import { IMAGE_BASE_URL } from "../../services/api";
 import { useAdminAuth } from '../../context/AdminAuthContext';
@@ -160,8 +161,8 @@ const ChatThread = ({ returnId, currentUserId }) => {
     }
 
     return (
-        <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-3" style={{ maxHeight: 320 }}>
+        <div className="flex flex-col flex-1 min-h-0">
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1 mb-3">
                 {messages.length === 0 ? (
                     <div className="text-center py-8 text-gray-400">
                         <svg className="w-8 h-8 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,7 +201,7 @@ const ChatThread = ({ returnId, currentUserId }) => {
                 <div ref={bottomRef} />
             </div>
 
-            <div className="flex gap-2 items-end border-t border-[#DCDCDC] pt-3">
+            <div className="flex gap-2 items-end border-t border-[#DCDCDC] pt-3 flex-shrink-0">
                 <textarea
                     rows={2}
                     value={text}
@@ -233,7 +234,7 @@ const RequestRow = ({ item, selected, onClick }) => {
     const messages = Array.isArray(item.messages) ? item.messages : [];
     const hasSubAdminRequest = messages.some(msg => 
         msg.message && msg.message.includes("[SUB-ADMIN REQUEST]")
-    );
+    ) || localStorage.getItem(`sent_request_${item.id}`) === 'true';
 
     return (
         <button
@@ -245,9 +246,14 @@ const RequestRow = ({ item, selected, onClick }) => {
                     <p className="text-sm font-bold text-gray-900 truncate">{productName}</p>
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                         <StatusBadge status={item.status} />
-                        {hasSubAdminRequest && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200 animate-pulse">
-                                ⚡ Sub-Admin Req
+                        {hasSubAdminRequest && !item.subadmin_authorized && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-gray-900 text-[#FDE31E] border border-gray-800 animate-pulse">
+                                 Sub-Admin Req
+                            </span>
+                        )}
+                        {item.subadmin_authorized && item.status === "pending" && (
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold uppercase tracking-wider bg-green-100 text-green-700 border border-green-200">
+                                ✓ Authorized
                             </span>
                         )}
                     </div>
@@ -347,16 +353,23 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
     const [acting, setActing] = useState(false);
     const [tab, setTab]       = useState("details");
     const [proof, setProof]   = useState(null);
-    const [requestSent, setRequestSent] = useState(false);
-    const fileRef             = useRef(null);
+    const requestSentRef = useRef(localStorage.getItem(`sent_request_${item?.id}`) === 'true');
+    const [requestSent, setRequestSent] = useState(requestSentRef.current);
+    const fileRef = useRef(null);
 
+    const prevItemId = useRef(item?.id);
     useEffect(() => {
-        setRequestSent(false);
+        if (prevItemId.current !== item?.id) {
+            prevItemId.current = item?.id;
+            const val = localStorage.getItem(`sent_request_${item?.id}`) === 'true';
+            requestSentRef.current = val;
+            setRequestSent(val);
+        }
     }, [item?.id]);
 
     if (!item) {
         return (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
+            <div className="flex flex-col items-center justify-center flex-1 text-gray-400 gap-3">
                 <svg className="w-12 h-12 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
@@ -387,19 +400,24 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
     const messages = Array.isArray(item.messages) ? item.messages : [];
     const hasSubAdminRequest = messages.some(msg => 
         msg.message && msg.message.includes("[SUB-ADMIN REQUEST]")
-    );
+    ) || localStorage.getItem(`sent_request_${item.id}`) === 'true';
 
     return (
-        <div className="h-full flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-4">
                 <div>
                     <p className="text-xs text-gray-400 uppercase font-semibold">Return Request</p>
                     <div className="flex items-center gap-2.5 mt-0.5">
                         <h3 className="text-lg font-bold text-gray-900">#{item.id}</h3>
-                        {hasSubAdminRequest && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200 animate-pulse">
-                                ⚡ Sub-Admin Confirmation Requested
+                        {hasSubAdminRequest && !item.subadmin_authorized && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-gray-900 text-[#FDE31E] border border-gray-800 animate-pulse">
+                                 Sub-Admin Confirmation Requested
+                            </span>
+                        )}
+                        {item.subadmin_authorized && item.status === "pending" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider bg-green-100 text-green-700 border border-green-200">
+                                ✓ Sub-Admin Authorized
                             </span>
                         )}
                     </div>
@@ -428,9 +446,8 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
                 ))}
             </div>
 
-            <div className="flex-1 overflow-y-auto pb-6">
-                {tab === "details" ? (
-                    <div className="space-y-5">
+            {tab === "details" ? (
+                <div className="flex-1 overflow-y-auto pb-6 space-y-5 pr-1">
                         {/* Product Card */}
                         <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-4 border border-[#DCDCDC]">
                             <Img src={productImg} alt={productName} className="w-16 h-16 rounded-xl border border-[#DCDCDC]" />
@@ -464,7 +481,21 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
                             <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Order Information</p>
                             <div className="flex justify-between"><span className="text-gray-500">Order ID</span> <span className="font-mono">{item.order?.order_number || `#${item.order_id}`}</span></div>
                             <div className="flex justify-between"><span className="text-gray-500">Payment</span> <span>{item.order?.payment_method || "COD"}</span></div>
-                            <div className="flex justify-between"><span className="text-gray-500">Submitted</span> <span>{fmtDate(item.created_at)}</span></div>
+                            <div className="flex justify-between mb-2"><span className="text-gray-500">Submitted</span> <span>{fmtDate(item.created_at)}</span></div>
+                            
+                            {item.order_detail?.product?.is_customizable == 1 && item.order?.artist && (
+                                <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200">
+                                    <span className="text-gray-500">Assigned Artist</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-[10px]">
+                                            {item.order.artist.first_name?.charAt(0)}
+                                        </div>
+                                        <span className="font-semibold text-purple-700">
+                                            {item.order.artist.first_name} {item.order.artist.last_name}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Reason */}
@@ -492,7 +523,40 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
                         {/* Admin Actions */}
                         {item.status === "pending" && (
                             <div className="pt-2 space-y-3.5">
-                                {currentUser?.role === 'subadmin' && (
+                                {/* Super Admin: show Authorize Sub-Admin block if not authorized yet */}
+                                {currentUser?.role === 'admin' && !item.subadmin_authorized && (
+                                    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 flex flex-col gap-3 shadow-md mb-3">
+                                        <div className="flex gap-3 items-start">
+                                            <span className="text-base select-none mt-0.5"></span>
+                                            <div>
+                                                <p className="text-xs font-black text-white uppercase tracking-widest">Delegate to Sub-Admin</p>
+                                                <p className="text-xs text-gray-300 leading-relaxed mt-1">
+                                                    You can authorize the Sub-Admin to verify and process this return request directly, or you can approve/reject it yourself below.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={async () => {
+                                                setActing(true);
+                                                try {
+                                                    const res = await authorizeSubAdmin(item.id);
+                                                    onStatusChange(item.id, item.status, res.data);
+                                                } catch (e) {
+                                                    console.error("Authorization failed", e);
+                                                } finally {
+                                                    setActing(false);
+                                                }
+                                            }}
+                                            disabled={acting}
+                                            className="w-full py-2.5 bg-[#FDE31E] hover:bg-yellow-400 text-gray-900 font-bold rounded-xl transition shadow-sm text-xs flex items-center justify-center gap-1.5"
+                                        >
+                                             Authorize Sub-Admin to Approve
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Sub-Admin: Request Approval block if NOT authorized */}
+                                {currentUser?.role === 'subadmin' && !item.subadmin_authorized && (
                                     <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
                                         <div className="flex gap-3 items-start">
                                             <span className="text-base select-none mt-0.5">⚠️</span>
@@ -503,36 +567,60 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
                                                 </p>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={async () => {
-                                                if (requestSent) return;
+                                        {(requestSent || hasSubAdminRequest) ? (
+                                            <button
+                                                disabled
+                                                className="w-full py-2.5 bg-yellow-100 text-yellow-600 border border-yellow-200 font-bold uppercase tracking-wider text-xs rounded-xl cursor-not-allowed text-center"
+                                            >
+                                                ✓ Already sent your request
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={async () => {
+                                                if (acting || requestSent) return;
                                                 setActing(true);
+                                                setRequestSent(true);
+                                                localStorage.setItem(`sent_request_${item.id}`, 'true');
                                                 try {
                                                     await sendReturnMessage(item.id, `[SUB-ADMIN REQUEST] Sub-Admin has reviewed Return Request #${item.id} and is requesting Super Admin approval/confirmation.`);
-                                                    setRequestSent(true);
+                                                    // ✅ No onStatusChange here — requestSent state + localStorage is enough
                                                 } catch (e) {
                                                     console.error("Failed to send approval request", e);
+                                                    setRequestSent(false); // revert on fail
+                                                    localStorage.removeItem(`sent_request_${item.id}`);
                                                 } finally {
                                                     setActing(false);
                                                 }
                                             }}
-                                            disabled={acting || requestSent}
-                                            className={`w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition shadow-sm border ${
-                                                requestSent 
-                                                    ? "bg-green-50 border-green-200 text-green-700 cursor-default select-none"
-                                                    : "bg-yellow-400 hover:bg-yellow-500 text-black border-yellow-500 animate-pulse hover:animate-none"
-                                            }`}
-                                        >
-                                            {acting ? "Sending Request..." : requestSent ? "✓ Approval Request Sent to Admin" : "📣 Request Approval from Super Admin"}
-                                        </button>
+                                                disabled={acting}
+                                                className="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-black border border-yellow-500 font-black uppercase tracking-wider text-xs rounded-xl transition shadow-sm animate-pulse hover:animate-none"
+                                            >
+                                                {acting ? "Sending Request..." : "📣 Request Approval from Super Admin"}
+                                            </button>
+                                        )}
                                     </div>
                                 )}
+
+                                {/* Sub-Admin: show beautiful alert when authorized */}
+                                {currentUser?.role === 'subadmin' && item.subadmin_authorized && (
+                                    <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex gap-3 items-start shadow-sm mb-3">
+                                        <span className="text-base select-none mt-0.5"></span>
+                                        <div>
+                                            <p className="text-xs font-black text-green-800 uppercase tracking-widest">Authorized by Super Admin</p>
+                                            <p className="text-xs text-green-700 leading-relaxed mt-1">
+                                                You have been authorized by the Super Admin to process this return request. You can now approve or reject this claim.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Action Buttons */}
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => handleAction("approved")}
-                                        disabled={acting || currentUser?.role === 'subadmin'}
+                                        disabled={acting || (currentUser?.role === 'subadmin' && !item.subadmin_authorized)}
                                         className={`flex-1 py-3.5 font-bold rounded-2xl transition shadow-sm border ${
-                                            currentUser?.role === 'subadmin'
+                                            (currentUser?.role === 'subadmin' && !item.subadmin_authorized)
                                                 ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed select-none"
                                                 : "bg-[#FDE31E] hover:bg-yellow-400 text-gray-900 border-yellow-500"
                                         }`}>
@@ -540,9 +628,9 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
                                     </button>
                                     <button
                                         onClick={() => handleAction("rejected")}
-                                        disabled={acting || currentUser?.role === 'subadmin'}
+                                        disabled={acting || (currentUser?.role === 'subadmin' && !item.subadmin_authorized)}
                                         className={`flex-1 py-3.5 font-bold rounded-2xl transition border ${
-                                            currentUser?.role === 'subadmin'
+                                            (currentUser?.role === 'subadmin' && !item.subadmin_authorized)
                                                 ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed select-none"
                                                 : "bg-white hover:bg-red-50 text-red-600 border-red-100"
                                         }`}>
@@ -568,7 +656,7 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
                                 <div className="bg-white border border-[#DCDCDC] rounded-2xl p-4 shadow-sm space-y-3.5">
                                     <p className="text-xs font-bold text-gray-400 uppercase">Manual Refund Verification</p>
                                     
-                                    {currentUser?.role === 'subadmin' && (
+                                    {currentUser?.role === 'subadmin' && !item.subadmin_authorized && (
                                         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 flex gap-2.5 items-start">
                                             <span className="text-xs select-none">⚠️</span>
                                             <p className="text-xs text-yellow-700 leading-relaxed">
@@ -579,10 +667,10 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
 
                                     {!proof ? (
                                         <button 
-                                            onClick={() => { if (currentUser?.role !== 'subadmin') fileRef.current?.click(); }}
-                                            disabled={currentUser?.role === 'subadmin'}
+                                            onClick={() => { if (currentUser?.role !== 'subadmin' || item.subadmin_authorized) fileRef.current?.click(); }}
+                                            disabled={currentUser?.role === 'subadmin' && !item.subadmin_authorized}
                                             className={`w-full py-6 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 transition ${
-                                                currentUser?.role === 'subadmin'
+                                                currentUser?.role === 'subadmin' && !item.subadmin_authorized
                                                     ? "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed select-none"
                                                     : "border-gray-200 hover:bg-gray-50 text-gray-500"
                                             }`}>
@@ -600,9 +688,9 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
                                             </div>
                                             <button 
                                                 onClick={() => handleAction("refunded", proof)}
-                                                disabled={acting || currentUser?.role === 'subadmin'}
+                                                disabled={acting || (currentUser?.role === 'subadmin' && !item.subadmin_authorized)}
                                                 className={`w-full py-3.5 font-bold rounded-xl transition shadow-md flex items-center justify-center gap-2 ${
-                                                    currentUser?.role === 'subadmin'
+                                                    currentUser?.role === 'subadmin' && !item.subadmin_authorized
                                                         ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed select-none"
                                                         : "bg-green-600 hover:bg-green-700 text-white"
                                                 }`}>
@@ -656,11 +744,12 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
                                 ✕ Return request has been rejected.
                             </div>
                         )}
-                    </div>
-                ) : (
+                </div>
+            ) : (
+                <div className="flex-1 min-h-0 flex flex-col">
                     <ChatThread returnId={item.id} currentUserId={currentUser?.user_id || currentUser?.id} />
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -735,7 +824,7 @@ const ReturnRefundManagement = () => {
     ];
 
     return (
-        <div className="my-5 mr-5 ml-1 bg-white rounded-3xl shadow-md overflow-hidden flex flex-col" style={{ height: "calc(100vh - 80px)" }}>
+        <div className="my-5 mr-5 ml-1 bg-white rounded-3xl shadow-md overflow-hidden flex flex-col" style={{ height: "calc(100vh - 2.5rem)" }}>
             {/* Header */}
             <div className="flex-shrink-0 px-6 py-5 border-b border-gray-100">
                 <div className="flex items-center justify-between">
@@ -810,7 +899,7 @@ const ReturnRefundManagement = () => {
                 </div>
 
                 {/* Right Detail Panel */}
-                <div className={`flex-1 overflow-y-auto p-6 ${showDetail ? "flex" : "hidden lg:flex"} flex-col`}>
+                <div className={`flex-1 overflow-hidden p-6 ${showDetail ? "flex" : "hidden lg:flex"} flex-col`}>
                     {showDetail && (
                         <button
                             onClick={() => setShowDetail(false)}

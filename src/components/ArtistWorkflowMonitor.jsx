@@ -28,7 +28,7 @@ const StatusBadge = ({ status }) => {
         'Design Approved': 'bg-green-100 text-green-700 border-green-200',
         'For Revision': 'bg-red-100 text-red-700 border-red-200',
         'Awaiting Shipment Approval': 'bg-orange-100 text-orange-700 border-orange-200',
-        'Shipment Approved': 'bg-green-100 text-green-700 border-green-200',
+        'To Shipping': 'bg-green-100 text-green-700 border-green-200',
         'Cancelled': 'bg-gray-100 text-gray-700 border-gray-200',
     };
 
@@ -62,7 +62,7 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
     const [sendingReminder, setSendingReminder] = useState(false);
     const [jtTrackingNumber, setJtTrackingNumber] = useState("");
     const [dispatching, setDispatching] = useState(false);
-    const isFulfillmentHistory = selectedOrder ? ['Shipment Approved', 'To Receive', 'Completed'].includes(selectedOrder.status) : false;
+    const isFulfillmentHistory = selectedOrder ? ['To Shipping', 'To Receive', 'Completed'].includes(selectedOrder.status) : false;
 
     // Timeline States
     const [showTimelineForm, setShowTimelineForm] = useState(false);
@@ -88,8 +88,8 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
             });
 
             const mapped = filtered.map(o => {
-                if (['Shipment Approved', 'To Receive', 'Shipped'].includes(o.status)) {
-                    return { ...o, status: 'Shipment Approved' };
+                if (['To Shipping', 'To Receive', 'Shipped'].includes(o.status)) {
+                    return { ...o, status: 'To Shipping' };
                 }
                 return o;
             });
@@ -533,7 +533,7 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                                             <span className="uppercase tracking-widest text-[9px] font-black text-white/80 block">📦 Shipment Status</span>
                                                             <div className="flex justify-between items-center">
                                                                 <div>
-                                                                    <p className="text-[13px] font-extrabold uppercase tracking-tight">Status: {selectedOrder.status === 'Shipment Approved' ? 'Shipment Approved' : selectedOrder.status}</p>
+                                                                    <p className="text-[13px] font-extrabold uppercase tracking-tight">Status: {selectedOrder.status === 'To Shipping' ? 'To Shipping' : selectedOrder.status}</p>
                                                                     {selectedOrder.tracking_number && (
                                                                         <p className="text-[11px] font-bold text-white/90 mt-1">Tracking Number (J&T Express): <span className="underline font-black text-[12px]">{selectedOrder.tracking_number}</span></p>
                                                                     )}
@@ -840,12 +840,12 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                             </div>
 
                                             {/* Phase 3 */}
-                                            <div className={`p-8 rounded-[40px] border-2 transition-all ${isFulfillmentHistory ? 'border-green-400 bg-green-50/30 shadow-2xl shadow-green-400/10' : ['Awaiting Shipment Approval', 'Shipment Approved', 'To Receive', 'Completed'].includes(selectedOrder.status) ? 'border-gray-50 bg-white' : 'border-yellow-400 bg-yellow-50/30'}`}>
+                                            <div className={`p-8 rounded-[40px] border-2 transition-all ${isFulfillmentHistory ? 'border-green-400 bg-green-50/30 shadow-2xl shadow-green-400/10' : ['Awaiting Shipment Approval', 'To Shipping', 'To Receive', 'Completed'].includes(selectedOrder.status) ? 'border-gray-50 bg-white' : 'border-yellow-400 bg-yellow-50/30'}`}>
                                                 <div className="flex justify-between items-center mb-6">
                                                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">Phase 03</span>
                                                     {selectedOrder.status === 'Completed' ? (
                                                         <span className="bg-green-100 text-green-700 text-[10px] font-black uppercase px-3 py-1 rounded-full">Completed</span>
-                                                    ) : ['Shipment Approved', 'To Receive'].includes(selectedOrder.status) ? (
+                                                    ) : ['To Shipping', 'To Receive'].includes(selectedOrder.status) ? (
                                                         <span className="bg-green-100 text-green-700 text-[10px] font-black uppercase px-3 py-1 rounded-full">Dispatched</span>
                                                     ) : selectedOrder.shipment_requested_at ? (
                                                         <span className="bg-orange-100 text-orange-700 text-[10px] font-black uppercase px-3 py-1 rounded-full">Pending Admin</span>
@@ -876,7 +876,7 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                                     <>
                                                         <p className="text-[12px] font-medium text-gray-500 mb-8 leading-relaxed">After client approval, request the admin to handle the physical shipping.</p>
 
-                                                        {!selectedOrder.shipment_requested_at && selectedOrder.status !== 'Awaiting Shipment Approval' && selectedOrder.status !== 'Shipment Approved' && (
+                                                        {!selectedOrder.shipment_requested_at && selectedOrder.status !== 'Awaiting Shipment Approval' && selectedOrder.status !== 'To Shipping' && (
                                                             <div className="space-y-4">
                                                                 <textarea
                                                                     placeholder="Add any specific shipping or handling notes..."
