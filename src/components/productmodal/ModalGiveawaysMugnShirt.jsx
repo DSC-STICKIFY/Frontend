@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo , useRef} from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUI } from "../../context/UIContext";
 import { useAuth } from '../../context/CustomerAuthContext';
@@ -39,7 +39,7 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
     const pnm = (giveaways.product_name || "").toLowerCase();
     const typ = (giveaways.type || giveaways.product_type || "").toLowerCase();
     const combined = `${cat} ${tit} ${pnm} ${typ}`;
-    
+
     return {
       isShirt: combined.includes("shirt"),
       isMug: combined.includes("mug")
@@ -77,9 +77,9 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
     const typ = (giveaways.type || giveaways.product_type || "").toLowerCase();
     const dsc = (giveaways.description || giveaways.product_description || "").toLowerCase();
     const combined = `${tit} ${pnm} ${typ} ${dsc}`;
-    
+
     console.log("🔍 MugnShirt Modal - Detection for ID:", giveaways.id || giveaways.product_id, { combined });
-    
+
     if (isShirt) {
       if (combined.includes("dtf")) setSelectedSubtype("DTF");
       else setSelectedSubtype("Sublimation");
@@ -250,24 +250,22 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
                         const rawTierPrice = getRawPricePerPiece(tier);
                         const discTierPrice = getDiscountedPrice(rawTierPrice, promo);
                         const tierHasDiscount = discTierPrice !== rawTierPrice && promo && (promo.discount_type === "percentage" || promo.discount_type === "fixed");
-                        
+
                         const sorted = [...options].sort((a, b) => a - b);
                         const nextTierIdx = sorted.indexOf(tier) + 1;
                         const nextTier = nextTierIdx < sorted.length ? sorted[nextTierIdx] : null;
                         const isActiveTier = totalQuantity >= tier && (!nextTier || totalQuantity < nextTier);
 
                         return (
-                          <tr 
-                            key={`${selectedSubtype}-${tier}`} 
+                          <tr
+                            key={`${selectedSubtype}-${tier}`}
                             onClick={() => setQuantity(tier)}
-                            className={`group cursor-pointer transition-all duration-200 ${
-                              isActiveTier ? 'bg-yellow-50/50' : 'hover:bg-gray-50/30'
-                            }`}
+                            className={`group cursor-pointer transition-all duration-200 ${isActiveTier ? 'bg-yellow-50/50' : 'hover:bg-gray-50/30'
+                              }`}
                           >
                             <td className="py-3 px-2 flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full border flex items-center justify-center transition-all ${
-                                isActiveTier ? 'border-[#FFE100]' : 'border-gray-200 group-hover:border-gray-300'
-                              }`}>
+                              <div className={`w-3 h-3 rounded-full border flex items-center justify-center transition-all ${isActiveTier ? 'border-[#FFE100]' : 'border-gray-200 group-hover:border-gray-300'
+                                }`}>
                                 {isActiveTier && <div className="w-1.5 h-1.5 rounded-full bg-[#FFE100]" />}
                               </div>
                               <span className={`font-bold transition-colors ${isActiveTier ? 'text-gray-900' : 'text-gray-500'}`}>
@@ -307,11 +305,11 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
 
               <div className="flex-1 min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
                 {isCustomMode ? (
-                  <DesignChatbox 
+                  <DesignChatbox
                     onImageUpload={(img) => {
                       setUploadedImage({ preview: img });
                       setSubmitError(null);
-                    }} 
+                    }}
                     productId={giveaways.product_id || giveaways.id}
                   />
                 ) : (
@@ -389,9 +387,9 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
               </div>
 
               <div className="mt-8 space-y-4">
-                <button 
-                  onClick={handleBuyNow} 
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)} 
+                <button
+                  onClick={handleBuyNow}
+                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
                     ${(isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed"
@@ -400,9 +398,9 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
                 >
                   {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
-                <button 
-                  onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)} 
+                <button
+                  onClick={handleAddToCart}
+                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
                     ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >

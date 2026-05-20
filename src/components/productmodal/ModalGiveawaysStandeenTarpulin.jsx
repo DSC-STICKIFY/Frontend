@@ -223,11 +223,11 @@ const ModalGiveawaysStandeenTarpulin = ({ giveaways, onClose }) => {
               {/* Chatbox — fills remaining height */}
               <div className="flex-1 min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
                 {isCustomMode ? (
-                  <DesignChatbox 
+                  <DesignChatbox
                     onImageUpload={(img) => {
                       setUploadedImage({ preview: img });
                       setSubmitError(null);
-                    }} 
+                    }}
                     productId={giveaways.product_id || giveaways.id}
                   />
                 ) : (
@@ -306,9 +306,9 @@ const ModalGiveawaysStandeenTarpulin = ({ giveaways, onClose }) => {
               </div>
 
               <div className="mt-8 space-y-4">
-                <button 
-                  onClick={handleBuyNow} 
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)} 
+                <button
+                  onClick={handleBuyNow}
+                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
                     ${(isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed"
@@ -317,9 +317,9 @@ const ModalGiveawaysStandeenTarpulin = ({ giveaways, onClose }) => {
                 >
                   {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
-                <button 
-                  onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)} 
+                <button
+                  onClick={handleAddToCart}
+                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
                     ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
                 >
