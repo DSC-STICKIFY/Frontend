@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/CustomerAuthContext';
 import {
     fetchVerificationStatus,
@@ -10,6 +11,7 @@ import {
 import toast from 'react-hot-toast';
 
 const CustomerAccountSettings = () => {
+    const location = useLocation();
     const { currentUser, setCurrentUser, logout } = useAuth();
 
     // Verification
@@ -21,7 +23,7 @@ const CustomerAccountSettings = () => {
     const [receivePromo, setReceivePromo] = useState(false);
 
     // Edit profile
-    const [editOpen, setEditOpen] = useState(false);
+    const [editOpen, setEditOpen] = useState(location.state?.edit || false);
     const [firstName, setFirstName] = useState(currentUser?.first_name || "");
     const [lastName, setLastName] = useState(currentUser?.last_name || "");
     const [email, setEmail] = useState(currentUser?.email || "");

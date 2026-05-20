@@ -1007,7 +1007,7 @@ const UserOrdersModal = ({ user, statusFilter = "All", onClose, onRefresh, actio
                         </button>
                         <button onClick={async (e) => {
                             e.stopPropagation();
-                            setCancellingOrder(row._originalOrder);
+                            setCancellingOrder(row);
                             setIsCancelModalOpen(true);
                         }} className="bg-red-500 hover:bg-red-600 text-white text-[10px] font-semibold px-3 py-1.5 rounded-lg transition">
                             Cancel

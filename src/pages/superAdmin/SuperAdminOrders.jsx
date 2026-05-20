@@ -131,8 +131,8 @@ const SuperAdminOrders = () => {
         refreshOrdersSilently();
     }, [refreshOrdersSilently]);
 
-    const handleCancelOrder = useCallback(async (orderId, orderDetailsId = null) => {
-        await cancelOrder(orderId, orderDetailsId);
+    const handleCancelOrder = useCallback(async (orderId, orderDetailsId = null, reason = "Cancelled by admin") => {
+        await cancelOrder(orderId, orderDetailsId, reason);
         refreshOrdersSilently();
     }, [refreshOrdersSilently]);
 

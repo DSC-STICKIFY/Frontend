@@ -23,7 +23,7 @@ const getDueDate = (dateStr) => {
     return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
 };
 
-const formatInvoiceNo = (orderId) => `INV-${String(orderId).padStart(5, '0')}`;
+const formatOrderNo = (orderId) => `ORD-${String(orderId).padStart(5, '0')}`;
 
 const peso = (v) => '₱' + Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 
@@ -108,14 +108,12 @@ const buildReceiptHTML = (transaction, logoBase64) => {
             <div class="thick"></div>
             <div class="meta-row">
                 <div>
-                    <div class="lbl">Invoice</div>
+                    <div class="lbl">Order Summary</div>
                     <div class="val-bold">${transaction.invoiceNo}</div>
                 </div>
                 <div class="meta-right">
                     <div class="lbl">Date</div>
                     <div class="val">${fD(transaction.date)}</div>
-                    <div class="lbl" style="margin-top:4px">Due Date</div>
-                    <div class="val">${dD(transaction.date)}</div>
                 </div>
             </div>
             <div class="dash"></div>
@@ -141,7 +139,8 @@ const buildReceiptHTML = (transaction, logoBase64) => {
             <div class="thick"></div>
             <div class="footer">
                 Thank you for your order!
-                <div class="footer-sub">This is a computer-generated receipt.</div>
+                <div class="footer-sub">This is an Order Summary only and is NOT an Official Receipt.</div>
+                <div class="footer-sub">Not valid for tax purposes.</div>
             </div>
         </div>
     `;
@@ -150,7 +149,7 @@ const buildReceiptHTML = (transaction, logoBase64) => {
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Receipt — ${transaction.invoiceNo}</title>
+    <title>Order Summary — ${transaction.invoiceNo}</title>
     <style>${css}</style>
 </head>
 <body>${page}</body>
@@ -219,7 +218,7 @@ const SuperAdminSalesInvoice = () => {
 
                     return {
                         id:            order.order_id,
-                        invoiceNo:     formatInvoiceNo(order.order_id),
+                        invoiceNo:     formatOrderNo(order.order_id),
                         name:          order.name || 'Customer',
                         address:       order.address || '—',
                         contact:       order.contact_number || '—',
@@ -286,7 +285,7 @@ const SuperAdminSalesInvoice = () => {
         };
         setTransactions(prev => [{
             id:            nextId,
-            invoiceNo:     formatInvoiceNo(nextId),
+            invoiceNo:     formatOrderNo(nextId),
             name:          newInvoice.customerName || 'N/A',
             address:       newInvoice.address || '—',
             contact:       newInvoice.contact || '—',
@@ -340,7 +339,7 @@ const SuperAdminSalesInvoice = () => {
     return (
         <>
             <div className="p-3 bg-white rounded-3xl min-h-[calc(100vh-2.5rem)] shadow-md my-5 mr-5 ml-1 flex flex-col">
-                <h1 className="text-2xl font-bold text-gray-900 mb-5 mt-1">Sales Invoices</h1>
+                <h1 className="text-2xl font-bold text-gray-900 mb-5 mt-1">Order Summaries</h1>
 
                 {showInvoice ? (
                     <AddSalesInvoice
@@ -355,7 +354,7 @@ const SuperAdminSalesInvoice = () => {
                         <div className="flex justify-between items-center mb-3 gap-3 flex-wrap">
                             <input
                                 type="text"
-                                placeholder="Search by invoice, product, customer..."
+                                placeholder="Search by order no., product, customer..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="border border-[#DCDCDC] rounded px-2 py-1 w-72 text-sm"
@@ -367,7 +366,7 @@ const SuperAdminSalesInvoice = () => {
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
                                 </svg>
-                                <span className="text-sm">Create Invoice</span>
+                                <span className="text-sm">Create Order Summary</span>
                             </button>
                         </div>
 
@@ -388,7 +387,7 @@ const SuperAdminSalesInvoice = () => {
                                 {loading ? (
                                     <div className="flex flex-col items-center justify-center py-20 gap-3">
                                         <div className="w-8 h-8 border-2 border-gray-200 border-t-yellow-500 rounded-full animate-spin" />
-                                        <p className="text-xs font-bold text-gray-400 uppercase">Loading invoices...</p>
+                                        <p className="text-xs font-bold text-gray-400 uppercase">Loading order summaries...</p>
                                     </div>
                                 ) : filtered.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -400,10 +399,9 @@ const SuperAdminSalesInvoice = () => {
                                             {/* ── Item(s) and Qty columns removed ── */}
                                             <tr className="text-left border-b border-gray-300">
                                                 <th className="px-3 py-2 font-semibold w-6"></th>
-                                                <th className="px-3 py-2 font-semibold">Invoice</th>
+                                                <th className="px-3 py-2 font-semibold">Order No.</th>
                                                 <th className="px-3 py-2 font-semibold">Customer</th>
                                                 <th className="px-3 py-2 font-semibold">Date</th>
-                                                <th className="px-3 py-2 font-semibold">Due</th>
                                                 <th className="px-3 py-2 font-semibold">Payment</th>
                                                 <th className="px-3 py-2 font-semibold text-right">Total</th>
                                                 <th className="px-3 py-2 font-semibold text-center">Actions</th>
@@ -448,11 +446,6 @@ const SuperAdminSalesInvoice = () => {
                                                                 {formatDate(tx.date)}
                                                             </td>
 
-                                                            {/* Due date */}
-                                                            <td className="px-3 py-3 text-gray-500 text-sm whitespace-nowrap">
-                                                                {getDueDate(tx.date)}
-                                                            </td>
-
                                                             {/* Payment */}
                                                             <td className="px-3 py-3 text-gray-500 text-sm">
                                                                 {tx.paymentMethod}
@@ -493,7 +486,7 @@ const SuperAdminSalesInvoice = () => {
                                                                             onClick={() => handlePrint(tx)}
                                                                             disabled={isPrinting}
                                                                             className="flex items-center gap-1 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 px-2.5 py-1 rounded-lg transition"
-                                                                            title={`Print receipt for ${tx.invoiceNo}`}
+                                                                            title={`Print order summary for ${tx.invoiceNo}`}
                                                                         >
                                                                             {isPrinting ? (
                                                                                 <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">

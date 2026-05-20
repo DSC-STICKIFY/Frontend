@@ -6,8 +6,42 @@ import {
     fetchReturnMessages,
     authorizeSubAdmin,
 } from "../../services/OrdersAPI";
-import { IMAGE_BASE_URL } from "../../services/api";
+import api, { IMAGE_BASE_URL } from "../../services/api";
 import { useAdminAuth } from '../../context/AdminAuthContext';
+import ReturnPoliciesManager from "../subAdmin/ReturnPoliciesManager";
+
+const FieldLabel = ({ children, required }) => (
+    <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 px-1">
+        {children} {required && <span className="text-red-500 normal-case tracking-normal text-xs">*</span>}
+    </label>
+);
+
+const SaveButton = ({ onClick, loading, disabled, label = 'Save Changes' }) => (
+    <button
+        onClick={onClick}
+        disabled={disabled || loading}
+        className="px-8 py-3 bg-[#FDE31E] hover:bg-yellow-400 disabled:bg-gray-100 disabled:text-gray-400 text-black font-black text-xs uppercase rounded-xl transition-all shadow-md  active:scale-95 disabled:cursor-not-allowed"
+    >
+        {loading ? (
+            <span className="flex items-center gap-2">
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Saving...
+            </span>
+        ) : label}
+    </button>
+);
+
+const SuccessBadge = ({ message = 'Saved!' }) => (
+    <span className="flex items-center gap-1.5 text-xs text-green-600 font-semibold bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+        </svg>
+        {message}
+    </span>
+);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const getUrl = (p) => {
@@ -756,12 +790,62 @@ const DetailPanel = ({ item, onClose, onStatusChange }) => {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 const ReturnRefundManagement = () => {
+    const [view, setView]             = useState("requests"); // "requests" | "policies"
     const [returns, setReturns]       = useState([]);
     const [loading, setLoading]       = useState(true);
     const [selected, setSelected]     = useState(null);
     const [filter, setFilter]         = useState("all");
     const [search, setSearch]         = useState("");
     const [showDetail, setShowDetail] = useState(false);
+
+    // ── Refund policy settings state ──────────────────────────────────────────
+    const [refundPct, setRefundPct] = useState(70);
+    const [refundInput, setRefundInput] = useState('70');
+    const [refundLoading, setRefundLoading] = useState(false);
+    const [refundFetching, setRefundFetching] = useState(true);
+    const [refundSuccess, setRefundSuccess] = useState(false);
+    const [refundError, setRefundError] = useState('');
+
+    // ── Fetch refund policy on mount ──────────────────────────────────────────
+    useEffect(() => {
+        const fetchPolicy = async () => {
+            try {
+                const res = await api.get('/admin/settings');
+                const pct = res.data?.refund_percentage ?? 70;
+                setRefundPct(pct);
+                setRefundInput(String(pct));
+            } catch {
+                // fallback to 70 if fetch fails
+            } finally {
+                setRefundFetching(false);
+            }
+        };
+        fetchPolicy();
+    }, []);
+
+    const handleSaveRefund = async () => {
+        const val = Number(refundInput);
+        if (!refundInput || isNaN(val) || val < 1 || val > 100) {
+            setRefundError('Please enter a valid percentage between 1 and 100.');
+            return;
+        }
+        setRefundError('');
+        setRefundLoading(true);
+        try {
+            await api.post('/admin/settings', { refund_percentage: val });
+            setRefundPct(val);
+            setRefundSuccess(true);
+            setTimeout(() => setRefundSuccess(false), 3000);
+        } catch {
+            setRefundError('Failed to save. Please try again.');
+        } finally {
+            setRefundLoading(false);
+        }
+    };
+
+    const displayPct = Number(refundInput) || 0;
+    const retainedPct = 100 - displayPct;
+    const isValidPct = displayPct >= 1 && displayPct <= 100;
 
     const fetchReturns = useCallback(async () => {
         try {
@@ -830,90 +914,215 @@ const ReturnRefundManagement = () => {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Return & Refund</h1>
-                        <p className="text-sm text-gray-500">Manage customer return/refund requests</p>
+                        <p className="text-sm text-gray-500">Manage customer return/refund requests & policies</p>
                     </div>
-                    <button onClick={initialLoad} className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200">
-                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <div className="flex gap-1 mt-5 bg-gray-100 p-1 rounded-xl w-fit">
-                    {TABS.map(t => (
-                        <button
-                            key={t.key}
-                            onClick={() => setFilter(t.key)}
-                            className={`px-5 py-2 rounded-lg text-sm font-semibold transition ${filter === t.key ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
-                            {t.label}
-                            {counts[t.key] > 0 && (
-                                <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-gray-700">
-                                    {counts[t.key]}
-                                </span>
-                            )}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Body */}
-            <div className="flex flex-1 overflow-hidden">
-                {/* Left List */}
-                <div className={`flex flex-col border-r border-gray-100 ${showDetail ? "hidden lg:flex" : "flex"} lg:w-[380px] w-full flex-shrink-0`}>
-                    <div className="p-4 border-b border-gray-100">
-                        <div className="relative">
-                            <input
-                                type="text"
-                                placeholder="Search product, customer, reason..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
-                            />
-                            <svg className="w-5 h-5 text-gray-400 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-gray-100 p-1 rounded-xl">
+                            <button
+                                onClick={() => setView("requests")}
+                                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition ${view === "requests" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
+                                Requests
+                            </button>
+                            <button
+                                onClick={() => setView("policies")}
+                                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition ${view === "policies" ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
+                                Policies
+                            </button>
                         </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto">
-                        {loading ? (
-                            <div className="flex flex-col items-center justify-center py-20">
-                                <div className="w-8 h-8 border-2 border-gray-200 border-t-orange-400 rounded-full animate-spin"/>
-                                <p className="mt-4 text-sm text-gray-400">Loading requests...</p>
-                            </div>
-                        ) : filtered.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                                <p>No requests found</p>
-                            </div>
-                        ) : (
-                            filtered.map(item => (
-                                <RequestRow
-                                    key={item.id}
-                                    item={item}
-                                    selected={selected?.id === item.id}
-                                    onClick={() => handleSelect(item)}
-                                />
-                            ))
+                        {view === "requests" && (
+                            <button onClick={initialLoad} className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200">
+                                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                            </button>
                         )}
                     </div>
                 </div>
 
-                {/* Right Detail Panel */}
-                <div className={`flex-1 overflow-hidden p-6 ${showDetail ? "flex" : "hidden lg:flex"} flex-col`}>
-                    {showDetail && (
-                        <button
-                            onClick={() => setShowDetail(false)}
-                            className="lg:hidden mb-4 text-orange-500 font-semibold flex items-center gap-1">
-                            ← Back to list
-                        </button>
-                    )}
-                    <DetailPanel
-                        item={selected}
-                        onClose={() => setShowDetail(false)}
-                        onStatusChange={handleStatusChange}
-                    />
-                </div>
+                {view === "requests" && (
+                    <div className="flex gap-1 mt-5 bg-gray-100 p-1 rounded-xl w-fit">
+                        {TABS.map(t => (
+                            <button
+                                key={t.key}
+                                onClick={() => setFilter(t.key)}
+                                className={`px-5 py-2 rounded-lg text-sm font-semibold transition ${filter === t.key ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"}`}>
+                                {t.label}
+                                {counts[t.key] > 0 && (
+                                    <span className="ml-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-gray-700">
+                                        {counts[t.key]}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
+
+            {/* Body */}
+            {view === "requests" ? (
+                <div className="flex flex-1 overflow-hidden">
+                    {/* Left List */}
+                    <div className={`flex flex-col border-r border-gray-100 ${showDetail ? "hidden lg:flex" : "flex"} lg:w-[380px] w-full flex-shrink-0`}>
+                        <div className="p-4 border-b border-gray-100">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="Search product, customer, reason..."
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"
+                                />
+                                <svg className="w-5 h-5 text-gray-400 absolute left-4 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto">
+                            {loading ? (
+                                <div className="flex flex-col items-center justify-center py-20">
+                                    <div className="w-8 h-8 border-2 border-gray-200 border-t-orange-400 rounded-full animate-spin"/>
+                                    <p className="mt-4 text-sm text-gray-400">Loading requests...</p>
+                                </div>
+                            ) : filtered.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                                    <p>No requests found</p>
+                                </div>
+                            ) : (
+                                filtered.map(item => (
+                                    <RequestRow
+                                        key={item.id}
+                                        item={item}
+                                        selected={selected?.id === item.id}
+                                        onClick={() => handleSelect(item)}
+                                    />
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right Detail Panel */}
+                    <div className={`flex-1 overflow-hidden p-6 ${showDetail ? "flex" : "hidden lg:flex"} flex-col`}>
+                        {showDetail && (
+                            <button
+                                onClick={() => setShowDetail(false)}
+                                className="lg:hidden mb-4 text-orange-500 font-semibold flex items-center gap-1">
+                                ← Back to list
+                            </button>
+                        )}
+                        <DetailPanel
+                            item={selected}
+                            onClose={() => setShowDetail(false)}
+                            onStatusChange={handleStatusChange}
+                        />
+                    </div>
+                </div>
+            ) : (
+                <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
+                    <div className="max-w-3xl mx-auto space-y-6 pb-12">
+                        {/* ── Refund Policy ── */}
+                        <div className="bg-white border border-[#DCDCDC] rounded-[32px] p-8 shadow-sm">
+                            <div className="flex items-center justify-between mb-5">
+                                <div>
+                                    <h2 className="text-base font-bold text-gray-900">Return & Refund Policy</h2>
+                                    <p className="text-xs text-gray-400 mt-0.5">Set the percentage refunded to customers on approved return requests</p>
+                                </div>
+                                {refundSuccess && <SuccessBadge />}
+                            </div>
+
+                            {refundFetching ? (
+                                <div className="flex items-center gap-3 py-6 text-gray-400">
+                                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                    </svg>
+                                    <span className="text-sm">Loading policy...</span>
+                                </div>
+                            ) : (
+                                <div className="space-y-5">
+                                    {/* Percentage input */}
+                                    <div>
+                                        <FieldLabel required>Refund Percentage</FieldLabel>
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative flex-1 max-w-[180px]">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="100"
+                                                    value={refundInput}
+                                                    onChange={e => {
+                                                        setRefundInput(e.target.value);
+                                                        setRefundError('');
+                                                    }}
+                                                    className={`w-full px-4 py-3 pr-10 rounded-xl border text-sm font-black text-gray-900 outline-none transition-all
+                                                        bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-[#FDE31E]/10
+                                                        ${refundError ? 'border-red-300 focus:border-red-400' : 'border-[#DCDCDC] focus:border-[#FDE31E]'}
+                                                    `}
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-black text-gray-400">%</span>
+                                            </div>
+
+                                            {/* Live split preview pill */}
+                                            {isValidPct && (
+                                                <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
+                                                    <span className="px-2.5 py-1 bg-[#FDE31E]/20 text-yellow-700 rounded-lg border border-yellow-200">
+                                                        {displayPct}% to customer
+                                                    </span>
+                                                    <span className="text-gray-300">·</span>
+                                                    <span className="px-2.5 py-1 bg-gray-100 text-gray-500 rounded-lg border border-gray-200">
+                                                        {retainedPct}% retained
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        {refundError && <p className="mt-1.5 text-xs text-red-500">{refundError}</p>}
+                                    </div>
+
+                                    {/* Visual progress bar */}
+                                    {isValidPct && (
+                                        <div className="space-y-1.5">
+                                            <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden flex">
+                                                <div
+                                                    className="h-full bg-[#FDE31E] transition-all duration-300 rounded-full"
+                                                    style={{ width: `${displayPct}%` }}
+                                                />
+                                            </div>
+                                            <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest px-0.5">
+                                                <span>Customer refund</span>
+                                                <span>Store retains</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Info note */}
+                                    <div className="flex items-start gap-3 bg-gray-50 border border-[#DCDCDC] rounded-2xl px-4 py-3.5">
+                                        <svg className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <p className="text-xs text-gray-500 leading-relaxed">
+                                            This percentage applies to all approved return requests. Currently, customers receive{' '}
+                                            <strong className="text-gray-700">{refundPct}%</strong> of the item price — the remaining{' '}
+                                            <strong className="text-gray-700">{100 - refundPct}%</strong> covers processing and restocking fees.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="flex justify-end mt-8 pt-6 border-t border-[#DCDCDC]">
+                                <SaveButton
+                                    onClick={handleSaveRefund}
+                                    loading={refundLoading}
+                                    disabled={refundFetching || !isValidPct}
+                                    label="Save Policy"
+                                />
+                            </div>
+                        </div>
+
+                        {/* ── Return Eligibility Policies ── */}
+                        <ReturnPoliciesManager />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

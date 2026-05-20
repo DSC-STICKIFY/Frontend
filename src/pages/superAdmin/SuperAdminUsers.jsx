@@ -69,8 +69,9 @@ const SuperAdminUsers = () => {
     const confirmDelete = async () => {
         if (!userToDelete) return;
         try {
-            await deleteUser(userToDelete.user_id);
-            setUsersData(prev => prev.filter(u => u.user_id !== userToDelete.user_id));
+            const id = userToDelete.user_id || userToDelete.employee_id || userToDelete.sub_admin_id;
+            await deleteUser(id, userType);
+            setUsersData(prev => prev.filter(u => (u.user_id || u.employee_id || u.sub_admin_id) !== id));
             setShowConfirmModal(false);
             setShowSuccessModal(true);
             setModalMessage("User deleted successfully.");
@@ -118,9 +119,10 @@ const SuperAdminUsers = () => {
             };
 
             if (modalMode === 'add') {
-                await addUser(payload);
+                await addUser(payload, userType);
             } else {
-                await updateUser(formData.user_id, payload, userType); // ← gi-add ang userType
+                const id = formData.user_id || formData.employee_id || formData.sub_admin_id;
+                await updateUser(id, payload, userType); // ← gi-add ang userType
             }
 
             setShowEditModal(false);
@@ -145,7 +147,7 @@ const SuperAdminUsers = () => {
     };
 
     const renderUserCells = (user) => {
-        const userId = user.user_id;
+        const userId = user.user_id || user.employee_id || user.sub_admin_id;
         const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'N/A';
 
         const commonCells = (
@@ -260,7 +262,7 @@ const SuperAdminUsers = () => {
                                 </tr>
                             ) : usersData.length > 0 ? (
                                 usersData.map(user => (
-                                    <tr key={user.user_id} className="hover:bg-gray-50/50 transition-colors group">
+                                    <tr key={user.user_id || user.employee_id || user.sub_admin_id} className="hover:bg-gray-50/50 transition-colors group">
                                         {renderUserCells(user)}
                                         <td className="px-6 py-4">
                                             <div className="flex justify-center gap-2">

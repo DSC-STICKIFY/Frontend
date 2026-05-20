@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 import api from '../../services/api';
-import ReturnPoliciesManager from './ReturnPoliciesManager';
+
 import { updateProfile, updatePassword as updatePasswordService } from '../../services/authService';
 
 const EyeIcon = ({ visible }) => (
@@ -109,13 +109,7 @@ const SubAdminAccountSettings = () => {
     const [pwSuccess, setPwSuccess] = useState(false);
     const [pwErrors, setPwErrors] = useState({});
 
-    // ── Refund policy state ───────────────────────────────────────────────────
-    const [refundPct, setRefundPct] = useState(70);
-    const [refundInput, setRefundInput] = useState('70');
-    const [refundLoading, setRefundLoading] = useState(false);
-    const [refundFetching, setRefundFetching] = useState(true);
-    const [refundSuccess, setRefundSuccess] = useState(false);
-    const [refundError, setRefundError] = useState('');
+
 
     // ── Pre-fill from currentUser ─────────────────────────────────────────────
     useEffect(() => {
@@ -127,22 +121,7 @@ const SubAdminAccountSettings = () => {
         }
     }, [currentUser]);
 
-    // ── Fetch refund policy on mount ──────────────────────────────────────────
-    useEffect(() => {
-        const fetchPolicy = async () => {
-            try {
-                const res = await api.get('/admin/settings');
-                const pct = res.data?.refund_percentage ?? 70;
-                setRefundPct(pct);
-                setRefundInput(String(pct));
-            } catch {
-                // fallback to 70 if fetch fails
-            } finally {
-                setRefundFetching(false);
-            }
-        };
-        fetchPolicy();
-    }, []);
+
 
     const fullName = [firstName, lastName].filter(Boolean).join(' ') || 'Admin User';
     const role = currentUser?.role === 'admin' ? 'Super Admin' : 'Sub Admin';
@@ -207,26 +186,7 @@ const SubAdminAccountSettings = () => {
         }
     };
 
-    // ── Save refund policy ────────────────────────────────────────────────────
-    const handleSaveRefund = async () => {
-        const val = Number(refundInput);
-        if (!refundInput || isNaN(val) || val < 1 || val > 100) {
-            setRefundError('Please enter a valid percentage between 1 and 100.');
-            return;
-        }
-        setRefundError('');
-        setRefundLoading(true);
-        try {
-            await api.post('/admin/settings', { refund_percentage: val });
-            setRefundPct(val);
-            setRefundSuccess(true);
-            setTimeout(() => setRefundSuccess(false), 3000);
-        } catch {
-            setRefundError('Failed to save. Please try again.');
-        } finally {
-            setRefundLoading(false);
-        }
-    };
+
 
     const pwStrength = () => {
         if (!newPw) return null;
@@ -238,10 +198,7 @@ const SubAdminAccountSettings = () => {
     };
     const strength = pwStrength();
 
-    // Derived refund display values
-    const displayPct = Number(refundInput) || 0;
-    const retainedPct = 100 - displayPct;
-    const isValidPct = displayPct >= 1 && displayPct <= 100;
+
 
     return (
         <div className="p-8 bg-white rounded-[40px] border border-[#DCDCDC] min-h-[calc(100vh-2.5rem)] shadow-sm my-5 mr-5 ml-1 overflow-y-auto">
@@ -407,106 +364,7 @@ const SubAdminAccountSettings = () => {
                     </div>
                 </div>
 
-                {/* ── Refund Policy ── */}
-                <div className="bg-white border border-[#DCDCDC] rounded-[32px] p-8 mb-6 shadow-sm">
-                    <div className="flex items-center justify-between mb-5">
-                        <div>
-                            <h2 className="text-base font-bold text-gray-900">Return & Refund Policy</h2>
-                            <p className="text-xs text-gray-400 mt-0.5">Set the percentage refunded to customers on approved return requests</p>
-                        </div>
-                        {refundSuccess && <SuccessBadge />}
-                    </div>
 
-                    {refundFetching ? (
-                        <div className="flex items-center gap-3 py-6 text-gray-400">
-                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                            </svg>
-                            <span className="text-sm">Loading policy...</span>
-                        </div>
-                    ) : (
-                        <div className="space-y-5">
-                            {/* Percentage input */}
-                            <div>
-                                <FieldLabel required>Refund Percentage</FieldLabel>
-                                <div className="flex items-center gap-3">
-                                    <div className="relative flex-1 max-w-[180px]">
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="100"
-                                            value={refundInput}
-                                            onChange={e => {
-                                                setRefundInput(e.target.value);
-                                                setRefundError('');
-                                            }}
-                                            className={`w-full px-4 py-3 pr-10 rounded-xl border text-sm font-black text-gray-900 outline-none transition-all
-                                                bg-gray-50/50 focus:bg-white focus:ring-4 focus:ring-[#FDE31E]/10
-                                                ${refundError ? 'border-red-300 focus:border-red-400' : 'border-[#DCDCDC] focus:border-[#FDE31E]'}
-                                            `}
-                                        />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-black text-gray-400">%</span>
-                                    </div>
-
-                                    {/* Live split preview pill */}
-                                    {isValidPct && (
-                                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-                                            <span className="px-2.5 py-1 bg-[#FDE31E]/20 text-yellow-700 rounded-lg border border-yellow-200">
-                                                {displayPct}% to customer
-                                            </span>
-                                            <span className="text-gray-300">·</span>
-                                            <span className="px-2.5 py-1 bg-gray-100 text-gray-500 rounded-lg border border-gray-200">
-                                                {retainedPct}% retained
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                                {refundError && <p className="mt-1.5 text-xs text-red-500">{refundError}</p>}
-                            </div>
-
-                            {/* Visual progress bar */}
-                            {isValidPct && (
-                                <div className="space-y-1.5">
-                                    <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden flex">
-                                        <div
-                                            className="h-full bg-[#FDE31E] transition-all duration-300 rounded-full"
-                                            style={{ width: `${displayPct}%` }}
-                                        />
-                                    </div>
-                                    <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-widest px-0.5">
-                                        <span>Customer refund</span>
-                                        <span>Store retains</span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Info note */}
-                            <div className="flex items-start gap-3 bg-gray-50 border border-[#DCDCDC] rounded-2xl px-4 py-3.5">
-                                <svg className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <p className="text-xs text-gray-500 leading-relaxed">
-                                    This percentage applies to all approved return requests. Currently, customers receive{' '}
-                                    <strong className="text-gray-700">{refundPct}%</strong> of the item price — the remaining{' '}
-                                    <strong className="text-gray-700">{100 - refundPct}%</strong> covers processing and restocking fees.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="flex justify-end mt-8 pt-6 border-t border-[#DCDCDC]">
-                        <SaveButton
-                            onClick={handleSaveRefund}
-                            loading={refundLoading}
-                            disabled={refundFetching || !isValidPct}
-                            label="Save Policy"
-                        />
-                    </div>
-                </div>
-
-                {/* ── Return Eligibility Policies ── */}
-                <ReturnPoliciesManager />
 
             </div>
         </div>

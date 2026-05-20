@@ -79,12 +79,14 @@ const CustomerInbox = () => {
 
     const emojiPickerRef = useRef(null);
     const fileInputRef = useRef(null);
-    const bottomRef = useRef(null);
+    const desktopBottomRef = useRef(null);
+    const mobileBottomRef = useRef(null);
 
     const adminContact = { name: "Admin Support", avatar: adminAvatar };
 
     const scrollToBottom = () => {
-        bottomRef.current?.scrollIntoView({ behavior: "auto" });
+        desktopBottomRef.current?.scrollIntoView({ behavior: "auto" });
+        mobileBottomRef.current?.scrollIntoView({ behavior: "auto" });
     };
 
     useEffect(() => {
@@ -166,7 +168,11 @@ const CustomerInbox = () => {
     }, [userId, loadMessages]);
 
     useLayoutEffect(() => {
-        if (!loading && messages.length > 0) scrollToBottom();
+        if (!loading && messages.length > 0) {
+            scrollToBottom();
+            const t = setTimeout(scrollToBottom, 100);
+            return () => clearTimeout(t);
+        }
     }, [messages, loading]);
 
     // ✅ Clear badge immediately on mount
@@ -365,6 +371,7 @@ const CustomerInbox = () => {
                             alt="Attachment"
                             className="max-h-56 rounded-xl border border-gray-200 cursor-pointer hover:opacity-90 transition"
                             onClick={() => window.open(msg.image, "_blank")}
+                            onLoad={scrollToBottom}
                         />
                     </div>
                 )}
@@ -520,7 +527,7 @@ const CustomerInbox = () => {
                             </div>
                         )}
                         
-                        <div ref={bottomRef} />
+                        <div ref={desktopBottomRef} />
                     </div>
                     {inputArea()}
                 </div>
@@ -569,7 +576,7 @@ const CustomerInbox = () => {
                             </div>
                         )}
 
-                        <div ref={bottomRef} />
+                        <div ref={mobileBottomRef} />
                     </div>
                     {inputArea(true)}
                 </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import newItem from "../../assets/newItem.svg";
 import searchB from "../../assets/search.svg";
@@ -7,9 +7,11 @@ import cImg1 from "../../assets/cImg1.png";
 import noImage from "../../assets/no_image.png";
 import { fetchUserOrders } from "../../services/OrdersAPI";
 import { useProducts } from "../../context/ProductsContext";
+import { useCart } from "../../context/CartContext";
 import PromoApi from "../../services/PromoApi";
 import { IMAGE_BASE_URL } from "../../services/api";
 import CustomerOrders from "./CustomerOrders.jsx";
+import { useAuth } from "../../context/CustomerAuthContext";
 
 // Sticker modals
 import ModalAssortedHologram from "../../components/productmodal/ModalAssortedHologram.jsx";
@@ -254,9 +256,59 @@ const getModalType = (item) => {
   return null;
 };
 
+const CompleteProfileBanner = ({ onClick }) => (
+  <div className="bg-[#FDE31E] rounded-2xl p-4 md:p-5 flex items-center justify-between shadow-sm gap-4 mb-5 border-2 border-black/10 animate-in fade-in duration-200" style={{ animation: 'bannerPop 0.25s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+    <style>{`@keyframes bannerPop { from { opacity:0; transform:scale(0.98) translateY(4px); } to { opacity:1; transform:scale(1) translateY(0); } }`}</style>
+    <div className="flex items-center gap-3 md:gap-4">
+      <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center shrink-0">
+        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      </div>
+      <div>
+        <h4 className="text-[11px] md:text-sm font-black text-black leading-snug uppercase tracking-tight">
+          Complete your profile!
+        </h4>
+        <p className="text-[10px] md:text-xs text-black/70 font-semibold leading-tight mt-0.5">
+          Please add your shipping address and contact number to proceed with order placement.
+        </p>
+      </div>
+    </div>
+    <button 
+      onClick={onClick}
+      className="bg-black text-white hover:bg-neutral-800 active:scale-95 transition-all px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest shrink-0 shadow-sm"
+    >
+      Complete Profile
+    </button>
+  </div>
+);
+
 const CustomerDashboard = () => {
   const navigate = useNavigate();
   const { allProducts, loading: productsLoading } = useProducts();
+  const { addItem } = useCart();
+  const { currentUser } = useAuth();
+  const [showCartToast, setShowCartToast] = useState(false);
+
+  const isProfileIncomplete = currentUser && (
+    !currentUser.address?.trim() || 
+    !currentUser.contact_number?.trim()
+  );
+
+  const handleAddToCart = useCallback((product) => {
+    if (!product) return;
+    addItem({
+      productId: product.id || product._id || product.product_id || "unknown",
+      title: product.name || product.product_name || "Product",
+      price: parseFloat(product.product_price || product.price || 0),
+      image: product.image || product.product_image || null,
+      quantity: 1,
+      category: product.category || product.product_category || "",
+      type: product.type || product.product_type || "",
+    });
+    setShowCartToast(true);
+    setTimeout(() => setShowCartToast(false), 3500);
+  }, [addItem]);
 
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
@@ -412,6 +464,9 @@ const CustomerDashboard = () => {
     <div className="p-6 bg-[#F1F3F7] min-h-screen">
       {/* ── DESKTOP ──────────────────────────────────────────────────────────── */}
       <div className="hidden lg:flex flex-col p-3 bg-white rounded-3xl shadow-md min-h-[calc(100vh-2.5rem)] w-full">
+        {isProfileIncomplete && (
+          <CompleteProfileBanner onClick={() => navigate("/customer-settings", { state: { edit: true } })} />
+        )}
         <div className="flex gap-3 flex-col md:flex-row">
           {/* Promo Carousel — Desktop (REPLACED) */}
           <div className="relative w-full md:w-[500px] rounded-[16px] overflow-hidden flex-shrink-0" style={{ minHeight: "220px" }}>
@@ -587,6 +642,7 @@ const CustomerDashboard = () => {
             products={allProducts}
             onProductClick={handleNavigateToProduct}
             onOrderNowClick={handleOpenModal}
+            onAddToCartClick={handleAddToCart}
             onViewAll={() => navigate("/products")}
           />
         </div>
@@ -596,6 +652,9 @@ const CustomerDashboard = () => {
       <div className="lg:hidden min-h-screen bg-gray-50">
         <div className="h-20" aria-hidden="true"></div>
         <div className="px-5 pb-10 space-y-8">
+          {isProfileIncomplete && (
+            <CompleteProfileBanner onClick={() => navigate("/customer-settings", { state: { edit: true } })} />
+          )}
           {/* Promo Banner Carousel — Mobile (REPLACED) */}
           <div className="relative rounded-2xl overflow-hidden shadow-lg" style={{ minHeight: "256px" }}>
             {promos.length === 0 ? (
@@ -776,6 +835,7 @@ const CustomerDashboard = () => {
               products={allProducts}
               onProductClick={handleNavigateToProduct}
               onOrderNowClick={handleOpenModal}
+              onAddToCartClick={handleAddToCart}
               onViewAll={() => navigate("/products")}
             />
           </div>
@@ -854,6 +914,18 @@ const CustomerDashboard = () => {
           isModal={true}
           onClose={() => setShowOrdersModal(false)}
         />
+      )}
+
+      {showCartToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl" style={{ animation: "toastIn 0.25s cubic-bezier(.34,1.56,.64,1) both" }}>
+          <style>{`@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(16px) scale(0.95); } to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }`}</style>
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+          <span className="text-sm font-medium">Added to cart!</span>
+          <button onClick={() => { setShowCartToast(false); navigate("/customer-cart"); }} className="ml-1 text-sm font-bold text-yellow-400 hover:text-yellow-300 transition-colors">View Cart</button>
+          <button onClick={() => setShowCartToast(false)} className="ml-2 text-gray-500 hover:text-white transition-colors text-lg leading-none">×</button>
+        </div>
       )}
     </div>
   );

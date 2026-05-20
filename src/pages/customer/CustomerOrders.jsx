@@ -495,6 +495,24 @@ const OrderDetailsModal = ({ order, onClose }) => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Cancellation Info Section */}
+                    {normalizeStatus(order.status) === 'Cancelled' && order.cancel_reason && (
+                        <div className="px-6 pb-6">
+                            <SectionLabel>Cancellation Information</SectionLabel>
+                            <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex gap-4 items-start">
+                                <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-red-100 border border-red-200 flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1.5">Reason for Cancellation</p>
+                                    <p className="text-sm font-semibold text-red-700 leading-relaxed">{order.cancel_reason}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -1032,6 +1050,21 @@ const OrderCard = ({
                             </button>
                         );
                     })()}
+
+                    {/* Cancellation Reason Banner */}
+                    {normalizeStatus(order.status) === 'Cancelled' && order.cancel_reason && (
+                        <div className="mt-2 bg-red-50 border border-red-200 rounded-2xl p-4 flex gap-3 items-start">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-xl bg-red-100 flex items-center justify-center">
+                                <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Cancellation Reason</p>
+                                <p className="text-sm font-semibold text-red-700 leading-snug">{order.cancel_reason}</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -1039,6 +1072,37 @@ const OrderCard = ({
                 <OrderDetailsModal order={order} onClose={() => setShowDetails(false)} />
             )}
         </>
+    );
+};
+
+const ReviewReminderBanner = ({ count, onClick }) => {
+    if (count <= 0) return null;
+    return (
+        <div className="bg-[#FDE31E] rounded-2xl p-4 md:p-5 flex items-center justify-between shadow-sm gap-4 mb-4" style={{ animation: 'modalPop 0.25s cubic-bezier(0.34,1.56,0.64,1) both' }}>
+            <div className="flex items-center gap-3 md:gap-4">
+                <div className="flex gap-0.5 text-black shrink-0">
+                    {[1, 2, 3, 4, 5].map(s => (
+                        <svg key={s} className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                    ))}
+                </div>
+                <div>
+                    <h4 className="text-[11px] md:text-sm font-black text-black leading-snug uppercase tracking-tight">
+                        You have {count} completed {count === 1 ? 'service' : 'services'} waiting for your review!
+                    </h4>
+                    <p className="text-[10px] md:text-xs text-black/70 font-semibold leading-tight mt-0.5">
+                        Your feedback helps us serve you better.
+                    </p>
+                </div>
+            </div>
+            <button 
+                onClick={onClick}
+                className="bg-black text-white hover:bg-neutral-800 active:scale-95 transition-all px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest shrink-0 shadow-sm"
+            >
+                View
+            </button>
+        </div>
     );
 };
 
@@ -1059,6 +1123,8 @@ const CustomerOrders = ({ isModal = false, onClose }) => {
     const [selectedChatOrder, setSelectedChatOrder] = useState(null);
 
     const showToast = useCallback((msg) => setToast(msg), []);
+
+    const reviewNeededCount = orders.filter(o => normalizeStatus(o.status) === 'Completed' && !o.has_review).length;
 
     const formatOrders = useCallback((data) => {
         const rawOrders = data.orders || data || [];
@@ -1109,6 +1175,7 @@ const CustomerOrders = ({ isModal = false, onClose }) => {
                     artist: order.artist || null,
                     expected_shipped_at: order.expected_shipped_at || null,
                     expected_delivery_at: order.expected_delivery_at || null,
+                    cancel_reason: order.cancel_reason || null,
                     sortDate,
                 });
             } else {
@@ -1186,6 +1253,7 @@ const CustomerOrders = ({ isModal = false, onClose }) => {
                         artist: order.artist || null,
                         expected_shipped_at: order.expected_shipped_at || null,
                         expected_delivery_at: order.expected_delivery_at || null,
+                        cancel_reason: order.cancel_reason || null,
                         sortDate,
                     });
                 });
@@ -1501,6 +1569,7 @@ const CustomerOrders = ({ isModal = false, onClose }) => {
 
                             {/* Scrollable list of orders */}
                             <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                <ReviewReminderBanner count={reviewNeededCount} onClick={() => setActiveTab('Completed')} />
                                 {loading ? (
                                     <Spinner />
                                 ) : filteredOrders.length === 0 ? (
@@ -1538,6 +1607,7 @@ const CustomerOrders = ({ isModal = false, onClose }) => {
                                 </div>
                             </div>
                             <div className="flex-1 overflow-y-auto bg-gray-50 p-6 space-y-4">
+                                <ReviewReminderBanner count={reviewNeededCount} onClick={() => setActiveTab('Completed')} />
                                 {loading ? (
                                     <Spinner />
                                 ) : filteredOrders.length === 0 ? (
@@ -1572,6 +1642,9 @@ const CustomerOrders = ({ isModal = false, onClose }) => {
                             </div>
                         </div>
                         <div className="overflow-y-auto px-2" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+                            <div className="px-2 pt-2">
+                                <ReviewReminderBanner count={reviewNeededCount} onClick={() => setActiveTab('Completed')} />
+                            </div>
                             {loading ? (
                                 <Spinner mobile />
                             ) : filteredOrders.length === 0 ? (

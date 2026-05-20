@@ -63,6 +63,7 @@ const transformOrder = (order) => {
     order_number:
       order.order_number || `ORD-${String(order.order_id).padStart(5, "0")}`,
     status: finalStatus,
+    cancel_reason: order.cancel_reason || null,
     total_price: Number(order.total_price) || 0,
     shipping_fee: Number(order.shipping_fee) || 0,
     tracking_number: order.tracking_number || null,
@@ -199,11 +200,11 @@ export const placeOrder = async (orderData) => {
   }
 };
 
-export const cancelOrder = async (orderId, orderItemId = null, reason = "Customer request") => {
+export const cancelOrder = async (orderId, orderDetailsId = null, reason = "Customer request") => {
   try {
     const payload = {
       reason,
-      ...(orderItemId ? { order_item_id: orderItemId } : {})
+      ...(orderDetailsId ? { order_details_id: orderDetailsId } : {})
     };
     const response = await api.post(`/cancel_order/${orderId}`, payload);
     return response.data;

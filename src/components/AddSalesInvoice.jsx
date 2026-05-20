@@ -71,7 +71,7 @@ const AddSalesInvoice = ({ onClose, onAddInvoice }) => {
     totalAmount:  '',
     date:         today,
     dueDate:      nextWeek,
-    invoiceNo:    `INV-${String(Date.now()).slice(-5)}`,
+    invoiceNo:    `ORD-${String(Date.now()).slice(-5)}`,
     customerName: '',
     address:      '',
     tin:          '',
@@ -168,7 +168,7 @@ const AddSalesInvoice = ({ onClose, onAddInvoice }) => {
 
       {/* Header & Action buttons */}
       <div className="flex justify-between items-center py-4 sticky top-0 bg-white z-10 border-b border-[#DCDCDC] mb-8">
-        <h2 className="text-xl font-black text-gray-900">Create New Invoice</h2>
+        <h2 className="text-xl font-black text-gray-900">Create New Order Summary</h2>
         <div className="flex gap-2">
           <button
             type="submit"

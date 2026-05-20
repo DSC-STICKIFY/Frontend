@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import SearchBar from "../components/SearchBar";
 import GallerySection from "../components/GallerySection";
 import TopProducts from "../components/TopProducts";
@@ -50,6 +50,8 @@ const getModalType = (type, name = "") => {
 function LandingPage() {
     const { allProducts, loading } = useProducts();
     const { addItem } = useCart();
+    const navigate = useNavigate();
+    const [showGlobalCartToast, setShowGlobalCartToast] = useState(false);
 
     const [searchText, setSearchText] = useState("");
     const [debouncedSearchText, setDebouncedSearchText] = useState("");
@@ -209,6 +211,8 @@ function LandingPage() {
             category: product.category || product.product_category || "",
             type: product.type || product.product_type || "",
         });
+        setShowGlobalCartToast(true);
+        setTimeout(() => setShowGlobalCartToast(false), 3500);
     }, [addItem]);
 
     const handleBackToGallery = useCallback(() => {
@@ -232,7 +236,7 @@ function LandingPage() {
     return (
         <div className="min-h-screen w-full text-black bg-[#F1F3F7]">
             {!selectedProduct && (
-                <header className="text-center mt-[160px]">
+                <header className="text-center mt-[140px]">
                     <h1 style={{ fontFamily: "Holtwood One SC, serif" }} className="tracking-wider text-3xl sm:text-4xl md:text-5xl font-bold text-black">
                         Welcome to <span className="text-[#FDE31E]">DSC</span>
                     </h1>
@@ -329,8 +333,8 @@ function LandingPage() {
                                                 onClick={() => handleAddToCart(selectedProduct)}
                                                 className="w-full bg-[#ececec] text-black font-bold py-4 rounded-xl hover:bg-gray-200 shadow-sm text-lg flex items-center justify-center gap-2"
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h11M10 19a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                                                    <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
                                                 </svg>
                                                 Add to Cart
                                             </button>
@@ -431,6 +435,7 @@ function LandingPage() {
                             products={filteredProducts}
                             onProductClick={handleProductSelection}
                             onOrderNowClick={handleOrderNow}
+                            onAddToCartClick={handleAddToCart}
                             onViewAll={() => document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth' })}
                         />
                     )}
@@ -438,7 +443,7 @@ function LandingPage() {
                         <LoadingSkeleton rows={2} cardsPerRow={4} />
                     ) : (
                         <div id="all-products">
-                            <Products onProductClick={handleProductSelection} onOrderNowClick={handleOrderNow} products={filteredProducts} />
+                            <Products onProductClick={handleProductSelection} onOrderNowClick={handleOrderNow} onAddToCartClick={handleAddToCart} products={filteredProducts} />
                         </div>
                     )}
                     {!debouncedSearchText && <Testimonials />}
@@ -457,6 +462,18 @@ function LandingPage() {
             {selectedPrintingItem && <ModalPrinting product={selectedPrintingItem} onClose={() => setSelectedPrintingItem(null)} />}
             {selectedCarService && <ModalCarServiceInquiry product={selectedCarService} onClose={() => setSelectedCarService(null)} />}
             {selectedMotorService && <ModalMotorServiceInquiry product={selectedMotorService} onClose={() => setSelectedMotorService(null)} />}
+
+            {showGlobalCartToast && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl animate-fade-in" style={{ animation: "toastIn 0.25s cubic-bezier(.34,1.56,.64,1) both" }}>
+                    <style>{`@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(16px) scale(0.95); } to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }`}</style>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                    <span className="text-sm font-medium">Added to cart!</span>
+                    <button onClick={() => { setShowGlobalCartToast(false); navigate("/cart"); }} className="ml-1 text-sm font-bold text-yellow-400 hover:text-yellow-300 transition-colors">View Cart</button>
+                    <button onClick={() => setShowGlobalCartToast(false)} className="ml-2 text-gray-500 hover:text-white transition-colors text-lg leading-none">×</button>
+                </div>
+            )}
         </div>
     );
 }
