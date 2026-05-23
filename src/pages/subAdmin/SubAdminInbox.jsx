@@ -144,40 +144,60 @@ const SubAdminInbox = () => {
 
   // ── Load conversations ────────────────────────────────────────────────────────
 
+  // Unique key per (user, product) pair — keeps general and product threads separate
+  const buildContactKey = (c) => `${c.userId}_${c.productId ?? "general"}`;
+
   const loadConversations = useCallback(async () => {
     try {
+      setLoadingContacts(true);
       const data = await fetchConversations();
-      const formatted = data.map((conv) => {
-        const rawLastMsg = conv.last_message || "—";
-        const cleanLastMsg = rawLastMsg.replace("[DESIGN]", "").trim();
-        const isDesignTagged =
-          rawLastMsg.includes("[DESIGN]") ||
-          rawLastMsg.toLowerCase().match(/design|wrap|decal|sticker|image/) ||
-          conv.category === "Decals & Wrap";
+      if (!Array.isArray(data)) return;
 
+      // Sort: general threads (no product_id) first, then latest activity.
+      // First-seen in Map wins, so the best conversation per user is kept.
+      const sorted = [...data].sort((a, b) => {
+        const aGeneral = !a.product_id ? 0 : 1;
+        const bGeneral = !b.product_id ? 0 : 1;
+        if (aGeneral !== bGeneral) return aGeneral - bGeneral;
+        return new Date(b.last_at || b.updated_at || 0) - new Date(a.last_at || a.updated_at || 0);
+      });
+
+      // Strict dedup: ONE entry per user — keyed by user_id, then email, then name.
+      const seenUsers = new Map();
+      for (const conv of sorted) {
+        const u = conv.user || {};
+        const key = conv.user_id
+          || u.email
+          || (`${u.first_name || ""} ${u.last_name || ""}`.trim()) || null;
+        if (!key || seenUsers.has(key)) continue;
+        seenUsers.set(key, conv);
+      }
+
+      const deduped = Array.from(seenUsers.values()).map((conv) => {
+        const u = conv.user || {};
+        const rawLastMsg = conv.last_message || "—";
+        const cleanLastMsg = rawLastMsg.replace(/^\[DESIGN\]\s*/i, "").trim();
         return {
-          // identity
-          name: `${conv.user?.first_name || ""} ${conv.user?.last_name || ""}`.trim() || "Unknown",
+          name: `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Unknown",
           userId: conv.user_id,
-          user: conv.user,
-          // product context  ← NEW
+          user: u,
           productId: conv.product_id ?? null,
           productName: conv.product_name ?? null,
           productCategory: conv.product_category ?? null,
-          // display
           lastMessage: cleanLastMsg,
-          time: conv.last_at ? new Date(conv.last_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
+          time: conv.last_at
+            ? new Date(conv.last_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            : "",
           unread: conv.unread_count || 0,
-          isCustomize: !!isDesignTagged || !!conv.product_id,
         };
       });
 
-      setContacts(formatted);
+      setContacts(deduped);
 
       // Restore last selected contact
       const savedKey = localStorage.getItem("subadmin_last_selected_key");
       if (savedKey && !selectedContact) {
-        const last = formatted.find((c) => buildContactKey(c) === savedKey);
+        const last = deduped.find((c) => buildContactKey(c) === savedKey);
         if (last) setSelectedContact(last);
       }
     } catch (err) {
@@ -189,9 +209,6 @@ const SubAdminInbox = () => {
 
   useEffect(() => { loadConversations(); }, [loadConversations]);
 
-  // Unique key per (user, product) pair
-  const buildContactKey = (c) => `${c.userId}_${c.productId ?? "general"}`;
-
   const selectContact = (contact) => {
     setSelectedContact(contact);
     localStorage.setItem("subadmin_last_selected_key", buildContactKey(contact));
@@ -199,13 +216,18 @@ const SubAdminInbox = () => {
 
   // ── Load messages for selected contact ───────────────────────────────────────
 
+  const messagesRef = useRef([]);
+
   const loadSelectedMessages = useCallback(async (contact, isPolling = false) => {
     if (!contact?.userId) return;
     try {
       if (!isPolling) setLoadingMessages(true);
 
-      const lastId = messages.length > 0 ? messages[messages.length - 1].id.replace('msg-', '') : null;
-      const data = await fetchAdminUserMessages(contact.userId, contact.productId, isPolling ? lastId : null);
+      // Use ref instead of state to avoid adding messages as a dependency
+      const lastId = isPolling && messagesRef.current.length > 0
+        ? messagesRef.current[messagesRef.current.length - 1].id.replace('msg-', '')
+        : null;
+      const data = await fetchAdminUserMessages(contact.userId, contact.productId, lastId);
       const arr = Array.isArray(data) ? data : (data.messages || []);
 
       if (arr.length === 0 && isPolling) return;
@@ -216,7 +238,9 @@ const SubAdminInbox = () => {
         const existingIds = new Set(prev.map(m => m.id));
         const newOnly = formatted.filter(m => !existingIds.has(m.id));
         if (newOnly.length === 0) return prev;
-        return [...prev.filter(m => !m.pending), ...newOnly];
+        const next = [...prev.filter(m => !m.pending), ...newOnly];
+        messagesRef.current = next;
+        return next;
       });
 
     } catch (err) {
@@ -224,9 +248,9 @@ const SubAdminInbox = () => {
     } finally {
       if (!isPolling) setLoadingMessages(false);
     }
-  }, [formatMsg, messages]);
+  }, [formatMsg]); // ✅ removed `messages` from deps — no more infinite loop
 
-  // ✅ Polling Interval (3 seconds) for the active conversation
+  // Polling every 3 seconds
   useEffect(() => {
     if (!selectedContact) return;
     const interval = setInterval(() => {
@@ -235,9 +259,14 @@ const SubAdminInbox = () => {
     return () => clearInterval(interval);
   }, [selectedContact, loadSelectedMessages]);
 
+  // Full load when contact changes
   useEffect(() => {
-    if (selectedContact) loadSelectedMessages(selectedContact);
-  }, [selectedContact]); // Only trigger full load when contact changes
+    if (selectedContact) {
+      messagesRef.current = [];
+      setMessages([]);
+      loadSelectedMessages(selectedContact);
+    }
+  }, [selectedContact]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Real-time listener (admin side) ──────────────────────────────────────────
 
@@ -259,8 +288,7 @@ const SubAdminInbox = () => {
           if (prev.some((m) => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
         });
-        loadConversations();
-        loadConversations();
+        loadConversations(); // ✅ called once (was called twice before)
       });
 
     return () => { channel.stopListening(".MessageSent"); };
@@ -292,7 +320,6 @@ const SubAdminInbox = () => {
     const file = e.target.files[0];
     if (!file || !selectedContact) return;
 
-    const bodyTag = null;
     const productId = selectedContact.productId ?? null;
 
     const optimistic = {
@@ -306,7 +333,7 @@ const SubAdminInbox = () => {
     setMessages((prev) => [...prev, optimistic]);
 
     try {
-      const res = await sendAdminMessage(bodyTag, selectedContact.userId, file, productId);
+      const res = await sendAdminMessage(null, selectedContact.userId, file, productId);
       const real = res.message || res;
       setMessages((prev) => prev.map((m) => m.id === optimistic.id ? formatMsg(real, selectedContact.userId) : m));
       loadConversations();
@@ -319,7 +346,6 @@ const SubAdminInbox = () => {
   const handleSend = async () => {
     if (!message.trim() || !selectedContact) return;
     const content = message.trim();
-    const taggedBody = content;
     const productId = selectedContact.productId ?? null;
 
     setMessage("");
@@ -333,7 +359,7 @@ const SubAdminInbox = () => {
     setMessages((prev) => [...prev, optimistic]);
 
     try {
-      const res = await sendAdminMessage(taggedBody, selectedContact.userId, null, productId);
+      const res = await sendAdminMessage(content, selectedContact.userId, null, productId);
       const real = res.message || res;
       setMessages((prev) => prev.map((m) => m.id === optimistic.id ? formatMsg(real, selectedContact.userId) : m));
       loadConversations();
@@ -348,13 +374,14 @@ const SubAdminInbox = () => {
 
   // ── Filtering ─────────────────────────────────────────────────────────────────
 
+  // ✅ FIXED: removed the `!c.isCustomize` filter — show ALL conversations
   const filteredContacts = contacts.filter((c) => {
-    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (c.productName || "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.lastMessage || "").toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
-    
-    // Only show General chats (exclude customized/product-specific ones)
-    return !c.isCustomize;
+    // General chats only — no product thread
+    return c.productId === null;
   });
 
   const sampleEmojis = ["😀", "😂", "😍", "😎", "👍", "🙏", "💖", "🥳", "🔥", "✨", "🤝", "💯"];
@@ -504,7 +531,6 @@ const SubAdminInbox = () => {
                         ...prev,
                         user: { ...prev.user, is_bot_active: res.is_bot_active }
                       }));
-                      // Also update in the contacts list
                       setContacts(prev => prev.map(c =>
                         c.userId === selectedContact.userId
                           ? { ...c, user: { ...c.user, is_bot_active: res.is_bot_active } }
@@ -579,6 +605,29 @@ const SubAdminInbox = () => {
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
                 />
+              </div>
+
+              {/* Emoji picker */}
+              <div className="relative" ref={emojiPickerRef}>
+                <button
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  onClick={() => setEmojiPickerVisible((p) => !p)}
+                >
+                  <img src={emojis} alt="emoji" className="h-4 opacity-40" />
+                </button>
+                {emojiPickerVisible && (
+                  <div className="absolute bottom-full right-0 mb-3 bg-white p-4 rounded-3xl shadow-2xl border border-[#DCDCDC] flex gap-2 flex-wrap w-[260px] z-50">
+                    {sampleEmojis.map((emoji, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleEmojiClick(emoji)}
+                        className="text-2xl hover:bg-gray-50 p-2.5 rounded-3xl transition-transform active:scale-125"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <button

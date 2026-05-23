@@ -120,7 +120,7 @@ const CustomerInbox = () => {
         }
         return {
             id: `msg-${msg.id}`,
-            isAdmin: ["admin", "subadmin", "sub_admin"].includes(msg.sender_type?.toLowerCase()),
+            isAdmin: ["admin", "subadmin", "sub_admin", "artist", "staff", "customer_service"].includes(msg.sender_type?.toLowerCase()),
             content: content,
             image: msg.image ? `http://127.0.0.1:8000/storage/${msg.image}` : null,
             video: msg.video ? `http://127.0.0.1:8000/storage/${msg.video}` : null,
