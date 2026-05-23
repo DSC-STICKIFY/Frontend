@@ -186,8 +186,8 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
         try {
             await approveShipmentRequest(id);
             alert("Order approved for physical shipping!");
+            setSelectedOrder(prev => prev ? { ...prev, status: 'To Shipping' } : prev);
             loadOrders();
-            setIsWorkflowModalOpen(false);
         } catch (err) {
             console.error("Approval failed:", err);
             alert("Failed to approve shipment: " + (err.response?.data?.message || err.message));
@@ -529,18 +529,31 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                                             )}
                                                         </div>
 
-                                                        <div className="bg-green-500 text-white p-6 rounded-[28px] shadow-lg space-y-2">
-                                                            <span className="uppercase tracking-widest text-[9px] font-black text-white/80 block">📦 Shipment Status</span>
-                                                            <div className="flex justify-between items-center">
-                                                                <div>
-                                                                    <p className="text-[13px] font-extrabold uppercase tracking-tight">Status: {selectedOrder.status === 'To Shipping' ? 'To Shipping' : selectedOrder.status}</p>
-                                                                    {selectedOrder.tracking_number && (
-                                                                        <p className="text-[11px] font-bold text-white/90 mt-1">Tracking Number (J&T Express): <span className="underline font-black text-[12px]">{selectedOrder.tracking_number}</span></p>
-                                                                    )}
+                                                        {selectedOrder.status === 'To Shipping' ? (
+                                                            <div className="bg-yellow-400 text-black p-6 rounded-[28px] shadow-lg space-y-2">
+                                                                <span className="uppercase tracking-widest text-[9px] font-black text-black/70 block">📦 Pending Staff Dispatch</span>
+                                                                <div className="flex justify-between items-center">
+                                                                    <div>
+                                                                        <p className="text-[13px] font-extrabold uppercase tracking-tight">Status: Awaiting Staff to Pack and Ship</p>
+                                                                        <p className="text-[11px] font-bold text-black/80 mt-1 italic">Requested na ang shipment, and ready to ship na kay staff</p>
+                                                                    </div>
+                                                                    <div className="text-2xl animate-pulse">🚚</div>
                                                                 </div>
-                                                                <div className="text-2xl animate-bounce">📦</div>
                                                             </div>
-                                                        </div>
+                                                        ) : (
+                                                            <div className="bg-green-500 text-white p-6 rounded-[28px] shadow-lg space-y-2">
+                                                                <span className="uppercase tracking-widest text-[9px] font-black text-white/80 block">📦 Shipment Status</span>
+                                                                <div className="flex justify-between items-center">
+                                                                    <div>
+                                                                        <p className="text-[13px] font-extrabold uppercase tracking-tight">Status: {selectedOrder.status}</p>
+                                                                        {selectedOrder.tracking_number && (
+                                                                            <p className="text-[11px] font-bold text-white/90 mt-1">Tracking Number (J&T Express): <span className="underline font-black text-[12px]">{selectedOrder.tracking_number}</span></p>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="text-2xl">✅</div>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ) : selectedOrder.status === 'Awaiting Shipment Approval' || selectedOrder.shipment_requested_at ? (
                                                     <div className="space-y-6">
@@ -551,13 +564,13 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
 
                                                         <div className="bg-black rounded-[32px] p-8 text-white shadow-2xl space-y-4">
                                                             <h4 className="text-md font-black italic uppercase tracking-tight mb-1">Authorization Desk</h4>
-                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6 leading-relaxed">Please review the design quality above before confirming the physical shipment.</p>
+                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6 leading-relaxed">Please review the design quality above before confirming the physical shipment. This will notify the staff to prepare the product.</p>
 
                                                             <button
                                                                 onClick={() => handleApproveForShipping(selectedOrder.order_id)}
                                                                 className="w-full py-5 bg-yellow-400 text-black text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-yellow-500 transition-all shadow-xl shadow-yellow-400/20 active:scale-95 flex items-center justify-center gap-2"
                                                             >
-                                                                ✅ Confirm & Ship Order
+                                                                ✅ Confirm Request shipment
                                                             </button>
 
                                                             {!showRejectInput ? (

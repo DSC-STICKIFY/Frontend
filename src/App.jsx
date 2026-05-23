@@ -45,6 +45,13 @@ const ArtistDashboard = React.lazy(() => import("./pages/artist/ArtistDashboard"
 const ArtistInbox = React.lazy(() => import("./pages/artist/ArtistInbox"));
 const ArtistAccountSettings = React.lazy(() => import("./pages/artist/ArtistAccountSettings"));
 
+// Staff
+const StaffLayout = React.lazy(() => import("./layouts/StaffLayout"));
+const StaffDashboard = React.lazy(() => import("./pages/staff/StaffDashboard"));
+const StaffOrders = React.lazy(() => import("./pages/staff/StaffOrders"));
+const StaffAccountSettings = React.lazy(() => import("./pages/staff/StaffAccountSettings"));
+const StaffValidationQueue = React.lazy(() => import("./pages/staff/StaffValidationQueue"));
+
 // Cart
 const CartPage = React.lazy(() => import("./pages/CartPage.jsx"));
 
@@ -88,6 +95,7 @@ const CustomerServiceDashboard = React.lazy(() => import("./pages/customerServic
 const ReturnRefundManagement = React.lazy(() => import("./pages/superAdmin/ReturnRefundManagement.jsx"));
 const AdminInquiries = React.lazy(() => import("./pages/superAdmin/AdminInquiries.jsx"));
 const SuperAdminArtists = React.lazy(() => import("./pages/superAdmin/SuperAdminArtists.jsx"));
+const SuperAdminCSQueue = React.lazy(() => import("./pages/superAdmin/SuperAdminCSQueue.jsx"));
 
 // E-Wallet
 const PaymentSuccess = React.lazy(() => import("./pages/EwalletPaymentRedirectPages/PaymentSuccess.jsx").then(m => ({ default: m.PaymentSuccess })));
@@ -256,6 +264,7 @@ const AppContent = () => {
                         <Route path="/super-admin-dashboard" element={<SuperAdminDashboard />} />
                         <Route path="/sub-admin-dashboard" element={<SuperAdminDashboard />} />
                         <Route path="/super-admin-offers" element={<SuperAdminOffers />} />
+                        <Route path="/super-admin-cs-queue" element={<SuperAdminCSQueue />} />
                         <Route path="/super-admin-orders" element={<SuperAdminOrders />} />
                         <Route path="/super-admin-products" element={<SuperAdminProducts />} />
                         <Route path="/super-admin-services" element={<SuperAdminServices />} />
@@ -273,13 +282,31 @@ const AppContent = () => {
                     <Route
                         element={
                             <AdminAuthProvider>
-                                <CustomerServiceLayout />
+                                <ProtectedRoute allowedRoles={['customer_service']}>
+                                    <CustomerServiceLayout />
+                                </ProtectedRoute>
                             </AdminAuthProvider>
                         }
                     >
                         <Route path="/customer-service-dashboard" element={<CustomerServiceDashboard />} />
                         <Route path="/customer-service-offers" element={<CustomerServiceOffers />} />
                         <Route path="/customer-service-inbox" element={<CustomerServiceInbox />} />
+                    </Route>
+
+                    {/* ==================== STAFF ==================== */}
+                    <Route 
+                        element={
+                            <AdminAuthProvider>
+                                <ProtectedRoute allowedRoles={['staff']}>
+                                    <StaffLayout />
+                                </ProtectedRoute>
+                            </AdminAuthProvider>
+                        }
+                    >
+                        <Route path="/staff/dashboard"         element={<StaffDashboard />} />
+                        <Route path="/staff/validation-queue"  element={<StaffValidationQueue />} />
+                        <Route path="/staff/orders"            element={<StaffOrders />} />
+                        <Route path="/staff/settings"          element={<StaffAccountSettings />} />
                     </Route>
 
                     {/* ==================== ARTIST ==================== */}

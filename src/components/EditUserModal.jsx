@@ -46,11 +46,6 @@ const EditUserModal = ({ user, onClose, onSave, mode = "edit", userType }) => {
         const { name, value } = e.target;
         setFormData(prev => {
             const newData = { ...prev, [name]: value };
-            // If changing role to Staff, clear email/password as they don't login
-            if (name === "role" && isEmployee && value !== "Artist") {
-                newData.email = "";
-                newData.password = "";
-            }
             return newData;
         });
     };
@@ -126,12 +121,13 @@ const EditUserModal = ({ user, onClose, onSave, mode = "edit", userType }) => {
                                 <option value="">Select Role</option>
                                 <option value="Staff">Staff</option>
                                 <option value="Artist">Artist</option>
+                                <option value="Customer Service">Customer Service</option>
                             </select>
                         </div>
                     )}
 
-                    {/* Email and Password - Conditional for Employees (only for Artists), always for others */}
-                    {(!isEmployee || formData.role === "Artist") && (
+                    {/* Email and Password - Conditional for Employees (Staff, Artists and CS require login), always for others */}
+                    {(!isEmployee || ["Artist", "Customer Service", "Staff"].includes(formData.role)) && (
                         <>
                             <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                                 <label className="text-xs font-bold text-gray-600 uppercase">Email Address</label>

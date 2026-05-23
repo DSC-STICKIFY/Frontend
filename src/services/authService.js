@@ -17,6 +17,8 @@ const getStoredUser = (role = null) => {
     return (
       JSON.parse(sessionStorage.getItem("user_user")) ||
       JSON.parse(sessionStorage.getItem("user_artist")) ||
+      JSON.parse(sessionStorage.getItem("user_staff")) ||
+      JSON.parse(sessionStorage.getItem("user_customer_service")) ||
       JSON.parse(sessionStorage.getItem("user_subadmin")) ||
       JSON.parse(sessionStorage.getItem("user_admin")) ||
       null
@@ -142,7 +144,7 @@ export const logoutUser = (role) => {
       sessionStorage.removeItem("stickify_checkout_intent");
 
       // Remove axios default header only if no other session is active
-      const anyRemaining = ["admin", "subadmin", "artist", "user"].find((r) =>
+      const anyRemaining = ["admin", "subadmin", "artist", "staff", "customer_service", "user"].find((r) =>
         getTokenForRole(r)
       );
       if (!anyRemaining) {

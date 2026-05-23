@@ -65,7 +65,7 @@ export const getTokenForRole = (role) => {
 export const getAuthHeaders = (role) => {
     // If no role provided, try to find an active session
     if (!role) {
-        role = ["admin", "subadmin", "artist", "user"].find((r) => getTokenForRole(r));
+        role = ["admin", "subadmin", "artist", "staff", "customer_service", "user"].find((r) => getTokenForRole(r));
     }
     const token = getTokenForRole(role);
     return token ? { Authorization: `Bearer ${token}` } : {};
@@ -76,7 +76,7 @@ export const getAuthHeaders = (role) => {
  * Call this on logout or before storing a new session.
  */
 export const clearAllSessions = () => {
-  ["admin", "subadmin", "artist", "user"].forEach((role) => {
+  ["admin", "subadmin", "artist", "staff", "customer_service", "user"].forEach((role) => {
     sessionStorage.removeItem(`token_${role}`);
     sessionStorage.removeItem(`user_${role}`);
     sessionStorage.removeItem(`active_role_${role}`);
@@ -138,7 +138,7 @@ api.interceptors.request.use(
     if (config.headers.Authorization) return config;
 
     // Priority 2: Automatic session injection
-    const role = ["admin", "subadmin", "artist", "user"].find((r) => getTokenForRole(r));
+    const role = ["admin", "subadmin", "artist", "staff", "customer_service", "user"].find((r) => getTokenForRole(r));
     const token = role ? getTokenForRole(role) : null;
 
     if (token) {
@@ -169,7 +169,7 @@ api.interceptors.response.use(
 
       if (sentToken) {
         // Find which role this token belongs to
-        const expiredRole = ["admin", "subadmin", "artist", "user"].find(
+        const expiredRole = ["admin", "subadmin", "artist", "staff", "customer_service", "user"].find(
           (r) => getTokenForRole(r) === sentToken
         );
 
@@ -179,7 +179,7 @@ api.interceptors.response.use(
           // ✅ Clear only the role that actually expired
           clearRoleSession(expiredRole);
 
-          if (expiredRole === "admin" || expiredRole === "subadmin") {
+          if (expiredRole === "admin" || expiredRole === "subadmin" || expiredRole === "staff" || expiredRole === "customer_service") {
             window.location.href = "/login";
           } else {
             window.location.href = "/";

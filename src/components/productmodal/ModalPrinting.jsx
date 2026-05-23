@@ -184,7 +184,7 @@ const ModalPrinting = ({ product, onClose }) => {
             <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 overflow-hidden">
 
               {/* Static top info */}
-              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizable ? 'flex-shrink-0' : 'flex-1'}`}>
+              <div className="flex-shrink-0 p-8 pb-4 bg-gray-50/30 flex flex-col gap-4">
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{title}</h2>
                   <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1">{category}</p>

@@ -262,6 +262,20 @@ export const outForDelivery = async (
   return response.data;
 };
 
+/**
+ * Staff confirms the order is prepared and ready to ship.
+ * Moves status from "Approved for Shipping" → "To Ship".
+ */
+export const staffConfirmShipment = async (orderId) => {
+  try {
+    const response = await api.post(`/orders/${orderId}/staff-confirm-shipment`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to confirm shipment for order #${orderId}:`, error.response?.data || error.message);
+    throw error;
+  }
+};
+
 export const completeOrder = async (orderId, orderDetailsId = null) => {
   try {
     const payload = orderDetailsId ? { order_details_id: orderDetailsId } : {};
@@ -464,6 +478,20 @@ export const rejectShipmentRequest = async (orderId, reason) => {
   return response.data;
 };
 
+export const fetchDispatchedOrders = async () => {
+  try {
+    const response = await api.get("/staff/dispatched-orders");
+    return extractOrdersArray(response.data).map(transformOrder);
+  } catch (error) {
+    console.error(
+      "Failed to fetch dispatched orders:",
+      error.response?.data || error.message,
+    );
+    throw error;
+  }
+};
+ 
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  Default Export
 // ─────────────────────────────────────────────────────────────────────────────
@@ -494,5 +522,6 @@ export default {
   approveDesign,
   requestChange,
   rejectShipmentRequest,
+  fetchDispatchedOrders,
 };
 

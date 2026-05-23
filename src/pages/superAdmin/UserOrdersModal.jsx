@@ -1036,11 +1036,24 @@ const UserOrdersModal = ({ user, statusFilter = "All", onClose, onRefresh, actio
                                         Change
                                     </button>
                                 </div>
-                            ) : (
+                            ) : row._originalOrder.cs_review_status === "pending_artist_assignment" ? (
                                 <button onClick={(e) => { e.stopPropagation(); setAssigningOrder(row._originalOrder); setIsAssignModalOpen(true); }}
-                                    className="bg-yellow-400 hover:bg-yellow-500 text-black text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition shadow-sm">
+                                    className="bg-yellow-400 hover:bg-yellow-500 text-black text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition shadow-sm animate-pulse">
                                     Assign Artist
                                 </button>
+                            ) : (
+                                <div className="flex flex-col items-center gap-1 select-none">
+                                    <span className="inline-flex items-center gap-1 text-[9px] font-black text-amber-600 uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-200">
+                                        🔒 CS Check In Progress
+                                    </span>
+                                    <span className="text-[8px] text-gray-400 font-bold uppercase tracking-wider">
+                                        {row._originalOrder.cs_review_status === "approved_for_staff"
+                                            ? "Awaiting Staff Check"
+                                            : row._originalOrder.cs_review_status === "pending_partial_response"
+                                            ? "Awaiting Customer Choice"
+                                            : "Awaiting CS Verification"}
+                                    </span>
+                                </div>
                             )
                         ) : (
                             <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest bg-gray-100 px-2.5 py-1.5 rounded-lg border border-gray-200 select-none">
@@ -1048,15 +1061,17 @@ const UserOrdersModal = ({ user, statusFilter = "All", onClose, onRefresh, actio
                             </span>
                         )}
                         
-                        <button onClick={async (e) => {
-                            e.stopPropagation();
-                            const ok = await confirm({ title: "Ship item", message: `Mark "${row.product_name}" as To Ship?`, confirmLabel: "Ship", danger: false });
-                            if (!ok) return;
-                            try { await handleShipOrder(order_id, order_details_id); updateItemLocally(order_id, order_details_id, "To Ship"); addToast("success", `"${row.product_name}" → To Ship.`); }
-                            catch { addToast("error", "Failed to ship."); }
-                        }} className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-semibold px-3 py-1.5 rounded-lg transition">
-                            Ship
-                        </button>
+                        {!isCustomizable && (
+                            <button onClick={async (e) => {
+                                e.stopPropagation();
+                                const ok = await confirm({ title: "Ship item", message: `Mark "${row.product_name}" as To Ship?`, confirmLabel: "Ship", danger: false });
+                                if (!ok) return;
+                                try { await handleShipOrder(order_id, order_details_id); updateItemLocally(order_id, order_details_id, "To Ship"); addToast("success", `"${row.product_name}" → To Ship.`); }
+                                catch { addToast("error", "Failed to ship."); }
+                            }} className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-semibold px-3 py-1.5 rounded-lg transition">
+                                Ship
+                            </button>
+                        )}
                     </div>
                 );
             }

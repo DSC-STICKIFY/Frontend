@@ -10,6 +10,7 @@ import {
     requestChange,
 } from '../../services/OrdersAPI';
 import { IMAGE_BASE_URL } from '../../services/api';
+import { csAcceptPartial, csDeclinePartial } from '../../services/customValidationAPI';
 import { useAuth } from '../../context/CustomerAuthContext';
 import { useUI } from '../../context/UIContext';
 import { useNavigate } from 'react-router-dom';
@@ -892,6 +893,131 @@ const OrderCard = ({
                 </div>
 
                 <div className="border-t border-gray-100 px-5 pb-4 pt-3 space-y-2">
+                    {/* Partial Accommodation Decision Banner */}
+                    {order.cs_review_status === 'pending_partial_response' && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-[20px] p-5 space-y-4 shadow-sm" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-start gap-3">
+                                <span className="text-2xl mt-0.5">⚠️</span>
+                                <div>
+                                    <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider">
+                                        Partial Feasibility Accommodation Proposal
+                                    </h4>
+                                    <p className="text-xs text-amber-800 font-semibold mt-1">
+                                        Staff has checked your custom order feasibility. We can accommodate this request if we adjust the quantity:
+                                    </p>
+                                    <div className="mt-3 bg-white/70 rounded-xl p-3 border border-amber-100/50 space-y-1.5 text-xs text-gray-800">
+                                        <p>
+                                            Original Requested Quantity: <strong className="text-gray-900">{order.quantity}</strong>
+                                        </p>
+                                        <p>
+                                            Proposed Feasible Quantity: <strong className="text-emerald-700 text-sm font-black">{order.manual_approved_quantity}</strong>
+                                        </p>
+                                        {order.staff_validation_note && (
+                                            <p className="italic text-gray-500 mt-1 border-t border-gray-150 pt-1.5">
+                                                Note from Staff: "{order.staff_validation_note}"
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (window.confirm("Are you sure you want to decline the proposed quantity adjustment? This will cancel your order.")) {
+                                            try {
+                                                await csDeclinePartial(order.order_id);
+                                                onSuccess?.("Order declined and cancelled.");
+                                                setTimeout(() => window.location.reload(), 1000);
+                                            } catch (err) {
+                                                alert("Failed to decline adjustment.");
+                                            }
+                                        }
+                                    }}
+                                    className="flex-1 py-3 bg-red-100 hover:bg-red-200 text-red-700 font-black text-[10px] uppercase tracking-widest rounded-xl transition active:scale-95 text-center font-bold"
+                                >
+                                    Decline & Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={async (e) => {
+                                        e.stopPropagation();
+                                        if (window.confirm(`Are you sure you want to proceed with the adjusted quantity of ${order.manual_approved_quantity}?`)) {
+                                            try {
+                                                await csAcceptPartial(order.order_id);
+                                                onSuccess?.("Adjustment accepted! Awaiting artist assignment.");
+                                                setTimeout(() => window.location.reload(), 1000);
+                                            } catch (err) {
+                                                alert("Failed to accept adjustment.");
+                                            }
+                                        }
+                                    }}
+                                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl transition active:scale-95 text-center font-bold shadow-lg shadow-emerald-600/20"
+                                >
+                                    Accept & Proceed
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Manual Validation Workflow Tracker */}
+                    {order.cs_review_status && order.cs_review_status !== 'not_applicable' && (
+                        <div className="bg-slate-50 border border-gray-150 rounded-[20px] p-4 text-[11px]" onClick={e => e.stopPropagation()}>
+                            <p className="font-black text-gray-700 uppercase tracking-widest text-[9px] mb-3 flex items-center gap-1.5">
+                                🛠️ Feasibility Validation Status
+                            </p>
+                            <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+                                <div className={`flex flex-col items-center p-2 rounded-xl border ${
+                                    order.cs_review_status === 'pending_admin_approval' 
+                                        ? 'bg-amber-50 border-amber-200 text-amber-700' 
+                                        : 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                                }`}>
+                                    <span>👤 Admin Approval</span>
+                                    <span className="font-black mt-1 uppercase text-[8px] tracking-wider">
+                                        {order.cs_review_status === 'pending_admin_approval' ? 'In Progress' : 'Passed ✓'}
+                                    </span>
+                                </div>
+                                <div className={`flex flex-col items-center p-2 rounded-xl border ${
+                                    order.cs_review_status === 'pending_admin_approval'
+                                        ? 'bg-gray-50 border-gray-100 text-gray-400'
+                                        : order.cs_review_status === 'pending_review'
+                                            ? 'bg-amber-50 border-amber-200 text-amber-700'
+                                            : 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                                }`}>
+                                    <span>📞 CS Review</span>
+                                    <span className="font-black mt-1 uppercase text-[8px] tracking-wider">
+                                        {order.cs_review_status === 'pending_admin_approval' 
+                                            ? 'Waiting'
+                                            : order.cs_review_status === 'pending_review' 
+                                                ? 'In Progress' 
+                                                : 'Passed ✓'}
+                                    </span>
+                                </div>
+                                <div className={`flex flex-col items-center p-2 rounded-xl border ${
+                                    ['pending_admin_approval', 'pending_review'].includes(order.cs_review_status)
+                                        ? 'bg-gray-50 border-gray-100 text-gray-400'
+                                        : order.cs_review_status === 'pending_partial_response'
+                                            ? 'bg-red-50 border-red-200 text-red-700 animate-pulse'
+                                            : order.staff_validation_status === 'pending_validation'
+                                                ? 'bg-amber-50 border-amber-200 text-amber-700'
+                                                : 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                                }`}>
+                                    <span>⚙️ Staff Feasibility</span>
+                                    <span className="font-black mt-1 uppercase text-[8px] tracking-wider">
+                                        {['pending_admin_approval', 'pending_review'].includes(order.cs_review_status)
+                                            ? 'Waiting'
+                                            : order.cs_review_status === 'pending_partial_response'
+                                                ? 'Requires Action ⚠️'
+                                                : order.staff_validation_status === 'pending_validation'
+                                                    ? 'In Progress'
+                                                    : 'Passed ✓'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Expected timeline for In Progress orders */}
                     {normalizeStatus(order.status) === 'In Progress' && (order.expected_shipped_at || order.expected_delivery_at) && (
                         <div className="bg-blue-50/75 border border-blue-100 rounded-[20px] p-4 space-y-2 text-xs">
@@ -1176,6 +1302,11 @@ const CustomerOrders = ({ isModal = false, onClose }) => {
                     expected_shipped_at: order.expected_shipped_at || null,
                     expected_delivery_at: order.expected_delivery_at || null,
                     cancel_reason: order.cancel_reason || null,
+                    cs_review_status: order.cs_review_status || null,
+                    staff_validation_status: order.staff_validation_status || null,
+                    manual_approved_quantity: order.manual_approved_quantity || null,
+                    staff_validation_note: order.staff_validation_note || null,
+                    rejection_reason: order.rejection_reason || null,
                     sortDate,
                 });
             } else {
@@ -1254,6 +1385,11 @@ const CustomerOrders = ({ isModal = false, onClose }) => {
                         expected_shipped_at: order.expected_shipped_at || null,
                         expected_delivery_at: order.expected_delivery_at || null,
                         cancel_reason: order.cancel_reason || null,
+                        cs_review_status: order.cs_review_status || null,
+                        staff_validation_status: order.staff_validation_status || null,
+                        manual_approved_quantity: order.manual_approved_quantity || null,
+                        staff_validation_note: order.staff_validation_note || null,
+                        rejection_reason: order.rejection_reason || null,
                         sortDate,
                     });
                 });

@@ -15,7 +15,7 @@ export const AdminAuthProvider = ({ children }) => {
 
   useEffect(() => {
     const loadUser = async () => {
-      const role = ['admin', 'subadmin', 'manager', 'artist'].find(r => sessionStorage.getItem(`token_${r}`));
+      const role = ['admin', 'subadmin', 'manager', 'artist', 'staff', 'customer_service'].find(r => sessionStorage.getItem(`token_${r}`));
       if (!role) {
         setLoading(false);
         return;
@@ -25,8 +25,8 @@ export const AdminAuthProvider = ({ children }) => {
         const res = await fetchCurrentUser(role);
         const user = res.data?.user || res.data || res || null;
         
-        const userRole = (user?.role || '').toLowerCase();
-        const validRoles = ['admin', 'subadmin', 'manager', 'artist'];
+        const userRole = (user?.role || '').toLowerCase().replace(' ', '_');
+        const validRoles = ['admin', 'subadmin', 'manager', 'artist', 'staff', 'customer_service'];
         
         if (validRoles.includes(userRole)) {
           // Force role to lowercase for consistent frontend checks

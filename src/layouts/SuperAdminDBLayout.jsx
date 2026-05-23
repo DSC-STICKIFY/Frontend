@@ -25,6 +25,7 @@ const SuperAdminLayoutContent = ({ expanded, setExpanded, setSelectedCategory })
     const navPages = isSuperAdmin ? [
         { label: 'Dashboard',        icon: dashboardIcn, path: '/super-admin-dashboard' },
         { label: 'Offers',           icon: offers,       path: '/super-admin-offers' },
+        { label: 'CS Queue',         icon: orders,       path: '/super-admin-cs-queue' },
         { label: 'Orders',           icon: orders,       path: '/super-admin-orders', badge: badges.orders },
         { label: 'Products',         icon: products,     path: '/super-admin-products' },
         { label: 'Services',         icon: products,     path: '/super-admin-services' },
@@ -39,6 +40,7 @@ const SuperAdminLayoutContent = ({ expanded, setExpanded, setSelectedCategory })
     ] : [
         { label: 'Dashboard',        icon: dashboardIcn, path: '/sub-admin-dashboard' },
         { label: 'Offers',           icon: offers,       path: '/super-admin-offers' },
+        { label: 'CS Queue',         icon: orders,       path: '/super-admin-cs-queue' },
         { label: 'Orders',           icon: orders,       path: '/super-admin-orders', badge: badges.orders },
         { label: 'Products',         icon: products,     path: '/super-admin-products' },
         { label: 'Services',         icon: products,     path: '/super-admin-services' },

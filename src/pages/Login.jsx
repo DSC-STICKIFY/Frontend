@@ -34,7 +34,7 @@ const Login = () => {
 
     const user = {
       ...(data.user || data),
-      role: (data.user?.role || data.role || "user").toLowerCase(),
+      role: (data.user?.role || data.role || "user").toLowerCase().replace(/ /g, '_'),
     };
 
     // ✅ loginUser() in authService already saves token_role and user_role
@@ -56,6 +56,16 @@ const Login = () => {
 
       if (user.role === "artist") {
         navigate("/artist/dashboard", { replace: true });
+        return;
+      }
+
+      if (user.role === "staff") {
+        navigate("/staff/dashboard", { replace: true });
+        return;
+      }
+
+      if (user.role === "customer_service") {
+        navigate("/customer-service-dashboard", { replace: true });
         return;
       }
 

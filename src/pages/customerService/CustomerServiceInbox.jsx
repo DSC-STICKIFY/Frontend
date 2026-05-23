@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import api, { getAuthHeaders } from "../../services/api";
 import searchB from "../../assets/search.svg";
 import customerlll from "../../assets/customerlll.png";
 import links from "../../assets/links.svg";
@@ -33,25 +34,8 @@ const ChatContact = ({ name, lastMessage, time, unread, avatar, onClick, isSelec
 const sampleEmojis = ["😀", "😂", "😍", "😎", "👍", "🙏", "💖", "🥳"];
 
 const CustomerServiceInbox = () => {
-    const [contacts, setContacts] = useState([
-        {
-            name: "Charlie Orence",
-            lastMessage: "Hey, how are you?",
-            time: "10:45 AM",
-            unread: 2,
-            avatar: customerlll,
-            isActive: true,
-        },
-        {
-            name: "Carl Lomotos",
-            lastMessage: "See you tomorrow!",
-            time: "Yesterday",
-            unread: 0,
-            avatar: customerlll,
-            isActive: false,
-        },
-    ]);
-
+    const [contacts, setContacts] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [selectedContact, setSelectedContact] = useState(null);
     const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState("");
@@ -60,6 +44,50 @@ const CustomerServiceInbox = () => {
     const emojiPickerRef = useRef(null);
     const fileInputRef = useRef(null);
     const bottomRef = useRef(null);
+
+    useEffect(() => {
+        fetchConversations();
+    }, []);
+
+    const fetchConversations = async () => {
+        try {
+            setLoading(true);
+            const res = await api.get('/admin/conversations', { headers: getAuthHeaders() });
+            if (res.conversations && Array.isArray(res.conversations)) {
+                const formattedContacts = res.conversations.map(conv => ({
+                    id: conv.id || conv.user_id,
+                    name: conv.sender_name || conv.customer_name || 'Unknown',
+                    lastMessage: conv.last_message || 'No messages yet',
+                    time: formatTime(conv.updated_at || conv.created_at),
+                    unread: conv.unread_count || 0,
+                    avatar: customerlll,
+                    isActive: conv.is_active || false,
+                }));
+                setContacts(formattedContacts);
+            }
+        } catch (err) {
+            console.error('Failed to fetch conversations:', err);
+            setContacts([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const formatTime = (dateString) => {
+        if (!dateString) return 'Unknown';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (diffDays < 7) return date.toLocaleDateString([], { weekday: 'short' });
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    };
 
     const scrollToBottom = (behavior = "smooth") => {
         if (bottomRef.current) {
@@ -131,7 +159,16 @@ const CustomerServiceInbox = () => {
             <div className="flex gap-2 w-full h-full">
 
                 <div className="flex flex-col h-full w-[320px]">
-                    <h1 className="text-2xl font-bold text-gray-900 mb-5 mt-1">Message Center</h1>
+                    <div className="flex items-center justify-between mb-5 mt-1">
+                        <h1 className="text-2xl font-bold text-gray-900">Message Center</h1>
+                        <button
+                            onClick={fetchConversations}
+                            className="text-xs font-bold text-gray-400 hover:text-gray-700 transition"
+                            disabled={loading}
+                        >
+                            ↻ Refresh
+                        </button>
+                    </div>
 
                     <div className="flex items-center bg-gray-50 border border-[#DCDCDC] rounded-2xl h-12 px-4 mb-4 flex-shrink-0 focus-within:ring-4 focus-within:ring-[#FDE31E]/10 transition-all">
                         <img src={searchB} alt="search" className="w-4 h-4 opacity-40" />
@@ -143,17 +180,30 @@ const CustomerServiceInbox = () => {
                     </div>
 
                     <div className="bg-white border border-[#DCDCDC] rounded-3xl flex-1 overflow-y-auto shadow-sm">
-                        {contacts.map((contact, index) => (
-                            <ChatContact
-                                key={index}
-                                {...contact}
-                                onClick={() => {
-                                    setSelectedContact(contact);
-                                    setMessages([]);
-                                }}
-                                isSelected={selectedContact?.name === contact.name}
-                            />
-                        ))}
+                        {loading ? (
+                            <div className="flex items-center justify-center h-full text-gray-400">
+                                <div className="text-center">
+                                    <div className="w-8 h-8 border-4 border-yellow-300 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                                    Loading conversations...
+                                </div>
+                            </div>
+                        ) : contacts.length === 0 ? (
+                            <div className="flex items-center justify-center h-full text-gray-400">
+                                No conversations yet
+                            </div>
+                        ) : (
+                            contacts.map((contact, index) => (
+                                <ChatContact
+                                    key={contact.id || index}
+                                    {...contact}
+                                    onClick={() => {
+                                        setSelectedContact(contact);
+                                        setMessages([]);
+                                    }}
+                                    isSelected={selectedContact?.id === contact.id}
+                                />
+                            ))
+                        )}
                     </div>
                 </div>
 
