@@ -7,20 +7,20 @@ import InquiryChatbox from '../../components/InquiryChatbox';
 
 /* ─── Status config ───────────────────────────────────────────────────── */
 const STATUS_CONFIG = {
-  pending:     { color: '#F59E0B', bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',  dot: 'bg-amber-400'   },
-  reviewed:    { color: '#3B82F6', bg: 'bg-blue-50',    text: 'text-blue-700',    border: 'border-blue-200',   dot: 'bg-blue-400'    },
-  quoted:      { color: '#8B5CF6', bg: 'bg-violet-50',  text: 'text-violet-700',  border: 'border-violet-200', dot: 'bg-violet-400'  },
-  approved:    { color: '#10B981', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200',dot: 'bg-emerald-400' },
-  in_progress: { color: '#06B6D4', bg: 'bg-cyan-50',    text: 'text-cyan-700',    border: 'border-cyan-200',   dot: 'bg-cyan-400'    },
-  completed:   { color: '#059669', bg: 'bg-green-50',   text: 'text-green-700',   border: 'border-green-200',  dot: 'bg-green-400'   },
-  rejected:    { color: '#EF4444', bg: 'bg-red-50',     text: 'text-red-700',     border: 'border-red-200',    dot: 'bg-red-400'     },
+  pending: { color: '#F59E0B', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', dot: 'bg-amber-400' },
+  reviewed: { color: '#3B82F6', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', dot: 'bg-blue-400' },
+  quoted: { color: '#8B5CF6', bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', dot: 'bg-violet-400' },
+  approved: { color: '#10B981', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', dot: 'bg-emerald-400' },
+  in_progress: { color: '#06B6D4', bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200', dot: 'bg-cyan-400' },
+  completed: { color: '#059669', bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', dot: 'bg-green-400' },
+  rejected: { color: '#EF4444', bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', dot: 'bg-red-400' },
 };
 const getStatus = (s) => STATUS_CONFIG[s?.toLowerCase()] || { color: '#6B7280', bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200', dot: 'bg-gray-400' };
 
 /* ─── Star display (read-only) ────────────────────────────────────────── */
 const StarDisplay = ({ rating }) => (
   <div className="flex items-center gap-0.5">
-    {[1,2,3,4,5].map(n => (
+    {[1, 2, 3, 4, 5].map(n => (
       <Star key={n} className={`w-3.5 h-3.5 ${n <= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200 fill-gray-200'}`} />
     ))}
   </div>
@@ -28,20 +28,20 @@ const StarDisplay = ({ rating }) => (
 
 /* ─── Progress Timeline ───────────────────────────────────────────────── */
 const STEPS = [
-  { key: 'pending',     label: 'Pending'     },
-  { key: 'reviewed',   label: 'Reviewed'    },
-  { key: 'quoted',     label: 'Quoted'      },
-  { key: 'approved',   label: 'Approved'    },
-  { key: 'scheduled',  label: 'Scheduled'   },
-  { key: 'in_progress',label: 'In Progress' },
-  { key: 'completed',  label: 'Completed'   },
+  { key: 'pending', label: 'Pending' },
+  { key: 'reviewed', label: 'Reviewed' },
+  { key: 'quoted', label: 'Quoted' },
+  { key: 'approved', label: 'Approved' },
+  { key: 'scheduled', label: 'Scheduled' },
+  { key: 'in_progress', label: 'In Progress' },
+  { key: 'completed', label: 'Completed' },
 ];
 
 const ProgressTimeline = ({ currentStatus }) => {
   const currentIndex = STEPS.findIndex(s => s.key === currentStatus?.toLowerCase());
   const pct = currentIndex <= 0 ? 0 : (currentIndex / (STEPS.length - 1)) * 100;
   return (
-    <div className="w-full pt-4 pb-2 mb-2">
+    <div className="w-full py-6 mb-8">
       <div className="relative flex items-start justify-between">
         <div className="absolute left-0 top-[7px] w-full h-[2px] bg-gray-100 rounded-full" />
         <div className="absolute left-0 top-[7px] h-[2px] bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
@@ -50,7 +50,7 @@ const ProgressTimeline = ({ currentStatus }) => {
           return (
             <div key={step.key} className="flex flex-col items-center gap-1.5 z-10">
               <div className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-500
-                ${done    ? 'bg-yellow-400 border-yellow-400' : ''}
+                ${done ? 'bg-yellow-400 border-yellow-400' : ''}
                 ${current ? 'bg-white border-yellow-400 scale-125 shadow-[0_0_0_4px_rgba(251,191,36,0.15)]' : ''}
                 ${!done && !current ? 'bg-white border-gray-200' : ''}`}
               />
@@ -68,9 +68,9 @@ const ProgressTimeline = ({ currentStatus }) => {
 /* ─── Inquiry Card ────────────────────────────────────────────────────── */
 const InquiryCard = ({ inquiry, onView, onRate }) => {
   const s = getStatus(inquiry.status);
-  const isCompleted  = inquiry.status === 'completed';
-  const hasRated     = !!inquiry.review;
-  const needsRating  = isCompleted && !hasRated;
+  const isCompleted = inquiry.status === 'completed';
+  const hasRated = !!inquiry.review;
+  const needsRating = isCompleted && !hasRated;
 
   return (
     <div className={`group bg-white rounded-[28px] border shadow-sm hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-500 overflow-hidden flex flex-col
@@ -162,23 +162,23 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
   const [activeTab, setActiveTab] = useState('details');
   const s = getStatus(inquiry.status);
   const isCompleted = inquiry.status === 'completed';
-  const hasRated    = !!inquiry.review;
+  const hasRated = !!inquiry.review;
   const needsRating = isCompleted && !hasRated;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden border border-gray-200"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden border-2 border-black"
         style={{ height: '90vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
+        <div className="flex-shrink-0 flex items-center justify-between px-6 pt-6 pb-4 border-b-2 border-black">
           <div>
             <p className="text-xs text-gray-400 uppercase font-semibold">Decal/Wrap Inquiry</p>
             <div className="flex items-center gap-2.5 mt-0.5">
               <h3 className="text-lg font-bold text-gray-900">#{inquiry.id} — {inquiry.service_type?.replace(/_/g, ' ')}</h3>
-              <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${s.bg} ${s.text} ${s.border}`}>
+              <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-black ${s.bg} ${s.text}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                 <span className="capitalize">{inquiry.status?.replace(/_/g, ' ')}</span>
               </div>
@@ -190,12 +190,12 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
         </div>
 
         {/* Tabs */}
-        <div className="flex-shrink-0 flex gap-1 mx-6 mt-4 mb-3 bg-gray-100 p-1 rounded-xl">
+        <div className="flex-shrink-0 flex gap-1 mx-6 mt-4 mb-3 bg-gray-100 p-1 rounded-xl border border-black">
           {['details', 'chat'].map(t => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition capitalize ${activeTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition capitalize ${activeTab === t ? 'bg-white text-gray-900 shadow-sm border border-black' : 'text-gray-500 hover:text-gray-700'}`}
             >
               {t === 'chat' ? '💬 Chat' : '📋 Details'}
             </button>
@@ -206,15 +206,15 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
         <div className="flex-1 min-h-0 overflow-y-auto">
           {activeTab === 'details' ? (
             <div className="p-6 space-y-5">
-              
+
               {/* Progress Timeline */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <div className="bg-gray-50 rounded-xl p-4 border border-black">
                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Service Progress</p>
                 <ProgressTimeline currentStatus={inquiry.status} />
               </div>
 
               {/* Quotation / Pricing result */}
-              <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+              <div className="bg-gray-50 rounded-xl border border-black overflow-hidden">
                 <div className="p-4 space-y-2">
                   <p className="text-[10px] font-bold text-gray-400 uppercase">Quotation details</p>
                   <div className="flex justify-between items-center py-1">
@@ -222,13 +222,13 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
                     <span className="text-lg font-bold text-gray-900">₱{inquiry.quotation_amount ? parseFloat(inquiry.quotation_amount).toLocaleString() : '—'}</span>
                   </div>
                   {inquiry.downpayment_amount > 0 && (
-                    <div className="flex justify-between items-center py-1 border-t border-dashed border-gray-200">
+                    <div className="flex justify-between items-center py-1 border-t border-dashed border-gray-300">
                       <span className="text-sm text-gray-500">Downpayment Required</span>
                       <span className="text-sm font-bold text-amber-600">₱{parseFloat(inquiry.downpayment_amount).toLocaleString()}</span>
                     </div>
                   )}
                 </div>
-                <div className="bg-gray-900 px-4 py-3 flex items-center justify-between">
+                <div className="bg-gray-900 px-4 py-3 flex items-center justify-between border-t border-black">
                   <span className="text-sm font-bold text-white">Estimated Price</span>
                   <span className="text-xl font-black text-[#FDE31E]">₱{inquiry.quotation_amount ? parseFloat(inquiry.quotation_amount).toLocaleString() : '—'}</span>
                 </div>
@@ -236,7 +236,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
 
               {/* Admin response message */}
               {inquiry.admin_message && (
-                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                <div className="bg-amber-50 border border-black rounded-xl p-4">
                   <p className="text-[10px] font-bold text-amber-600 uppercase mb-2">Admin Response</p>
                   <p className="text-sm text-gray-800 font-medium leading-relaxed">{inquiry.admin_message}</p>
                 </div>
@@ -244,7 +244,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
 
               {/* Rejection reason */}
               {inquiry.status === 'rejected' && inquiry.rejection_reason && (
-                <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                <div className="bg-red-50 border border-black rounded-xl p-4">
                   <p className="text-[10px] font-bold text-red-600 uppercase mb-2">Reason for Rejection</p>
                   <p className="text-sm text-red-700 italic font-medium leading-relaxed">"{inquiry.rejection_reason}"</p>
                 </div>
@@ -252,13 +252,13 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
 
               {/* Payment details card */}
               {(inquiry.payment_status === 'paid' || inquiry.payment_status === 'pay_onsite') && (
-                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-2">
+                <div className="bg-emerald-50 border border-black rounded-xl p-4 space-y-2">
                   <p className="text-[10px] font-bold text-emerald-600 uppercase mb-1">Payment Confirmation</p>
                   {[
-                    ['Method',    inquiry.payment_method?.replace(/_/g, ' ')],
-                    ['Status',    inquiry.payment_status?.replace(/_/g, ' ')],
+                    ['Method', inquiry.payment_method?.replace(/_/g, ' ')],
+                    ['Status', inquiry.payment_status?.replace(/_/g, ' ')],
                     ['Reference', inquiry.payment_reference],
-                  ].filter(([,v]) => v).map(([label, val]) => (
+                  ].filter(([, v]) => v).map(([label, val]) => (
                     <div key={label} className="flex justify-between items-center text-sm">
                       <span className="text-gray-500">{label}</span>
                       <span className="font-semibold text-gray-800 capitalize">{val}</span>
@@ -268,24 +268,24 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
               )}
 
               {/* Service details */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <div className="bg-gray-50 rounded-xl p-4 border border-black">
                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Service Details</p>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                   {[
-                    ['Vehicle Type',   inquiry.car_type],
-                    ['Wrap Type',      inquiry.wrap_type],
-                    ['Decal Type',     inquiry.decal_type],
-                    ['Finish Type',    inquiry.finish_type],
-                    ['Placement',      inquiry.placement],
+                    ['Vehicle Type', inquiry.car_type],
+                    ['Wrap Type', inquiry.wrap_type],
+                    ['Decal Type', inquiry.decal_type],
+                    ['Finish Type', inquiry.finish_type],
+                    ['Placement', inquiry.placement],
                     ['Estimated Size', inquiry.size],
-                  ].filter(([,v]) => v).map(([label, val]) => (
+                  ].filter(([, v]) => v).map(([label, val]) => (
                     <div key={label} className="flex justify-between text-sm">
                       <span className="text-gray-500">{label}</span>
                       <span className="font-semibold text-gray-800 capitalize">{val}</span>
                     </div>
                   ))}
                   {inquiry.schedule_date && (
-                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 text-sm col-span-2">
+                    <div className="flex justify-between items-center pt-2 border-t border-black text-sm col-span-2">
                       <span className="text-gray-500">Scheduled Date</span>
                       <span className="font-semibold text-yellow-600">{format(new Date(inquiry.schedule_date), 'MMM dd, yyyy – p')}</span>
                     </div>
@@ -307,9 +307,9 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
 
               {/* Attached design */}
               {inquiry.image && (
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <div className="bg-gray-50 rounded-xl p-4 border border-black">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Submitted Design</p>
-                  <div className="rounded-xl overflow-hidden border border-gray-200">
+                  <div className="rounded-xl overflow-hidden border border-black">
                     <img src={`http://localhost:8000/storage/${inquiry.image}`}
                       className="w-full object-cover" alt="Design" />
                   </div>
@@ -317,17 +317,17 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
               )}
 
               {/* Customer message */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <div className="bg-gray-50 rounded-xl p-4 border border-black">
                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Your Message</p>
                 <p className="text-sm text-gray-700 italic">"{inquiry.message || 'No additional notes provided.'}"</p>
               </div>
 
               {/* Review rating section */}
               {isCompleted && (
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <div className="bg-gray-50 rounded-xl p-4 border border-black">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Your Review</p>
                   {hasRated ? (
-                    <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
+                    <div className="bg-yellow-50 border border-black rounded-xl p-4">
                       <div className="flex items-center gap-3 mb-2">
                         <StarDisplay rating={inquiry.review?.rating || 5} />
                         <span className="text-xs font-black text-yellow-700 uppercase tracking-widest">
@@ -341,7 +341,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
                       )}
                     </div>
                   ) : (
-                    <div className="bg-gradient-to-br from-yellow-400 to-yellow-300 rounded-xl p-4">
+                    <div className="bg-gradient-to-br from-yellow-400 to-yellow-300 rounded-xl p-4 border border-black">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-8 h-8 bg-black/10 rounded-lg flex items-center justify-center flex-shrink-0">
                           <Star className="w-4 h-4 text-black fill-black" />
@@ -353,7 +353,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
                       </div>
                       <button
                         onClick={() => { onClose(); onRate(inquiry); }}
-                        className="w-full py-2.5 bg-black text-white rounded-lg font-black uppercase tracking-widest text-[9px] hover:bg-gray-900 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-2.5 bg-black text-white rounded-lg font-black uppercase tracking-widest text-[9px] hover:bg-gray-900 transition-all flex items-center justify-center gap-2 border border-black"
                       >
                         <Star className="w-3.5 h-3.5 fill-white" />
                         Leave a Review
@@ -372,19 +372,19 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
         </div>
 
         {/* ── Footer actions ── */}
-        <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-end gap-3">
-          <button onClick={onClose} className="px-5 py-2.5 text-xs font-bold uppercase text-gray-500 hover:text-gray-700 transition hover:bg-gray-100 rounded-xl">
+        <div className="flex-shrink-0 px-6 py-4 bg-white border-t-2 border-black flex items-center justify-end gap-3">
+          <button onClick={onClose} className="px-5 py-2.5 text-xs font-bold uppercase text-gray-500 hover:text-gray-700 transition hover:bg-gray-100 rounded-xl border border-transparent">
             Close
           </button>
 
           {activeTab === 'details' && inquiry.status === 'quoted' && (
             <div className="flex gap-2">
               <button onClick={() => onAccept(inquiry.id)}
-                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5">
+                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-black">
                 <CheckCircle className="w-4 h-4" /> Accept
               </button>
               <button onClick={() => onDecline(inquiry.id)}
-                className="px-5 py-2.5 bg-white text-red-500 hover:bg-red-50 rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-red-200">
+                className="px-5 py-2.5 bg-white text-red-500 hover:bg-red-50 rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-red-500">
                 <XCircle className="w-4 h-4" /> Decline
               </button>
             </div>
@@ -393,12 +393,12 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
           {activeTab === 'details' && inquiry.status === 'approved' && inquiry.payment_status === 'unpaid' && (
             <div className="flex gap-2">
               <button onClick={() => onPayGcash(inquiry.id)}
-                className="px-5 py-2.5 bg-[#FFE100] hover:bg-yellow-400 text-black rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5">
+                className="px-5 py-2.5 bg-[#FFE100] hover:bg-yellow-400 text-black rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-black">
                 <CreditCard className="w-4 h-4" />
                 GCash {inquiry.downpayment_amount > 0 && inquiry.amount_paid == 0 ? 'Downpayment' : 'Balance'}
               </button>
               <button onClick={() => onPayOnsite(inquiry.id)}
-                className="px-5 py-2.5 bg-white text-blue-600 hover:bg-blue-50 rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-blue-200">
+                className="px-5 py-2.5 bg-white text-blue-600 hover:bg-blue-50 rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-blue-500">
                 <Banknote className="w-4 h-4" /> Pay Onsite
               </button>
             </div>
@@ -407,7 +407,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
           {activeTab === 'details' && needsRating && (
             <button
               onClick={() => { onClose(); onRate(inquiry); }}
-              className="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-black rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5"
+              className="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-black rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-black"
             >
               <Star className="w-4 h-4 fill-black" /> Rate Service
             </button>
@@ -420,12 +420,12 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
 
 /* ─── Main Page ───────────────────────────────────────────────────────── */
 const CustomerInquiries = () => {
-  const [inquiries,       setInquiries]       = useState([]);
-  const [loading,         setLoading]         = useState(true);
-  const [searchTerm,      setSearchTerm]      = useState('');
-  const [filterStatus,    setFilterStatus]    = useState('all');
+  const [inquiries, setInquiries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [selectedInquiry, setSelectedInquiry] = useState(null);
-  const [rateInquiry,     setRateInquiry]     = useState(null);
+  const [rateInquiry, setRateInquiry] = useState(null);
 
   useEffect(() => { loadInquiries(); }, []);
 
@@ -465,16 +465,17 @@ const CustomerInquiries = () => {
     return matchSearch && matchStatus;
   });
 
+  // Count unrated completed inquiries for an alert
   const unratedCount = inquiries.filter(i => i.status === 'completed' && !i.review).length;
 
   const tabs = [
-    { value: 'all',         label: 'All'         },
-    { value: 'pending',     label: 'Pending'     },
-    { value: 'quoted',      label: 'Quoted'      },
-    { value: 'approved',    label: 'Approved'    },
+    { value: 'all', label: 'All' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'quoted', label: 'Quoted' },
+    { value: 'approved', label: 'Approved' },
     { value: 'in_progress', label: 'In Progress' },
-    { value: 'completed',   label: 'Completed'   },
-    { value: 'rejected',    label: 'Rejected'    },
+    { value: 'completed', label: 'Completed' },
+    { value: 'rejected', label: 'Rejected' },
   ];
 
   return (
@@ -489,9 +490,9 @@ const CustomerInquiries = () => {
           </div>
           <div className="relative w-full md:w-72">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search by service or ID…" 
+            <input
+              type="text"
+              placeholder="Search by service or ID…"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-medium placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:bg-white transition-all"
@@ -503,7 +504,7 @@ const CustomerInquiries = () => {
         {unratedCount > 0 && (
           <div className="mb-6 flex items-center gap-4 bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-2xl px-5 py-4">
             <div className="flex gap-0.5 flex-shrink-0">
-              {[1,2,3,4,5].map(n => <Star key={n} className="w-4 h-4 text-black fill-black" />)}
+              {[1, 2, 3, 4, 5].map(n => <Star key={n} className="w-4 h-4 text-black fill-black" />)}
             </div>
             <div className="flex-1">
               <p className="text-sm font-black text-black uppercase tracking-tight leading-none">
@@ -527,8 +528,8 @@ const CustomerInquiries = () => {
             const unrated = tab.value === 'completed' ? unratedCount : 0;
             const active = filterStatus === tab.value;
             return (
-              <button 
-                key={tab.value} 
+              <button
+                key={tab.value}
                 onClick={() => setFilterStatus(tab.value)}
                 className={`relative flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all
                   ${active ? 'bg-gray-900 text-white shadow-lg' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
@@ -552,7 +553,7 @@ const CustomerInquiries = () => {
         <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1,2,3,4,5,6].map(n => (
+              {[1, 2, 3, 4, 5, 6].map(n => (
                 <div key={n} className="bg-white rounded-[28px] h-72 animate-pulse border border-gray-100 shadow-sm" />
               ))}
             </div>
@@ -580,17 +581,17 @@ const CustomerInquiries = () => {
       <div className="lg:hidden min-h-screen bg-gray-50 flex flex-col">
         <div className="h-20 flex-shrink-0" aria-hidden="true"></div>
         <div className="px-5 pb-10 flex flex-col flex-1 gap-6">
-          
+
           {/* Mobile Header */}
           <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
             <h1 className="text-2xl font-black text-gray-900 tracking-tight">My Inquiries</h1>
             <p className="text-xs text-gray-400 mt-1 font-medium">Track and manage your service requests.</p>
-            
+
             <div className="relative mt-5">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Search inquiries..." 
+              <input
+                type="text"
+                placeholder="Search inquiries..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm font-medium"
@@ -601,8 +602,8 @@ const CustomerInquiries = () => {
           {/* Status Tabs (Mobile) */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
             {tabs.map(tab => (
-              <button 
-                key={tab.value} 
+              <button
+                key={tab.value}
                 onClick={() => setFilterStatus(tab.value)}
                 className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all
                   ${filterStatus === tab.value ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-500 border border-gray-100'}`}
@@ -633,7 +634,7 @@ const CustomerInquiries = () => {
           {/* Content (Mobile) */}
           <div className="space-y-6 pb-20">
             {loading ? (
-              [1,2,3].map(n => <div key={n} className="bg-white rounded-[28px] h-60 animate-pulse border border-gray-100" />)
+              [1, 2, 3].map(n => <div key={n} className="bg-white rounded-[28px] h-60 animate-pulse border border-gray-100" />)
             ) : filtered.length === 0 ? (
               <div className="bg-white rounded-[32px] border border-gray-100 p-10 text-center">
                 <MessageSquare className="w-8 h-8 text-gray-200 mx-auto mb-3" />
