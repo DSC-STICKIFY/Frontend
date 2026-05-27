@@ -5,7 +5,7 @@ import { useAuth } from "../context/CustomerAuthContext";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import echo from "../echo";
 
-const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderStatus: orderStatusProp, isArtistChat = false, onNewMessage }) => {
+const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderStatus: orderStatusProp, isArtistChat = false, onNewMessage, isReadOnly = false }) => {
   const { currentUser: customerUser } = useAuth();
   const { currentUser: adminUser } = useAdminAuth();
 
@@ -477,7 +477,14 @@ const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderSta
       </div>
 
       {/* Input area — always pinned to the bottom */}
-      <div className="flex-shrink-0 p-4 bg-white border-t border-gray-50">
+      {isReadOnly ? (
+        <div className="flex-shrink-0 p-6 bg-gray-50 border-t border-gray-100 flex items-center justify-center">
+          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center italic">
+            🔒 Read-Only Mode: You are observing this conversation
+          </p>
+        </div>
+      ) : (
+        <div className="flex-shrink-0 p-4 bg-white border-t border-gray-50">
         {localPreview && (
           <div className="mb-3 relative w-16 h-16 rounded-xl overflow-hidden border-2 border-[#FFE100] shadow-md">
             <img src={localPreview} alt="preview" className="w-full h-full object-cover" />
@@ -562,6 +569,7 @@ const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderSta
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 };

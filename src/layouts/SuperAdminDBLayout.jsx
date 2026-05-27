@@ -34,7 +34,7 @@ const SuperAdminLayoutContent = ({ expanded, setExpanded, setSelectedCategory })
         { label: 'Artists',          icon: users,        path: '/super-admin-artists', badge: badges.artists }, 
         { label: 'Service Payment',  icon: users,        path: '/super-admin-service-payment' },
         { label: 'Return/Refund',    icon: orders,       path: '/super-admin-return-refund', badge: badges.returns },
-        { label: 'Inquiries',        icon: inbox,        path: '/super-admin-inquiries', badge: badges.inquiries },
+        { label: 'Decal/Wrap Inquiries', icon: inbox,        path: '/super-admin-inquiries', badge: badges.inquiries },
         { label: 'Inbox',            icon: inbox,        path: '/sub-admin-inbox', badge: badges.inbox },
         { label: 'Account Settings', icon: users,        path: '/sub-admin-account-settings' },
     ] : [
@@ -48,7 +48,7 @@ const SuperAdminLayoutContent = ({ expanded, setExpanded, setSelectedCategory })
         { label: 'Order Summaries',  icon: salesIn,      path: '/super-admin-sales-invoices' },
         { label: 'Service Payment',  icon: users,        path: '/super-admin-service-payment' },
         { label: 'Return/Refund',    icon: orders,       path: '/super-admin-return-refund', badge: badges.returns },
-        { label: 'Inquiries',        icon: inbox,        path: '/super-admin-inquiries', badge: badges.inquiries },
+        { label: 'Decal/Wrap Inquiries', icon: inbox,        path: '/super-admin-inquiries', badge: badges.inquiries },
         { label: 'Inbox',            icon: inbox,        path: '/sub-admin-inbox', badge: badges.inbox },
         { label: 'Account Settings', icon: users,        path: '/sub-admin-account-settings' },
     ];

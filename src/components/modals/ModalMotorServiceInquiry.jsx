@@ -35,19 +35,35 @@ const ModalMotorServiceInquiry = ({ onClose, product }) => {
     }
   }, [currentUser]);
 
+  const [formErrors, setFormErrors] = useState({});
   const [imageFile, setImageFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Removed automatic auth modal trigger. User can fill the form as guest first.
+  const validateForm = () => {
+    let errs = {};
+    if (!formData.finish_type) errs.finish_type = "This field is required";
+    if (!formData.color_style) errs.color_style = "This field is required";
+    if (!formData.schedule_date) errs.schedule_date = "This field is required";
+    if (currentUser) {
+      if (!formData.contact_number) errs.contact_number = "This field is required";
+      if (!formData.address) errs.address = "This field is required";
+    }
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (formErrors[e.target.name]) {
+      setFormErrors({ ...formErrors, [e.target.name]: null });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
     if (!currentUser) {
       // Save form data for auto-submit after login
@@ -66,11 +82,6 @@ const ModalMotorServiceInquiry = ({ onClose, product }) => {
       }
 
       setShowAuthModal(true);
-      return;
-    }
-
-    if (!formData.finish_type) {
-      setErrors({ finish_type: ["Please select a finish type."] });
       return;
     }
     setIsSubmitting(true);
@@ -154,7 +165,7 @@ const ModalMotorServiceInquiry = ({ onClose, product }) => {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} noValidate className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2 p-6 bg-gray-50 rounded-3xl border border-gray-100">
                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Motorbike Model</p>
@@ -169,19 +180,24 @@ const ModalMotorServiceInquiry = ({ onClose, product }) => {
                     <button
                       key={type}
                       type="button"
-                      onClick={() => setFormData({ ...formData, finish_type: type })}
-                      className={`p-4 rounded-2xl border-2 font-black uppercase italic tracking-tighter text-xs transition-all ${formData.finish_type === type ? "border-[#FDE31E] bg-yellow-50 text-black shadow-md" : "border-gray-50 text-gray-400 hover:border-gray-100"}`}
+                      onClick={() => {
+                        setFormData({ ...formData, finish_type: type });
+                        if (formErrors.finish_type) setFormErrors({ ...formErrors, finish_type: null });
+                      }}
+                      className={`p-4 rounded-2xl border-2 font-black uppercase italic tracking-tighter text-xs transition-all hover:scale-[1.02] active:scale-95 ${formData.finish_type === type ? "border-[#FDE31E] bg-yellow-50 text-black shadow-md" : "border-gray-100 text-gray-400 hover:border-yellow-400 hover:bg-yellow-50/30"}`}
                     >
                       {type}
                     </button>
                   ))}
                 </div>
+                {formErrors.finish_type && <p className="text-red-500 text-[10px] font-black uppercase">{formErrors.finish_type}</p>}
                 {errors.finish_type && <p className="text-red-500 text-[10px] font-black uppercase">{errors.finish_type[0]}</p>}
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Color Preference</label>
-                <input name="color_style" value={formData.color_style} onChange={handleChange} placeholder="e.g. Matte Black" className="w-full p-4 rounded-2xl border-2 border-gray-50 focus:border-[#FDE31E] outline-none font-bold" />
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Color Preference <span className="text-red-500">*</span></label>
+                <input name="color_style" value={formData.color_style} onChange={handleChange} placeholder="e.g. Matte Black" className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${formErrors.color_style ? "border-red-500" : "border-gray-50 focus:border-[#FDE31E]"}`} />
+                {formErrors.color_style && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.color_style}</p>}
               </div>
 
               <div className="md:col-span-2 space-y-1">
@@ -189,11 +205,11 @@ const ModalMotorServiceInquiry = ({ onClose, product }) => {
                 <input
                   type="datetime-local"
                   name="schedule_date"
-                  required
                   value={formData.schedule_date}
                   onChange={handleChange}
-                  className="w-full p-4 rounded-2xl border-2 border-gray-50 focus:border-[#FDE31E] outline-none font-bold"
+                  className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${formErrors.schedule_date ? "border-red-500" : "border-gray-50 focus:border-[#FDE31E]"}`}
                 />
+                {formErrors.schedule_date && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.schedule_date}</p>}
                 <p className="text-[9px] text-gray-400 font-bold italic uppercase mt-1">Note: This is subject to availability and confirmation.</p>
               </div>
 
@@ -222,23 +238,24 @@ const ModalMotorServiceInquiry = ({ onClose, product }) => {
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Customer Name <span className="text-red-500">*</span></label>
-                    <input name="customer_name" required value={formData.customer_name} onChange={handleChange} readOnly={true} className="w-full p-4 rounded-2xl border-2 border-gray-50 bg-gray-50 text-gray-500 cursor-not-allowed outline-none font-bold" />
-                    {errors.customer_name && <p className="text-red-500 text-[10px] font-black uppercase">{errors.customer_name[0]}</p>}
+                    <input name="customer_name" value={formData.customer_name} onChange={handleChange} readOnly={true} className="w-full p-4 rounded-2xl border-2 border-gray-50 bg-gray-50 text-gray-500 cursor-not-allowed outline-none font-bold" />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Contact Number <span className="text-red-500">*</span></label>
-                    <input name="contact_number" required value={formData.contact_number} onChange={handleChange} readOnly={!isEditingProfile} placeholder="09XX XXX XXXX" className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${(!isEditingProfile) ? 'bg-gray-50 border-gray-50 text-gray-500 cursor-not-allowed' : 'border-gray-50 focus:border-[#FDE31E]'}`} />
+                    <input name="contact_number" value={formData.contact_number} onChange={handleChange} readOnly={!isEditingProfile} placeholder="09XX XXX XXXX" className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${(!isEditingProfile) ? 'bg-gray-50 border-gray-50 text-gray-500 cursor-not-allowed' : (formErrors.contact_number ? 'border-red-500' : 'border-gray-50 focus:border-[#FDE31E]')}`} />
+                    {formErrors.contact_number && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.contact_number}</p>}
                   </div>
 
                   <div className="md:col-span-2 space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Email Address <span className="text-red-500">*</span></label>
-                    <input type="email" name="email" required value={formData.email} onChange={handleChange} readOnly={true} className="w-full p-4 rounded-2xl border-2 border-gray-50 bg-gray-50 text-gray-500 cursor-not-allowed outline-none font-bold" />
+                    <input type="email" name="email" value={formData.email} onChange={handleChange} readOnly={true} className="w-full p-4 rounded-2xl border-2 border-gray-50 bg-gray-50 text-gray-500 cursor-not-allowed outline-none font-bold" />
                   </div>
 
                   <div className="md:col-span-2 space-y-1">
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Current Address <span className="text-red-500">*</span></label>
-                    <input name="address" required value={formData.address} onChange={handleChange} readOnly={!isEditingProfile} placeholder="e.g. Brgy. 1, City, Province" className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${(!isEditingProfile) ? 'bg-gray-50 border-gray-50 text-gray-500 cursor-not-allowed' : 'border-gray-50 focus:border-[#FDE31E]'}`} />
+                    <input name="address" value={formData.address} onChange={handleChange} readOnly={!isEditingProfile} placeholder="e.g. Brgy. 1, City, Province" className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${(!isEditingProfile) ? 'bg-gray-50 border-gray-50 text-gray-500 cursor-not-allowed' : (formErrors.address ? 'border-red-500' : 'border-gray-50 focus:border-[#FDE31E]')}`} />
+                    {formErrors.address && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.address}</p>}
                   </div>
                 </>
               )}

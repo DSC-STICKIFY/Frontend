@@ -8,20 +8,9 @@ import DesignChatbox from "../DesignChatbox";
 import { getBestPromo, getDiscountedPrice } from "../PromoTag";
 import PromoApi from "../../services/PromoApi";
 import { getImageUrl } from "../../services/api";
+import CartToast from "../CartToast";
 
 const CHECKOUT_STORAGE_KEY = "stickify_checkout_data";
-
-const CartToast = ({ onViewCart, onClose }) => (
-  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl" style={{ animation: "toastIn 0.25s cubic-bezier(.34,1.56,.64,1) both" }}>
-    <style>{`@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(16px) scale(0.95); } to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }`}</style>
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-    </svg>
-    <span className="text-sm font-medium">Added to cart!</span>
-    <button onClick={onViewCart} className="ml-1 text-sm font-bold text-yellow-400 hover:text-yellow-300 transition-colors">View Cart</button>
-    <button onClick={onClose} className="ml-2 text-gray-500 hover:text-white transition-colors text-lg leading-none">×</button>
-  </div>
-);
 
 const ModalMoreStickers = ({ sticker, onClose }) => {
   const rightPanelRef = useRef(null);
@@ -39,7 +28,14 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
   const navigate = useNavigate();
   const { setCheckoutData } = useUI();
   const { currentUser } = useAuth();
-  const { addItem } = useCart();
+  const { addItem, cartItems } = useCart();
+
+  const cartCount = useMemo(() => {
+    const productId = sticker.id || sticker.product_id;
+    return cartItems
+      .filter((c) => c.productId === productId)
+      .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+  }, [cartItems, sticker]);
 
   const hasDbSizes = sticker.sizes && sticker.sizes.length > 0;
   const hasDbDesigns = sticker.designs && sticker.designs.length > 0;
@@ -54,6 +50,9 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
 
   const isCustomizableProduct = sticker.is_customizable !== 0 && sticker.is_customizable !== false && sticker.is_customizable !== "0" && sticker.is_customizable !== undefined;
   const isCustomMode = isCustomizableProduct;
+
+  const stockCount = sticker.product_quantity !== undefined ? parseInt(sticker.product_quantity) : 0;
+  const isOutOfStock = !isCustomizableProduct && stockCount <= 0;
 
   const [quantity, setQuantity] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState(null);
@@ -82,6 +81,14 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
     PromoApi.getActive().then((data) => setPromos(Array.isArray(data) ? data : [])).catch(() => setPromos([]));
   }, []);
 
+  useEffect(() => {
+    if (!isCustomizableProduct && quantity > stockCount) {
+      setQuantity(Math.max(1, stockCount));
+    } else if (quantity === 0) {
+      setQuantity(1);
+    }
+  }, [isOutOfStock, stockCount, isCustomizableProduct, quantity]);
+
   const sizePricing = {
     "1.5 × 1.5": 180, "2 × 2": 200, "2 × 3": 220, "2.5 x 2.5": 240,
     "3 × 3": 250, "3.5 x 3.5": 280, "4 x 4": 320, "4 x 1": 230,
@@ -107,13 +114,14 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
   const activeBasePrice = (!isCustomMode && selectedDesign) ? parseFloat(selectedDesign.additional_price || 0) : dbPrice;
   const qualityAddon = 0;
 
-  let sizeAddon = 0;
+  let sizeSheetPrice = dbPrice;
   let currentSizeName = "";
   let currentPieces = 0;
 
   if (hasDbSizes) {
     if (selectedSizeObj) {
-      sizeAddon = parseFloat(selectedSizeObj.additional_price || 0);
+      const sizeAddon = parseFloat(selectedSizeObj.additional_price || 0);
+      sizeSheetPrice = activeBasePrice + sizeAddon;
       currentSizeName = selectedSizeObj.size_name;
       const matched = sizes.find(s => s.size.toLowerCase() === currentSizeName.toLowerCase());
       currentPieces = matched ? matched.pieces : 0;
@@ -122,11 +130,11 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
     currentSizeName = selectedLegacySize || defaultLegacySize;
     const matched = sizes.find(s => s.size === currentSizeName);
     currentPieces = matched ? matched.pieces : 0;
-    const legacySizePrice = sizePricing[currentSizeName] || dbPrice;
-    sizeAddon = Math.max(0, legacySizePrice - dbPrice);
+    const perPiecePrice = sizePricing[currentSizeName] || dbPrice;
+    sizeSheetPrice = perPiecePrice * currentPieces;
   }
 
-  const rawPrice = activeBasePrice + qualityAddon + sizeAddon;
+  const rawPrice = sizeSheetPrice + qualityAddon;
   const promo = getBestPromo(sticker, promos);
   let discountedPrice = getDiscountedPrice(rawPrice, promo);
   if (isNaN(discountedPrice)) discountedPrice = rawPrice;
@@ -277,7 +285,24 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
               <div className="flex-shrink-0 p-5 sm:p-8 pb-4 flex flex-col gap-4 md:overflow-y-auto custom-scrollbar" style={{ maxHeight: window.innerWidth >= 768 ? "55%" : "none" }}>
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">{sticker?.title || "More Stickers"}</h2>
-                  <p className="text-xs sm:text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">Premium Sticker Sheets</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <p className="text-xs sm:text-sm font-bold text-yellow-600 uppercase tracking-widest italic">Premium Sticker Sheets</p>
+                    {!isCustomizableProduct && (
+                      isOutOfStock ? (
+                        <span className="text-[10px] font-black uppercase bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full border border-red-200">
+                          Sold Out
+                        </span>
+                      ) : stockCount <= 5 ? (
+                        <span className="text-[10px] font-black uppercase bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full border border-amber-200 animate-pulse">
+                          Only {stockCount} Left!
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          {stockCount} In Stock
+                        </span>
+                      )
+                    )}
+                  </div>
                 </div>
 
                 {description && <p className="text-xs sm:text-sm text-gray-500 leading-relaxed italic line-clamp-3 sm:line-clamp-none">{description}</p>}
@@ -448,9 +473,22 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                     <div className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100">
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Quantity</span>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-gray-400 hover:bg-white hover:shadow-sm rounded-xl transition-all text-xl font-bold">−</button>
+                        <button 
+                          onClick={() => setQuantity(q => Math.max(1, q - 1))} 
+                          className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-gray-400 hover:bg-white hover:shadow-sm rounded-xl transition-all text-xl font-bold"
+                          disabled={isOutOfStock || quantity <= 1}
+                        >−</button>
                         <span className="w-8 text-center font-black text-base sm:text-lg">{quantity}</span>
-                        <button onClick={() => setQuantity(q => q + 1)} className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-gray-400 hover:bg-white hover:shadow-sm rounded-xl transition-all text-xl font-bold">+</button>
+                        <button 
+                          onClick={() => setQuantity(q => {
+                            if (!isCustomizableProduct) {
+                              return Math.min(stockCount, q + 1);
+                            }
+                            return q + 1;
+                          })} 
+                          className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-gray-400 hover:bg-white hover:shadow-sm rounded-xl transition-all text-xl font-bold"
+                          disabled={isOutOfStock || (!isCustomizableProduct && quantity >= stockCount)}
+                        >+</button>
                       </div>
                     </div>
 
@@ -498,23 +536,42 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
               <div className="mt-8 space-y-3 sm:space-y-4">
                 <button
                   onClick={handleBuyNow}
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)}
+                  disabled={isOutOfStock || isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)}
                   className={`w-full py-5 sm:py-6 rounded-[20px] sm:rounded-[24px] font-black uppercase tracking-widest text-xs sm:text-sm transition-all active:scale-[0.98] shadow-xl
-                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview))
+                    ${(isOutOfStock || isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 cursor-not-allowed"
                       : "bg-[#FFE100] text-black hover:bg-yellow-400"
                     }`}
                 >
-                  {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
+                  {isOutOfStock ? "SOLD OUT / OUT OF STOCK" : ((isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout"))}
                 </button>
-                <button
-                  onClick={handleAddToCart}
-                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)}
-                  className={`w-full py-5 sm:py-6 rounded-[20px] sm:rounded-[24px] font-black uppercase tracking-widest text-xs sm:text-sm border-2 transition-all
-                    ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
-                >
-                  Add to Cart
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={isOutOfStock || (isCustomMode && !uploadedImage?.preview)}
+                    className={`w-full py-5 sm:py-6 rounded-[20px] sm:rounded-[24px] font-black uppercase tracking-widest text-xs sm:text-sm border-2 transition-all
+                      ${(isOutOfStock || (isCustomMode && !uploadedImage?.preview)) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                  >
+                    Add to Cart
+                  </button>
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2 min-w-[24px] h-[24px] bg-[#FFE100] text-black text-xs font-black rounded-full flex items-center justify-center px-1.5 shadow-md leading-none border-2 border-white z-10 select-none pointer-events-none">
+                      {cartCount}
+                    </span>
+                  )}
+                  {showToast && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[100]">
+                      <CartToast
+                        onViewCart={() => {
+                          setShowToast(false);
+                          onClose();
+                          navigate("/cart");
+                        }}
+                        onClose={() => setShowToast(false)}
+                      />
+                    </div>
+                  )}
+                </div>
                 {submitError && <p className="text-red-500 text-[9px] sm:text-[10px] text-center font-black uppercase tracking-widest mt-4">{submitError}</p>}
               </div>
 
@@ -526,7 +583,6 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
       </div>
 
       {showAuthModal && <LoginRegisterModal onClose={() => setShowAuthModal(false)} />}
-      {showToast && <CartToast onViewCart={() => { setShowToast(false); onClose(); navigate("/cart"); }} onClose={() => setShowToast(false)} />}
     </>
   );
 };

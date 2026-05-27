@@ -14,6 +14,8 @@ const columnOrder = [
   "product_name",
   "product_price",
   "product_description",
+  "product_quantity",
+  "shelf_location",
   "product_image",
 ];
 
@@ -149,6 +151,8 @@ const normalizeProduct = (
     product_price: parseFloat(product.product_price || 0),
     product_description: product.product_description || product.description || "",
     is_customizable: product.is_customizable !== undefined ? product.is_customizable : true,
+    product_quantity: product.product_quantity !== undefined ? parseInt(product.product_quantity) : 0,
+    shelf_location: product.shelf_location || "",
     product_image: getImageUrl(product.product_image),
     price_map_image: getImageUrl(product.price_map_image),
     wrap_price: product.wrap_price || null,
@@ -242,6 +246,8 @@ const SuperAdminProducts = () => {
     product_price: "",
     product_description: "",
     is_customizable: true,
+    product_quantity: "0",
+    shelf_location: "",
   });
   const [editingProduct, setEditingProduct] = useState({});
   const [toast, setToast] = useState({ type: "success", message: "" });
@@ -534,7 +540,7 @@ const SuperAdminProducts = () => {
           insertProductIntoState(lastProduct);
         }
 
-        setFormValues({ product_name: "", product_price: "", product_description: "", is_customizable: true });
+        setFormValues({ product_name: "", product_price: "", product_description: "", is_customizable: true, product_quantity: "0", shelf_location: "" });
         setMultiPrices({ wrap: "", glossy: "", hologram: "" });
         setNewProductImage(null);
         setShowAddForm(false);
@@ -583,7 +589,7 @@ const SuperAdminProducts = () => {
           insertProductIntoState(p);
         }
 
-        setFormValues({ product_name: "", product_price: "", product_description: "", is_customizable: true });
+        setFormValues({ product_name: "", product_price: "", product_description: "", is_customizable: true, product_quantity: "0", shelf_location: "" });
         setCarPartsPrices(Object.keys(carPartsPrices).reduce((acc, k) => ({ ...acc, [k]: "" }), {}));
         setNewProductImage(null);
         setShowAddForm(false);
@@ -613,6 +619,8 @@ const SuperAdminProducts = () => {
     formData.append("product_type", selectedType);
     formData.append("product_description", formValues.product_description || "");
     formData.append("is_customizable", formValues.is_customizable ? "1" : "0");
+    formData.append("product_quantity", String(formValues.product_quantity || 0));
+    formData.append("shelf_location", String(formValues.shelf_location || ""));
 
     // Service Layout Fields
     formData.append("is_car_service", isCarService ? "1" : "0");
@@ -668,6 +676,8 @@ const SuperAdminProducts = () => {
         product_price: "",
         product_description: "",
         is_customizable: true,
+        product_quantity: "0",
+        shelf_location: "",
       });
       setNewProductImage(null);
       setPriceMapImage(null);
@@ -737,6 +747,14 @@ const SuperAdminProducts = () => {
         tempValues.is_customizable !== undefined
           ? tempValues.is_customizable
           : (originalItem.is_customizable !== undefined ? originalItem.is_customizable : true),
+      product_quantity:
+        tempValues.product_quantity !== undefined
+          ? parseInt(tempValues.product_quantity)
+          : (originalItem.product_quantity !== undefined ? parseInt(originalItem.product_quantity) : 0),
+      shelf_location:
+        tempValues.shelf_location !== undefined
+          ? tempValues.shelf_location
+          : (originalItem.shelf_location !== undefined ? originalItem.shelf_location : ""),
     };
 
     const newImageFile = tempValues.product_image;
@@ -992,7 +1010,7 @@ const SuperAdminProducts = () => {
           setNewProductImage={setNewProductImage}
           handleAdd={handleAdd}
           resetAddForm={() => {
-            setFormValues({ product_name: "", product_price: "", product_description: "", is_customizable: true });
+            setFormValues({ product_name: "", product_price: "", product_description: "", is_customizable: true, product_quantity: "0", shelf_location: "" });
             setMultiPrices({ wrap: "", glossy: "", hologram: "" });
             setCarPartsPrices(Object.keys(carPartsPrices).reduce((acc, k) => ({ ...acc, [k]: "" }), {}));
             setNewProductImage(null);
@@ -1482,6 +1500,41 @@ const AddProductForm = ({
             <option value="ready_made">Ready Made</option>
           </select>
         </div>
+        )}
+
+        {/* Stock & Shelf Location (Ready Made Only) */}
+        {!formValues.is_customizable && (
+          <>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-gray-700">
+                Stock Quantity <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={formValues.product_quantity}
+                onChange={(e) =>
+                  setFormValues((prev) => ({ ...prev, product_quantity: e.target.value }))
+                }
+                placeholder="Enter stock quantity"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-gray-700">
+                Shelf Location
+              </label>
+              <input
+                type="text"
+                value={formValues.shelf_location}
+                onChange={(e) =>
+                  setFormValues((prev) => ({ ...prev, shelf_location: e.target.value }))
+                }
+                placeholder="e.g. Rack A-3, Shelf B2"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none"
+              />
+            </div>
+          </>
         )}
 
         {/* Image (Standard) */}

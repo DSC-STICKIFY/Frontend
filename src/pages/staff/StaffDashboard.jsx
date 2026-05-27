@@ -58,8 +58,25 @@ export default function StaffDashboard() {
         return items;
     }, [orders]);
 
+    // Production / Preparation queue
+    const productionItems = useMemo(() => {
+        const items = [];
+        orders.forEach(order => {
+            const details = order.order_details || order.items || [];
+            details.forEach(detail => {
+                const isReadyMadePrep = (detail.status === "To Process" || order.status === "To Process") && order.cs_review_status === "not_applicable";
+                const isCustomPrep    = (detail.status === "In Production" || order.status === "In Production");
+                if ((isReadyMadePrep || isCustomPrep) && !items.some(i => i.order_details_id === detail.order_details_id)) {
+                    items.push({ ...detail, order_id: order.order_id });
+                }
+            });
+        });
+        return items;
+    }, [orders]);
+
     // Stat derivations
     const totalPending = allPendingShippingItems.length;
+    const productionCount = productionItems.length;
     
     const codCount = useMemo(() => {
         return allPendingShippingItems.filter(item => 
@@ -87,6 +104,12 @@ export default function StaffDashboard() {
                         className="px-6 py-3.5 bg-yellow-400 hover:bg-yellow-500 text-black text-xs font-black uppercase tracking-wider rounded-2xl transition duration-300 shadow-lg shadow-yellow-400/20 active:scale-95 text-center flex items-center justify-center"
                     >
                         📦 Process Shipments
+                    </Link>
+                    <Link
+                        to="/staff/orders"
+                        className="px-6 py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black uppercase tracking-wider rounded-2xl transition duration-300 shadow-lg shadow-emerald-400/20 active:scale-95 text-center flex items-center justify-center"
+                    >
+                        🔧 Production Queue
                     </Link>
                     <Link
                         to="/staff/validation-queue"
@@ -122,6 +145,27 @@ export default function StaffDashboard() {
                                 </div>
                             </div>
                             <span className="text-xs font-black uppercase tracking-widest text-black opacity-70 group-hover:opacity-100 transition">Review Now →</span>
+                        </Link>
+                    )}
+
+                    {/* Production Queue Alert */}
+                    {productionCount > 0 && (
+                        <Link
+                            to="/staff/orders"
+                            className="flex items-center justify-between gap-4 bg-emerald-500 hover:bg-emerald-600 rounded-3xl px-8 py-5 shadow-xl shadow-emerald-400/30 transition group animate-in slide-in-from-top-2 duration-300"
+                        >
+                            <div className="flex items-center gap-4">
+                                <span className="text-3xl animate-bounce">🔧</span>
+                                <div>
+                                    <p className="text-white font-black text-base uppercase tracking-tight">
+                                        {productionCount} Item{productionCount > 1 ? "s" : ""} In Production / Preparation
+                                    </p>
+                                    <p className="text-emerald-100/70 text-[10px] font-bold uppercase tracking-widest">
+                                        Custom or ready-made items awaiting your fabrication or packing
+                                    </p>
+                                </div>
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-widest text-white opacity-70 group-hover:opacity-100 transition">Work Now →</span>
                         </Link>
                     )}
 
@@ -163,16 +207,16 @@ export default function StaffDashboard() {
                             <p className="text-xs text-gray-400 font-semibold">Paid in full online. Dispatch immediately</p>
                         </div>
 
-                        {/* Stat Card 4 — Pending Validations */}
-                        <div className="bg-white rounded-3xl p-6 shadow-md border border-amber-200 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
+                        {/* Stat Card 4 — Production Queue */}
+                        <div className="bg-white rounded-3xl p-6 shadow-md border border-emerald-200 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
                             <div className="absolute right-0 bottom-0 opacity-5 translate-x-4 translate-y-4 group-hover:scale-110 transition-transform duration-500">
                                 <svg className="w-48 h-48" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 5h2v6h-2V7zm0 8h2v2h-2v-2z"/>
+                                    <path d="M22 5.72l-4.6-3.86-1.29 1.53 4.6 3.86L22 5.72zM7.88 3.39L6.6 1.86 2 5.71l1.29 1.53 4.59-3.85zM12.5 8H11v6l4.75 2.85.75-1.23-4-2.37V8zM12 4c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z"/>
                                 </svg>
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 block mb-2">Pending Check</span>
-                            <div className="text-5xl font-black italic tracking-tighter text-gray-900 mb-2">{pendingValidations.length}</div>
-                            <p className="text-xs text-gray-400 font-semibold">Custom orders awaiting manual feasibility check</p>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 block mb-2">In Production</span>
+                            <div className="text-5xl font-black italic tracking-tighter text-gray-900 mb-2">{productionCount}</div>
+                            <p className="text-xs text-gray-400 font-semibold">Items being fabricated or packed by staff</p>
                         </div>
                     </div>
 

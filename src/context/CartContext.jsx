@@ -46,10 +46,10 @@ export const CartProvider = ({ children }) => {
             const existingIdx = merged.findIndex(
               (i) =>
                 i.productId === guestItem.productId &&
-                i.size === guestItem.size &&
-                i.type === guestItem.type &&
-                i.designId === guestItem.designId &&
-                i.qualityId === guestItem.qualityId
+                (i.size || null) === (guestItem.size || null) &&
+                (i.type || "") === (guestItem.type || "") &&
+                (i.designId || null) === (guestItem.designId || null) &&
+                (i.qualityId || null) === (guestItem.qualityId || null)
             );
             if (existingIdx !== -1) {
               merged[existingIdx] = {
@@ -96,10 +96,10 @@ export const CartProvider = ({ children }) => {
       const existingIdx = prev.findIndex(
         (i) =>
           i.productId === item.productId &&
-          i.size === item.size &&
-          i.type === item.type &&
-          i.designId === item.designId &&
-          i.qualityId === item.qualityId
+          (i.size || null) === (item.size || null) &&
+          (i.type || "") === (item.type || "") &&
+          (i.designId || null) === (item.designId || null) &&
+          (i.qualityId || null) === (item.qualityId || null)
       );
       if (existingIdx !== -1) {
         const updated = [...prev];

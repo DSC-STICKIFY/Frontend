@@ -2,11 +2,42 @@ import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import { InboxProvider } from "../context/inboxcontext";
+import { AdminBadgeProvider, useAdminBadges } from "../context/AdminBadgeContext";
 
 import dashboardIcn from '../assets/sidebarAdminsIcons/dashboard.svg';
 import ordersIcon from '../assets/sidebarAdminsIcons/orders.svg';
 import settingIcn from '../assets/sidebarCustIcons/settings.svg';
+import inboxIcon from '../assets/sidebarAdminsIcons/inbox.svg';
 import { fetchAllOrders } from "../services/OrdersAPI";
+
+function StaffLayoutContent({ expanded, setExpanded, setSelectedCategory, selectedCategory, shipmentCount }) {
+    const { badges } = useAdminBadges();
+
+    const navPages = [
+        { label: 'Dashboard',            icon: dashboardIcn, path: '/staff/dashboard' },
+        { label: 'Artist Inbox',         icon: inboxIcon,    path: '/staff/inbox' },
+        { label: 'Decal/Wrap Inquiries', icon: inboxIcon,    path: '/staff/inquiries', badge: badges.inquiries },
+        { label: 'Feasibility Check',    icon: ordersIcon,   path: '/staff/validation-queue' },
+        { label: 'Orders to Ship',       icon: ordersIcon,   path: '/staff/orders', badge: shipmentCount },
+        { label: 'Settings',             icon: settingIcn,   path: '/staff/settings' },
+    ];
+
+    return (
+        <div className="flex bg-[#F1F3F7] h-screen overflow-hidden">
+            <Sidebar
+                expanded={expanded}
+                setExpanded={setExpanded}
+                navPages={navPages}
+                roleTitle="Staff"
+                setSelectedCategory={setSelectedCategory}
+            />
+
+            <main className="flex-1 overflow-y-auto transition-all duration-300">
+                <Outlet context={{ selectedCategory }} />
+            </main>
+        </div>
+    );
+}
 
 export default function StaffLayout() {
     const [expanded, setExpanded] = useState(true);
@@ -46,28 +77,17 @@ export default function StaffLayout() {
         return () => clearInterval(interval);
     }, []);
 
-    const navPages = [
-        { label: 'Dashboard',          icon: dashboardIcn, path: '/staff/dashboard' },
-        { label: 'Feasibility Check',  icon: ordersIcon,       path: '/staff/validation-queue' },
-        { label: 'Orders to Ship',     icon: ordersIcon,       path: '/staff/orders', badge: shipmentCount },
-        { label: 'Settings',           icon: settingIcn,   path: '/staff/settings' },
-    ];
-
     return (
         <InboxProvider>
-            <div className="flex bg-[#F1F3F7] h-screen overflow-hidden">
-                <Sidebar
+            <AdminBadgeProvider>
+                <StaffLayoutContent 
                     expanded={expanded}
                     setExpanded={setExpanded}
-                    navPages={navPages}
-                    roleTitle="Staff"
                     setSelectedCategory={setSelectedCategory}
+                    selectedCategory={selectedCategory}
+                    shipmentCount={shipmentCount}
                 />
-
-                <main className="flex-1 overflow-y-auto transition-all duration-300">
-                    <Outlet context={{ selectedCategory }} />
-                </main>
-            </div>
+            </AdminBadgeProvider>
         </InboxProvider>
     );
 }

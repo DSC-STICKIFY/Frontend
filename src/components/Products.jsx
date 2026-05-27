@@ -1,7 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getImageUrl, PLACEHOLDER_IMAGE } from "../services/api";
 import PromoTag from "../components/PromoTag";
+import CartToast from "./CartToast";
 
 const CATEGORY_ORDER = [
   "Stickers", "Decals & Wrap", "Signage",
@@ -17,8 +18,21 @@ const CATEGORY_URL_MAP = {
   "Printing": "/services/printing",
 };
 
-const Products = ({ onProductClick, onOrderNowClick, onAddToCartClick = () => {}, products = [] }) => {
+const Products = ({ onProductClick, onOrderNowClick, onAddToCartClick = () => {}, products = [], cartItems = [] }) => {
   const navigate = useNavigate();
+  const [activeToastId, setActiveToastId] = useState(null);
+
+  useEffect(() => {
+    if (activeToastId !== null) {
+      const timer = setTimeout(() => setActiveToastId(null), 3500);
+      return () => clearTimeout(timer);
+    }
+  }, [activeToastId]);
+
+  const getCartCount = (item) =>
+    cartItems
+      .filter((c) => c.productId === (item.id || item.product_id))
+      .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
 
   const handleViewAll = (category) => {
     const url = CATEGORY_URL_MAP[category];
@@ -171,21 +185,43 @@ const Products = ({ onProductClick, onOrderNowClick, onAddToCartClick = () => {}
                           >
                             {(item.category || item.product_category || "").toLowerCase().includes("decal") ? "Inquire now" : "Order Now"}
                           </button>
-                          {!((item.category || item.product_category || "").toLowerCase().includes("decal") || (item.category || item.product_category || "").toLowerCase().includes("wrap")) && (
-                            <button
-                              type="button"
-                              className="bg-gray-100 hover:bg-gray-200 text-gray-800 p-2.5 rounded-lg transition active:scale-[0.98] flex items-center justify-center"
-                              title="Add to Cart"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onAddToCartClick(item);
-                              }}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                                <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
-                              </svg>
-                            </button>
-                          )}
+                          {!((item.category || item.product_category || "").toLowerCase().includes("decal") || (item.category || item.product_category || "").toLowerCase().includes("wrap")) && (() => {
+                            const count = getCartCount(item);
+                            return (
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 p-2.5 rounded-lg transition active:scale-[0.98] flex items-center justify-center relative"
+                                  title="Add to Cart"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAddToCartClick(item, e);
+                                    setActiveToastId(item.id || item.product_id);
+                                  }}
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                                    <path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z" />
+                                  </svg>
+                                  {count > 0 && (
+                                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-[#FDE31E] text-black text-[9px] font-black rounded-full flex items-center justify-center px-1 shadow-sm leading-none">
+                                      {count > 99 ? "99+" : count}
+                                    </span>
+                                  )}
+                                </button>
+                                {activeToastId === (item.id || item.product_id) && (
+                                  <div className="absolute bottom-full right-0 mb-2 z-[100] pointer-events-auto">
+                                    <CartToast
+                                      onViewCart={() => {
+                                        setActiveToastId(null);
+                                        navigate(window.location.pathname.includes("customer") ? "/customer-cart" : "/cart");
+                                      }}
+                                      onClose={() => setActiveToastId(null)}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>

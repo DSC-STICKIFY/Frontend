@@ -34,7 +34,14 @@ const ModalGraphicServices = ({ product, onClose }) => {
   const navigate = useNavigate();
   const { setCheckoutData } = useUI();
   const { currentUser, isVerified } = useAuth();
-  const { addItem } = useCart();
+  const { addItem, cartItems } = useCart();
+
+  const cartCount = useMemo(() => {
+    const productId = product.id || product.product_id;
+    return cartItems
+      .filter((c) => c.productId === productId)
+      .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+  }, [cartItems, product]);
 
   const isCustomizableProduct = product.is_customizable !== 0 && product.is_customizable !== false && product.is_customizable !== "0" && product.is_customizable !== undefined;
   const isCustomMode = isCustomizableProduct;
@@ -293,14 +300,33 @@ const ModalGraphicServices = ({ product, onClose }) => {
                 >
                   {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
-                <button 
-                  onClick={handleAddToCart} 
-                  disabled={subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)} 
-                  className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                    ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
-                >
-                  Add to Cart
-                </button>
+                <div className="relative">
+                  <button 
+                    onClick={handleAddToCart} 
+                    disabled={subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)} 
+                    className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
+                      ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                  >
+                    Add to Cart
+                  </button>
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2 min-w-[24px] h-[24px] bg-[#FFE100] text-black text-xs font-black rounded-full flex items-center justify-center px-1.5 shadow-md leading-none border-2 border-white z-10 select-none pointer-events-none">
+                      {cartCount}
+                    </span>
+                  )}
+                  {showToast && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[100]">
+                      <CartToast
+                        onViewCart={() => {
+                          setShowToast(false);
+                          onClose();
+                          navigate("/cart");
+                        }}
+                        onClose={() => setShowToast(false)}
+                      />
+                    </div>
+                  )}
+                </div>
                 {submitError && <p className="text-red-500 text-[10px] text-center font-black uppercase tracking-widest mt-4">{submitError}</p>}
               </div>
             </div>
@@ -309,7 +335,6 @@ const ModalGraphicServices = ({ product, onClose }) => {
       </div>
 
       {showAuthModal && <LoginRegisterModal onClose={() => setShowAuthModal(false)} fromCheckout={true} />}
-      {showToast && <CartToast onViewCart={() => { setShowToast(false); onClose(); navigate("/cart"); }} onClose={() => setShowToast(false)} />}
     </>
   );
 };

@@ -13,16 +13,19 @@ import ordersIcn from '../assets/sidebarCustIcons/orders.svg';
 import settingsIcn from '../assets/sidebarCustIcons/settings.svg';
 import inquiriesIcn from '../assets/sidebarAdminsIcons/inbox.svg';
 
+import { useCart } from '../context/CartContext';
+
 export default function CustomerDBLayout() {
     const [expanded, setExpanded] = useState(true);
     const [selectedCategory, setSelectedCategory] = useState(null);
     const { currentUser, logout } = useAuth();
+    const { totalItems } = useCart();
 
     const navPages = [
         { label: 'Dashboard',        icon: dashboardIcn, path: '/customer-dashboard' },
         { label: 'Inbox',            icon: inboxIcn,     path: '/customer-inbox' },
         { label: 'Artist Inbox',     icon: inquiriesIcn, path: '/customer-artist-inbox' },
-        { label: 'Cart',             icon: cartIcn,      path: '/customer-cart' },
+        { label: 'Cart',             icon: cartIcn,      path: '/customer-cart', badge: totalItems },
         { label: 'Orders',           icon: ordersIcn,    path: '/customer-orders' },
         { label: 'My Inquiries',     icon: inquiriesIcn, path: '/customer-inquiries' },
         { label: 'Account Settings', icon: settingsIcn,  path: '/customer-settings' },

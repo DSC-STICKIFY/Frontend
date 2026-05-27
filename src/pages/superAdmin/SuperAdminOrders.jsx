@@ -467,6 +467,8 @@ const SuperAdminOrders = ({ isCSQueueOnly = false }) => {
                 return order.status === "Pending" || order.status === "Pending Payment";
             if (statusFilter === "Return/Refund")   
                 return order.status === "Return/Refund" || order.status === "Refunded";
+            if (statusFilter === "Shipment Approvals")
+                return order.status === "Awaiting Shipment Approval";
             return order.status === statusFilter;
         })
         .filter((order) => {
@@ -482,7 +484,7 @@ const SuperAdminOrders = ({ isCSQueueOnly = false }) => {
             const dateA = a.order_date || a.created_at;
             const dateB = b.order_date || b.created_at;
             if (!dateA && !dateB) return b.order_id - a.order_id;
-            if (!dateA) return -1; // ← null date goes to TOP
+            if (!dateA) return -1;
             if (!dateB) return 1;
             return new Date(dateB) - new Date(dateA);
         });
@@ -610,7 +612,7 @@ const SuperAdminOrders = ({ isCSQueueOnly = false }) => {
             {/* Status filters */}
             {!isCSQueueOnly && (
                 <div className="flex gap-4 font-semibold overflow-x-auto mb-6">
-                    {["All", "Pending", "Pending Payment", "To Process", "To Ship", "To Receive", "Completed", "Return/Refund", "Reviews", "Archived"].map((status) => (
+                    {["All", "Pending", "Pending Payment", "To Process", "Shipment Approvals", "To Ship", "To Receive", "Completed", "Return/Refund", "Reviews", "Archived"].map((status) => (
                         <button 
                             key={status} 
                             onClick={() => setStatusFilter(status)}
@@ -681,7 +683,7 @@ const SuperAdminOrders = ({ isCSQueueOnly = false }) => {
                     </div>
                 )
             ) : (
-                /* Table (Status column removed) */
+                /* Table */
                 <div className="flex flex-col w-full overflow-y-auto flex-1 rounded-xl border border-gray-200 bg-white shadow-sm">
                     <div className="border-b border-gray-200 px-6 py-4 bg-gray-50">
                         <p className="text-sm font-medium text-gray-600">
@@ -692,9 +694,10 @@ const SuperAdminOrders = ({ isCSQueueOnly = false }) => {
                     </div>
 
                     <div className="p-4 overflow-x-auto">
-                        <table className="w-full table-auto border-collapse min-w-[680px]">
+                        <table className="w-full table-auto border-collapse min-w-[720px]">
                             <thead className="bg-gray-50 sticky top-0 z-10">
                                 <tr className="text-left border-b-2 border-gray-200">
+                                    <th className="px-4 py-3 font-semibold text-sm text-center w-12">#</th>
                                     <th className="px-4 py-3 font-semibold text-sm">Order #</th>
                                     <th className="px-4 py-3 font-semibold text-sm">Date</th>
                                     <th className="px-4 py-3 font-semibold text-sm">Customer</th>
@@ -706,7 +709,7 @@ const SuperAdminOrders = ({ isCSQueueOnly = false }) => {
                             <tbody className="divide-y divide-gray-50">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan="6" className="text-center py-20">
+                                        <td colSpan="7" className="text-center py-20">
                                             <div className="flex flex-col items-center gap-3">
                                                 <div className="w-8 h-8 border-2 border-gray-300 border-t-yellow-500 rounded-full animate-spin"/>
                                                 <p className="text-sm text-gray-500">Loading orders...</p>
@@ -715,16 +718,21 @@ const SuperAdminOrders = ({ isCSQueueOnly = false }) => {
                                     </tr>
                                 ) : filteredOrders.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="text-center py-20 text-gray-500">
+                                        <td colSpan="7" className="text-center py-20 text-gray-500">
                                             <p className="font-medium text-lg">No orders found matching current filters.</p>
                                         </td>
                                     </tr>
-                                ) : filteredOrders.map((order) => {
+                                ) : filteredOrders.map((order, index) => {
                                     const customerName = getCustomerName(order);
                                     const reviewCount  = order.reviews?.length || 0;
 
                                     return (
                                         <tr key={order.order_id} className="border-b hover:bg-gray-50 transition">
+                                            {/* Row number */}
+                                            <td className="px-4 py-5 text-center">
+                                                <span className="text-sm font-black text-gray-500">{index + 1}</span>
+                                            </td>
+
                                             {/* Order number */}
                                             <td className="px-4 py-5">
                                                 <span className="font-bold text-gray-900 text-sm">

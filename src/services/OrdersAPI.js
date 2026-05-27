@@ -122,6 +122,8 @@ const transformOrder = (order) => {
     final_design_url: order.final_design_url || null,
     shipment_requested_at: order.shipment_requested_at || null,
     shipment_note: order.shipment_note || null,
+    cs_review_status: order.cs_review_status || null,
+    staff_validation_status: order.staff_validation_status || null,
   };
 };
 
@@ -478,6 +480,26 @@ export const rejectShipmentRequest = async (orderId, reason) => {
   return response.data;
 };
 
+export const requestShipment = async (orderId, note) => {
+  const response = await api.post(`/orders/${orderId}/request-shipment`, { note });
+  return response.data;
+};
+
+export const approveLayout = async (orderId) => {
+  const response = await api.post(`/orders/${orderId}/approve-layout`);
+  return response.data;
+};
+
+export const rejectLayout = async (orderId, reason) => {
+  const response = await api.post(`/orders/${orderId}/reject-layout`, { reason });
+  return response.data;
+};
+
+export const completeProduction = async (orderId) => {
+  const response = await api.post(`/orders/${orderId}/production-completed`);
+  return response.data;
+};
+
 export const fetchDispatchedOrders = async () => {
   try {
     const response = await api.get("/staff/dispatched-orders");
@@ -522,6 +544,10 @@ export default {
   approveDesign,
   requestChange,
   rejectShipmentRequest,
+  requestShipment,
+  approveLayout,
+  rejectLayout,
+  completeProduction,
   fetchDispatchedOrders,
 };
 

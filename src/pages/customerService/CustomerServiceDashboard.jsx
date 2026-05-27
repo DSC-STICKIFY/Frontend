@@ -133,6 +133,11 @@ const OrderCard = ({ order, artists, onSendToStaff, onReject, onAcceptPartial, o
         setSendingToStaff(false);
     };
 
+    const dateRaw = order.order_date || order.created_at || order.date;
+    const formattedDate = dateRaw 
+        ? new Date(dateRaw).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+        : 'Unknown Date';
+
     return (
         <div className="bg-white rounded-3xl shadow-md border border-gray-100 p-6 hover:shadow-xl transition-shadow duration-300 space-y-4">
             {/* Header row */}
@@ -142,7 +147,7 @@ const OrderCard = ({ order, artists, onSendToStaff, onReject, onAcceptPartial, o
                         <span className="font-black text-gray-900 text-sm">{order.order_number}</span>
                         <span className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${color}`}>{label}</span>
                     </div>
-                    <p className="text-xs font-bold text-gray-500 mt-0.5">👤 {customerName}</p>
+                    <p className="text-xs font-bold text-gray-500 mt-0.5">👤 {customerName} <span className="mx-1 text-gray-300">•</span> 🕒 {formattedDate}</p>
                 </div>
                 <span className={`inline-block px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
                     order.payment_method?.toUpperCase() === "COD"
@@ -329,7 +334,16 @@ export default function CustomerServiceDashboard() {
                 fetchCSValidationQueue(),
                 fetchAllArtists(),
             ]);
-            setOrders(Array.isArray(ordersData) ? ordersData : []);
+            
+            const rawOrders = Array.isArray(ordersData) ? ordersData : [];
+            // Sort by latest date first
+            rawOrders.sort((a, b) => {
+                const dateA = new Date(a.order_date || a.created_at || a.date || 0);
+                const dateB = new Date(b.order_date || b.created_at || b.date || 0);
+                return dateB - dateA;
+            });
+            
+            setOrders(rawOrders);
             setArtists(Array.isArray(artistsData) ? artistsData : []);
         } catch (err) {
             console.error("CS Dashboard load error:", err);

@@ -43,6 +43,27 @@ const PromoApi = {
   notify: (id) =>
     api.post(`/promotions/${id}/notify`)
       .then((res) => res.data),
+
+  // Customer Service Queue & Workflow APIs
+  getQueue: () =>
+    api.get("/promotions/queue")
+      .then((res) => res.data || {}),
+
+  review: (id) =>
+    api.post(`/promotions/${id}/review`)
+      .then((res) => res.data),
+
+  send: (id) =>
+    api.post(`/promotions/${id}/send`)
+      .then((res) => res.data),
+
+  cancel: (id) =>
+    api.post(`/promotions/${id}/cancel`)
+      .then((res) => res.data),
+
+  getAnalytics: (id) =>
+    api.get(`/promotions/${id}/analytics`)
+      .then((res) => res.data),
 };
 
 export default PromoApi;

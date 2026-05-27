@@ -54,6 +54,24 @@ const CustomerProducts = () => {
             } else {
                 setSelectedCarInquiry(product);
             }
+        } else if (category === "signage") {
+            setSelectedSignage(product);
+        } else if (category === "printing") {
+            setSelectedPrintingItem(product);
+        } else if (category === "graphic services") {
+            setSelectedGraphicItem(product);
+        } else if (category === "giveaways") {
+            const modalType = getModalType(product.type, product.name);
+            setSelectedGiveaway({
+                ...product,
+                modalType,
+                product_id: product.id || product.product_id,
+                product_name: product.name || product.product_name,
+                product_description: product.description || product.product_description,
+                product_price: product.price || product.product_price,
+                product_image: product.image || product.product_image,
+                product_quantity: product.quantity || 1,
+            });
         } else {
             setSelectedSticker({
                 ...product,
@@ -349,10 +367,10 @@ const CustomerProducts = () => {
             {/* Modals */}
             {selectedSticker && <ModalMoreStickers sticker={selectedSticker} onClose={() => setSelectedSticker(null)} />}
             {selectedGraphicItem && <ModalGraphicServices product={selectedGraphicItem} onClose={() => setSelectedGraphicItem(null)} />}
-            {selectedGiveaway?.modalType === "standee-tarpulinModal" && <ModalGiveawaysStandeenTarpulin giveaways={selectedGiveaway.giveaways} onClose={() => setSelectedGiveaway(null)} />}
+            {selectedGiveaway?.modalType === "standee-tarpulinModal" && <ModalGiveawaysStandeenTarpulin giveaways={selectedGiveaway} onClose={() => setSelectedGiveaway(null)} />}
             {selectedGiveaway?.modalType === "mug-shirtModal" && <ModalGiveawaysMugnShirt giveaways={selectedGiveaway} onClose={() => setSelectedGiveaway(null)} />}
             {selectedGiveaway?.modalType === "moreModal" && <ModalGiveawayMore giveaways={selectedGiveaway} onClose={() => setSelectedGiveaway(null)} />}
-            {selectedSignage && <ModalSignage signage={selectedSignage.signage} onClose={() => setSelectedSignage(null)} />}
+            {selectedSignage && <ModalSignage signage={selectedSignage} onClose={() => setSelectedSignage(null)} />}
             {selectedPrintingItem && <ModalPrinting product={selectedPrintingItem} onClose={() => setSelectedPrintingItem(null)} />}
             {selectedCarInquiry && (
                 <ModalCarServiceInquiry

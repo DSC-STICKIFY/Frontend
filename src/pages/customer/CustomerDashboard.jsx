@@ -286,10 +286,8 @@ const CompleteProfileBanner = ({ onClick }) => (
 const CustomerDashboard = () => {
   const navigate = useNavigate();
   const { allProducts, loading: productsLoading } = useProducts();
-  const { addItem } = useCart();
+  const { addItem, cartItems } = useCart();
   const { currentUser } = useAuth();
-  const [showCartToast, setShowCartToast] = useState(false);
-
   const isProfileIncomplete = currentUser && (
     !currentUser.address?.trim() || 
     !currentUser.contact_number?.trim()
@@ -306,8 +304,6 @@ const CustomerDashboard = () => {
       category: product.category || product.product_category || "",
       type: product.type || product.product_type || "",
     });
-    setShowCartToast(true);
-    setTimeout(() => setShowCartToast(false), 3500);
   }, [addItem]);
 
   const [orders, setOrders] = useState([]);
@@ -443,6 +439,10 @@ const CustomerDashboard = () => {
     const modalType = getModalType(item);
     if (modalType === "car-decal") { setSelectedCarInquiry(item); return; }
     if (modalType === "motor-decal") { setSelectedMotorInquiry(item); return; }
+    if (modalType === "signage") { setSelectedSignage(buildSignagePayload(item)); return; }
+    if (modalType === "graphic") { setSelectedGraphicItem(buildGraphicPayload(item)); return; }
+    if (modalType === "giveaway") { setSelectedGiveaway(buildGiveawayPayload(item)); return; }
+    if (modalType === "printing") { setSelectedPrinting(buildPrintingPayload(item)); return; }
 
     setSelectedSticker(buildStickerPayload(item));
   };
@@ -461,7 +461,7 @@ const CustomerDashboard = () => {
   }
 
   return (
-    <div className="p-6 bg-[#F1F3F7] min-h-screen">
+    <div className="p-6 bg-[#F1F3F7] min-h-screen relative">
       {/* ── DESKTOP ──────────────────────────────────────────────────────────── */}
       <div className="hidden lg:flex flex-col p-3 bg-white rounded-3xl shadow-md min-h-[calc(100vh-2.5rem)] w-full">
         {isProfileIncomplete && (
@@ -519,8 +519,12 @@ const CustomerDashboard = () => {
                             )}
                             <button 
                               onClick={() => {
-                                if (promo.product_uuids && promo.product_uuids.length > 0) {
+                                if (promo.applicable_to === "products" && promo.product_uuids && promo.product_uuids.length === 1) {
                                   navigate(`/?product=${promo.product_uuids[0]}`);
+                                } else if (promo.applicable_to === "types" && promo.applicable_ids && promo.applicable_ids.length > 0) {
+                                  navigate(`/?search=${encodeURIComponent(promo.applicable_ids[0])}`);
+                                } else if (promo.applicable_to === "categories" && promo.applicable_ids && promo.applicable_ids.length > 0) {
+                                  navigate(`/?search=${encodeURIComponent(promo.applicable_ids[0])}`);
                                 } else {
                                   navigate("/");
                                 }
@@ -643,7 +647,8 @@ const CustomerDashboard = () => {
             onProductClick={handleNavigateToProduct}
             onOrderNowClick={handleOpenModal}
             onAddToCartClick={handleAddToCart}
-            onViewAll={() => navigate("/products")}
+            onViewAll={() => navigate("/products/sticker")}
+            cartItems={cartItems}
           />
         </div>
       </div>
@@ -707,8 +712,12 @@ const CustomerDashboard = () => {
                             )}
                             <button 
                               onClick={() => {
-                                if (promo.product_uuids && promo.product_uuids.length > 0) {
+                                if (promo.applicable_to === "products" && promo.product_uuids && promo.product_uuids.length === 1) {
                                   navigate(`/?product=${promo.product_uuids[0]}`);
+                                } else if (promo.applicable_to === "types" && promo.applicable_ids && promo.applicable_ids.length > 0) {
+                                  navigate(`/?search=${encodeURIComponent(promo.applicable_ids[0])}`);
+                                } else if (promo.applicable_to === "categories" && promo.applicable_ids && promo.applicable_ids.length > 0) {
+                                  navigate(`/?search=${encodeURIComponent(promo.applicable_ids[0])}`);
                                 } else {
                                   navigate("/");
                                 }
@@ -807,10 +816,10 @@ const CustomerDashboard = () => {
               placeholder="Search your style..." 
               className="flex-1 outline-none text-gray-700" 
               onKeyDown={(e) => {
-                if (e.key === 'Enter') navigate("/products");
+                if (e.key === 'Enter') navigate("/products/sticker");
               }}
             />
-            <img src={searchB} alt="search" className="w-5 h-5 cursor-pointer" onClick={() => navigate("/products")} />
+            <img src={searchB} alt="search" className="w-5 h-5 cursor-pointer" onClick={() => navigate("/products/sticker")} />
           </div>
 
           {/* Static Carousel (mobile) */}
@@ -836,7 +845,8 @@ const CustomerDashboard = () => {
               onProductClick={handleNavigateToProduct}
               onOrderNowClick={handleOpenModal}
               onAddToCartClick={handleAddToCart}
-              onViewAll={() => navigate("/products")}
+              onViewAll={() => navigate("/products/sticker")}
+              cartItems={cartItems}
             />
           </div>
         </div>
@@ -916,17 +926,6 @@ const CustomerDashboard = () => {
         />
       )}
 
-      {showCartToast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl" style={{ animation: "toastIn 0.25s cubic-bezier(.34,1.56,.64,1) both" }}>
-          <style>{`@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(16px) scale(0.95); } to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }`}</style>
-          <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-          </svg>
-          <span className="text-sm font-medium">Added to cart!</span>
-          <button onClick={() => { setShowCartToast(false); navigate("/customer-cart"); }} className="ml-1 text-sm font-bold text-yellow-400 hover:text-yellow-300 transition-colors">View Cart</button>
-          <button onClick={() => setShowCartToast(false)} className="ml-2 text-gray-500 hover:text-white transition-colors text-lg leading-none">×</button>
-        </div>
-      )}
     </div>
   );
 };

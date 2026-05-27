@@ -2,7 +2,11 @@ import axios from "axios";
 
 const API = "http://127.0.0.1:8000/api";
 
-const getAdminToken = () => sessionStorage.getItem("token_admin") || sessionStorage.getItem("token_subadmin") || null;
+const getAdminToken = () => {
+  const roles = ["admin", "subadmin", "sub_admin", "artist", "staff", "customer_service"];
+  const activeRole = roles.find(r => sessionStorage.getItem(`token_${r}`));
+  return activeRole ? sessionStorage.getItem(`token_${activeRole}`) : null;
+};
 
 const adminHttp = axios.create({ baseURL: API });
 adminHttp.interceptors.request.use((config) => {
@@ -119,6 +123,28 @@ export const submitInquiryReview = async (id, data) => {
   return response.data;
 };
 
+export const fetchInquiryMessages = async (inquiryId) => {
+  const adminToken = getAdminToken();
+  const customerToken = sessionStorage.getItem("token");
+  const token = adminToken || customerToken;
+
+  const response = await axios.get(`${API}/inquiries/${inquiryId}/messages`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data;
+};
+
+export const sendInquiryMessage = async (inquiryId, message) => {
+  const adminToken = getAdminToken();
+  const customerToken = sessionStorage.getItem("token");
+  const token = adminToken || customerToken;
+
+  const response = await axios.post(`${API}/inquiries/${inquiryId}/messages`, { message }, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data;
+};
+
 export default {
   submitInquiry,
   fetchInquiries,
@@ -131,5 +157,7 @@ export default {
   markInquiryPaid,
   getNotifications,
   markNotificationsRead,
-  submitInquiryReview
+  submitInquiryReview,
+  fetchInquiryMessages,
+  sendInquiryMessage
 };

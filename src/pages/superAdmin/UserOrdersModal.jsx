@@ -972,7 +972,7 @@ const UserOrdersModal = ({ user, statusFilter = "All", onClose, onRefresh, actio
         try {
             await rejectShipmentRequest(rejectingOrder.order_id, reason);
             updateItemLocally(rejectingOrder.order_id, rejectingOrder.order_details_id, "Design In Progress");
-            addToast("info", "Shipment request rejected. Artist has been notified.");
+            addToast("info", "Shipment request rejected. Staff/Artist has been notified.");
             setIsRejectModalOpen(false);
             onRefresh();
         } catch (err) {
@@ -1118,7 +1118,7 @@ const UserOrdersModal = ({ user, statusFilter = "All", onClose, onRefresh, actio
                                 if (!ok) return;
                                 try { 
                                     await approveShipmentRequest(row.order_id); 
-                                    updateItemLocally(row.order_id, row.order_details_id, "To Ship"); 
+                                    updateItemLocally(row.order_id, row.order_details_id, "Approved for Shipping"); 
                                     addToast("success", "Shipment request approved."); 
                                     onRefresh();
                                 }
@@ -1134,6 +1134,18 @@ const UserOrdersModal = ({ user, statusFilter = "All", onClose, onRefresh, actio
                                 Reject
                             </button>
                         </div>
+                    </div>
+                );
+
+            case "Approved for Shipping":
+                return (
+                    <div className="flex flex-col gap-1.5 items-center">
+                        <span className="inline-block px-3 py-1 text-[10px] font-semibold bg-green-50 text-green-600 border border-green-200 rounded-lg whitespace-nowrap">
+                            📦 Approved for Shipping
+                        </span>
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest text-center">
+                            Pending Staff Dispatch
+                        </span>
                     </div>
                 );
 

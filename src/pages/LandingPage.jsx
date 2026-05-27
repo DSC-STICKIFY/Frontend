@@ -13,6 +13,7 @@ import { getImageUrl, PLACEHOLDER_IMAGE } from "../services/api";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import PromoApi from "../services/PromoApi";
 import PromoTag, { getDiscountedPrice } from "../components/PromoTag";
+import CartToast from "../components/CartToast";
 
 // All modals
 import ModalAssortedHologram from "../components/productmodal/ModalAssortedHologram.jsx";
@@ -49,15 +50,22 @@ const getModalType = (type, name = "") => {
 
 function LandingPage() {
     const { allProducts, loading } = useProducts();
-    const { addItem } = useCart();
+    const { addItem, cartItems } = useCart();
     const navigate = useNavigate();
-    const [showGlobalCartToast, setShowGlobalCartToast] = useState(false);
+
 
     const [searchText, setSearchText] = useState("");
     const [debouncedSearchText, setDebouncedSearchText] = useState("");
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [searchParams, setSearchParams] = useSearchParams();
     const productUuidParam = searchParams.get("product");
+    const searchParamQuery = searchParams.get("search");
+
+    useEffect(() => {
+        if (searchParamQuery) {
+            setSearchText(searchParamQuery);
+        }
+    }, [searchParamQuery]);
 
     useEffect(() => {
         if (allProducts && allProducts.length > 0 && productUuidParam) {
@@ -211,8 +219,6 @@ function LandingPage() {
             category: product.category || product.product_category || "",
             type: product.type || product.product_type || "",
         });
-        setShowGlobalCartToast(true);
-        setTimeout(() => setShowGlobalCartToast(false), 3500);
     }, [addItem]);
 
     const handleBackToGallery = useCallback(() => {
@@ -234,7 +240,7 @@ function LandingPage() {
     const hasDiscount = activePromo && (activePromo.discount_type === "percentage" || activePromo.discount_type === "fixed") && discountedPrice < originalPrice;
 
     return (
-        <div className="min-h-screen w-full text-black bg-[#F1F3F7]">
+        <div className="min-h-screen w-full text-black bg-[#F1F3F7] relative">
             {!selectedProduct && (
                 <header className="text-center mt-[140px]">
                     <h1 style={{ fontFamily: "Holtwood One SC, serif" }} className="tracking-wider text-3xl sm:text-4xl md:text-5xl font-bold text-black">
@@ -435,15 +441,19 @@ function LandingPage() {
                             products={filteredProducts}
                             onProductClick={handleProductSelection}
                             onOrderNowClick={handleOrderNow}
-                            onAddToCartClick={handleAddToCart}
-                            onViewAll={() => document.getElementById('all-products')?.scrollIntoView({ behavior: 'smooth' })}
+                            onAddToCartClick={(item, e) => handleAddToCart(item, e)}
+                            onViewAll={() => {
+                                navigate('/services/sticker');
+                                window.scrollTo(0, 0);
+                            }}
+                            cartItems={cartItems}
                         />
                     )}
                     {loading ? (
                         <LoadingSkeleton rows={2} cardsPerRow={4} />
                     ) : (
                         <div id="all-products">
-                            <Products onProductClick={handleProductSelection} onOrderNowClick={handleOrderNow} onAddToCartClick={handleAddToCart} products={filteredProducts} />
+                            <Products onProductClick={handleProductSelection} onOrderNowClick={handleOrderNow} onAddToCartClick={(item, e) => handleAddToCart(item, e)} products={filteredProducts} cartItems={cartItems} />
                         </div>
                     )}
                     {!debouncedSearchText && <Testimonials />}
@@ -463,19 +473,8 @@ function LandingPage() {
             {selectedCarService && <ModalCarServiceInquiry product={selectedCarService} onClose={() => setSelectedCarService(null)} />}
             {selectedMotorService && <ModalMotorServiceInquiry product={selectedMotorService} onClose={() => setSelectedMotorService(null)} />}
 
-            {showGlobalCartToast && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl animate-fade-in" style={{ animation: "toastIn 0.25s cubic-bezier(.34,1.56,.64,1) both" }}>
-                    <style>{`@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(16px) scale(0.95); } to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }`}</style>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                    <span className="text-sm font-medium">Added to cart!</span>
-                    <button onClick={() => { setShowGlobalCartToast(false); navigate("/cart"); }} className="ml-1 text-sm font-bold text-yellow-400 hover:text-yellow-300 transition-colors">View Cart</button>
-                    <button onClick={() => setShowGlobalCartToast(false)} className="ml-2 text-gray-500 hover:text-white transition-colors text-lg leading-none">×</button>
-                </div>
-            )}
         </div>
     );
+  
 }
-
 export default LandingPage;

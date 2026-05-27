@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import CustDBProductsLayout from '../../../layouts/CustDBProductsLayout.jsx';
 import bg from '../../../assets/servicesImgIcon/signage/signageBG.png';
 import cart from '../../../assets/servicesImgIcon/stickers/cart.svg';
-import ModalMoreStickers from '../../../components/productmodal/ModalMoreStickers.jsx';
+import ModalSignage from '../../../components/productmodal/ModalSignage.jsx';
 import { useProducts } from '../../../context/ProductsContext';
 import { fetchCurrentUser } from '../../../services/authService';
 import { getImageUrl } from '../../../services/api';
@@ -383,8 +383,8 @@ const Signage = () => {
         )}
 
       {selectedSignage && (
-        <ModalMoreStickers
-          sticker={selectedSignage}
+        <ModalSignage
+          signage={selectedSignage}
           onClose={() => setSelectedSignage(null)}
         />
       )}

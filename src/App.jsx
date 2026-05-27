@@ -51,6 +51,7 @@ const StaffDashboard = React.lazy(() => import("./pages/staff/StaffDashboard"));
 const StaffOrders = React.lazy(() => import("./pages/staff/StaffOrders"));
 const StaffAccountSettings = React.lazy(() => import("./pages/staff/StaffAccountSettings"));
 const StaffValidationQueue = React.lazy(() => import("./pages/staff/StaffValidationQueue"));
+const StaffInbox = React.lazy(() => import("./pages/staff/StaffInbox"));
 
 // Cart
 const CartPage = React.lazy(() => import("./pages/CartPage.jsx"));
@@ -92,6 +93,8 @@ const SuperAdminServices = React.lazy(() => import("./pages/superAdmin/SuperAdmi
 const CustomerServiceOffers = React.lazy(() => import("./pages/customerService/CustomerServiceOffers.jsx"));
 const CustomerServiceInbox = React.lazy(() => import("./pages/customerService/CustomerServiceInbox.jsx"));
 const CustomerServiceDashboard = React.lazy(() => import("./pages/customerService/CustomerServiceDashboard.jsx"));
+const CustomerServiceArtistInbox = React.lazy(() => import("./pages/customerService/CustomerServiceArtistInbox.jsx"));
+const CustomerServiceInquiries = React.lazy(() => import("./pages/customerService/CustomerServiceInquiries.jsx"));
 const ReturnRefundManagement = React.lazy(() => import("./pages/superAdmin/ReturnRefundManagement.jsx"));
 const AdminInquiries = React.lazy(() => import("./pages/superAdmin/AdminInquiries.jsx"));
 const SuperAdminArtists = React.lazy(() => import("./pages/superAdmin/SuperAdminArtists.jsx"));
@@ -102,7 +105,6 @@ const PaymentSuccess = React.lazy(() => import("./pages/EwalletPaymentRedirectPa
 const PaymentFailed = React.lazy(() => import("./pages/EwalletPaymentRedirectPages/PaymentFailed.jsx").then(m => ({ default: m.PaymentFailed })));
 
 // ─── Cart Router ──────────────────────────────────────────────────────────────
-// Lives inside CustomerAuthProvider so useAuth() is safe here
 const CartRouter = () => {
     const { currentUser, loading } = useAuth();
 
@@ -167,11 +169,12 @@ const AppContent = () => {
             <Suspense fallback={<PageLoader />}>
                 <Routes>
                     {/* ==================== PUBLIC / LANDING ==================== */}
-                    {/* Wrapped in CustomerAuthProvider so Navbar shows customer session */}
                     <Route
                         element={
                             <CustomerAuthProvider>
-                                <LandingLayout />
+                                <CartProvider>
+                                    <LandingLayout />
+                                </CartProvider>
                             </CustomerAuthProvider>
                         }
                     >
@@ -201,20 +204,26 @@ const AppContent = () => {
                     </Route>
 
                     {/* ==================== CART ==================== */}
+                    {/* ✅ CartProvider is now INSIDE CustomerAuthProvider */}
                     <Route
                         path="/cart"
                         element={
                             <CustomerAuthProvider>
-                                <CartRouter />
+                                <CartProvider>
+                                    <CartRouter />
+                                </CartProvider>
                             </CustomerAuthProvider>
                         }
                     />
 
                     {/* ==================== CUSTOMER DASHBOARD ==================== */}
+                    {/* ✅ CartProvider is now INSIDE CustomerAuthProvider */}
                     <Route
                         element={
                             <CustomerAuthProvider>
-                                <CustomerDBLayout />
+                                <CartProvider>
+                                    <CustomerDBLayout />
+                                </CartProvider>
                             </CustomerAuthProvider>
                         }
                     >
@@ -291,10 +300,12 @@ const AppContent = () => {
                         <Route path="/customer-service-dashboard" element={<CustomerServiceDashboard />} />
                         <Route path="/customer-service-offers" element={<CustomerServiceOffers />} />
                         <Route path="/customer-service-inbox" element={<CustomerServiceInbox />} />
+                        <Route path="/customer-service-artist-inbox" element={<CustomerServiceArtistInbox />} />
+                        <Route path="/customer-service-inquiries" element={<CustomerServiceInquiries />} />
                     </Route>
 
                     {/* ==================== STAFF ==================== */}
-                    <Route 
+                    <Route
                         element={
                             <AdminAuthProvider>
                                 <ProtectedRoute allowedRoles={['staff']}>
@@ -304,13 +315,15 @@ const AppContent = () => {
                         }
                     >
                         <Route path="/staff/dashboard"         element={<StaffDashboard />} />
+                        <Route path="/staff/inbox"             element={<StaffInbox />} />
                         <Route path="/staff/validation-queue"  element={<StaffValidationQueue />} />
                         <Route path="/staff/orders"            element={<StaffOrders />} />
+                        <Route path="/staff/inquiries"         element={<AdminInquiries />} />
                         <Route path="/staff/settings"          element={<StaffAccountSettings />} />
                     </Route>
 
                     {/* ==================== ARTIST ==================== */}
-                    <Route 
+                    <Route
                         element={
                             <AdminAuthProvider>
                                 <ProtectedRoute allowedRoles={['artist']}>
@@ -348,17 +361,15 @@ const ScrollToTop = () => {
 };
 
 // ─── App Root ─────────────────────────────────────────────────────────────────
+// ✅ CartProvider removed from here — it now lives inside CustomerAuthProvider
+//    per route group so useAuth() is available when CartContext initializes.
 function App() {
     return (
-        // ✅ No more single AuthProvider wrapping everything
-        // Each route group wraps its own provider instead
         <UIProvider>
-            <CartProvider>
-                <Router>
-                    <ScrollToTop />
-                    <AppContent />
-                </Router>
-            </CartProvider>
+            <Router>
+                <ScrollToTop />
+                <AppContent />
+            </Router>
         </UIProvider>
     );
 }

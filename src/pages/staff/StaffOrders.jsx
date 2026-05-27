@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { fetchAllOrders, fetchDispatchedOrders, outForDelivery, staffConfirmShipment } from "../../services/OrdersAPI";
+import { fetchAllOrders, fetchDispatchedOrders, outForDelivery, staffConfirmShipment, requestShipment, completeProduction } from "../../services/OrdersAPI";
 
 const DISPATCHED_STATUSES = new Set([
     "to receive",
@@ -20,6 +20,8 @@ export default function StaffOrders() {
     const [selectedItemForPrint, setSelectedItemForPrint] = useState(null);
     const [confirmingShipment, setConfirmingShipment] = useState(null);
     const [selectedItemForDetails, setSelectedItemForDetails] = useState(null);
+    const [activeTab, setActiveTab] = useState("preparation"); // "preparation", "dispatch", "history"
+    const [submittingPrep, setSubmittingPrep] = useState(null);
 
     // Form states
     const [trackingNumber, setTrackingNumber] = useState("");
@@ -54,6 +56,46 @@ export default function StaffOrders() {
         const interval = setInterval(() => loadOrders(true), 10000);
         return () => clearInterval(interval);
     }, []);
+
+    // ─── Prep queue (Production & Ready-Made Preparation) ─────────────────────
+    const prepItems = useMemo(() => {
+        const items = [];
+        const seenIds = new Set();
+
+        orders.forEach(order => {
+            const details = order.order_details || order.items || [];
+            details.forEach(detail => {
+                const detailStatus = (detail.status || "").toLowerCase();
+                const orderStatus  = (order.status  || "").toLowerCase();
+
+                if (DISPATCHED_STATUSES.has(detailStatus) || DISPATCHED_STATUSES.has(orderStatus)) return;
+
+                // Ready-made in "To Process" OR Customized in "In Production"
+                const isReadyMadePrep = (detail.status === "To Process" || order.status === "To Process") && order.cs_review_status === "not_applicable";
+                const isCustomPrep    = (detail.status === "In Production" || order.status === "In Production");
+                const isAwaitingApproval = (detail.status === "Awaiting Shipment Approval" || order.status === "Awaiting Shipment Approval");
+
+                if ((isReadyMadePrep || isCustomPrep || isAwaitingApproval) && !seenIds.has(detail.order_details_id)) {
+                    seenIds.add(detail.order_details_id);
+                    items.push({
+                        ...detail,
+                        order_id:       order.order_id,
+                        order_number:   order.order_number,
+                        customer_name:  order.name,
+                        address:        order.address,
+                        contact_number: order.contact_number,
+                        payment_method: order.payment_method,
+                        order_date:     order.order_date,
+                        raw_order:      order,
+                        dispatched:     null,
+                        is_custom_prep: !isReadyMadePrep,
+                        is_awaiting_approval: isAwaitingApproval,
+                    });
+                }
+            });
+        });
+        return items;
+    }, [orders]);
 
     // ─── Active queue ─────────────────────────────────────────────────────────
 
@@ -132,17 +174,53 @@ export default function StaffOrders() {
 
     // ─── Combined + filtered ──────────────────────────────────────────────────
 
-    const allItems = useMemo(() => [...activeItems, ...dispatchedItems], [activeItems, dispatchedItems]);
+    const currentItems = useMemo(() => {
+        if (activeTab === "preparation") return prepItems;
+        if (activeTab === "dispatch") return activeItems;
+        return dispatchedItems;
+    }, [activeTab, prepItems, activeItems, dispatchedItems]);
 
     const filteredItems = useMemo(() => {
-        if (!searchQuery.trim()) return allItems;
+        if (!searchQuery.trim()) return currentItems;
         const search = searchQuery.toLowerCase();
-        return allItems.filter(item =>
+        return currentItems.filter(item =>
             (item.order_number  || "").toLowerCase().includes(search) ||
             (item.customer_name || "").toLowerCase().includes(search) ||
             (item.product_name  || "").toLowerCase().includes(search)
         );
-    }, [allItems, searchQuery]);
+    }, [currentItems, searchQuery]);
+
+    // ─── Production & Shipment Request handlers ──────────────────────────────
+    const handleCompleteProduction = async (orderId) => {
+        if (!window.confirm("Are you sure you want to mark production as completed for this order?")) return;
+        setSubmittingPrep(orderId);
+        try {
+            await completeProduction(orderId);
+            alert("Production successfully marked as completed! Order is now sent to sub-admin for shipment approval.");
+            await loadOrders();
+        } catch (err) {
+            console.error("Failed to complete production:", err);
+            alert("Error: " + (err.response?.data?.message || err.message));
+        } finally {
+            setSubmittingPrep(null);
+        }
+    };
+
+    const handleRequestShipment = async (orderId) => {
+        const note = window.prompt("Enter any shipment preparation notes (optional):");
+        if (note === null) return;
+        setSubmittingPrep(orderId);
+        try {
+            await requestShipment(orderId, note.trim() || "Ready-made order packed.");
+            alert("Shipment request submitted successfully! Awaiting sub-admin approval.");
+            await loadOrders();
+        } catch (err) {
+            console.error("Failed to request shipment:", err);
+            alert("Error: " + (err.response?.data?.message || err.message));
+        } finally {
+            setSubmittingPrep(null);
+        }
+    };
 
     // ─── Dispatch handler ─────────────────────────────────────────────────────
 
@@ -198,8 +276,9 @@ export default function StaffOrders() {
         printWindow.document.close();
     };
 
-    const pendingCount    = filteredItems.filter(i => !i.dispatched).length;
-    const dispatchedCount = filteredItems.filter(i => !!i.dispatched).length;
+    const prepCount       = prepItems.length;
+    const activeCount      = activeItems.length;
+    const historyCount     = dispatchedItems.length;
 
     // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -209,8 +288,8 @@ export default function StaffOrders() {
             {/* Header */}
             <div className="flex items-start justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-semibold text-gray-900 mb-1">Pending dispatch shipments</h1>
-                    <p className="text-xs text-gray-400">Pack, print waybills, and register tracking numbers</p>
+                    <h1 className="text-2xl font-semibold text-gray-900 mb-1">Order Fulfillment &amp; Dispatch Console</h1>
+                    <p className="text-xs text-gray-400">Fabricate custom layouts, request shipment approvals, pack waybills, and register tracking numbers</p>
                 </div>
                 <button
                     onClick={() => loadOrders(false)}
@@ -223,7 +302,41 @@ export default function StaffOrders() {
                 </button>
             </div>
 
-            {/* Search + Counts */}
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200 mb-6 gap-6">
+                <button
+                    onClick={() => setActiveTab("preparation")}
+                    className={`pb-3 text-sm font-bold uppercase tracking-wider transition border-b-2 ${
+                        activeTab === "preparation"
+                            ? "border-amber-500 text-gray-900"
+                            : "border-transparent text-gray-400 hover:text-gray-600"
+                    }`}
+                >
+                    🔧 Prep &amp; Production ({prepCount})
+                </button>
+                <button
+                    onClick={() => setActiveTab("dispatch")}
+                    className={`pb-3 text-sm font-bold uppercase tracking-wider transition border-b-2 ${
+                        activeTab === "dispatch"
+                            ? "border-amber-500 text-gray-900"
+                            : "border-transparent text-gray-400 hover:text-gray-600"
+                    }`}
+                >
+                    📦 Dispatch Queue ({activeCount})
+                </button>
+                <button
+                    onClick={() => setActiveTab("history")}
+                    className={`pb-3 text-sm font-bold uppercase tracking-wider transition border-b-2 ${
+                        activeTab === "history"
+                            ? "border-amber-500 text-gray-900"
+                            : "border-transparent text-gray-400 hover:text-gray-600"
+                    }`}
+                >
+                    📜 Dispatched History ({historyCount})
+                </button>
+            </div>
+
+            {/* Search */}
             <div className="flex items-center gap-3 mb-5">
                 <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 h-9 flex-1 max-w-md shadow-sm">
                     <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,20 +346,10 @@ export default function StaffOrders() {
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search by order ID or customer name..."
+                        placeholder="Search by order ID, customer name, or product..."
                         className="w-full text-xs bg-transparent outline-none text-gray-700 placeholder-gray-400"
                     />
                 </div>
-                {!loading && (
-                    <>
-                        <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                            {pendingCount} pending
-                        </span>
-                        <span className="text-xs font-medium px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200">
-                            {dispatchedCount} dispatched
-                        </span>
-                    </>
-                )}
             </div>
 
             {/* Table */}
@@ -264,16 +367,28 @@ export default function StaffOrders() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                                 </svg>
                             </div>
-                            <h4 className="text-sm font-semibold text-gray-800 mb-1">No orders ready for shipping</h4>
-                            <p className="text-xs text-gray-400">Items will appear here once approved by the subadmin.</p>
+                            <h4 className="text-sm font-semibold text-gray-800 mb-1">
+                                {activeTab === "preparation" ? "No items in preparation" : activeTab === "dispatch" ? "No orders ready for dispatch" : "No dispatched orders yet"}
+                            </h4>
+                            <p className="text-xs text-gray-400">
+                                {activeTab === "preparation"
+                                    ? "Custom production items and ready-made orders will appear here when assigned."
+                                    : activeTab === "dispatch"
+                                    ? "Items will appear here once approved by the sub-admin for shipping."
+                                    : "Dispatched orders with tracking numbers will show up here."}
+                            </p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full border-collapse text-sm">
                                 <thead>
                                     <tr className="border-b border-gray-100 bg-gray-50">
+                                        <th className="text-center py-3 px-4 text-xs font-medium text-gray-500 w-10">#</th>
                                         <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 whitespace-nowrap">Order ID</th>
                                         <th className="text-left py-3 px-4 text-xs font-medium text-gray-500">Customer &amp; location</th>
+                                        {activeTab === "preparation" && (
+                                            <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Type</th>
+                                        )}
                                         <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Method</th>
                                         <th className="text-center py-3 px-4 text-xs font-medium text-gray-500">Status</th>
                                         <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 whitespace-nowrap">Action</th>
@@ -296,6 +411,11 @@ export default function StaffOrders() {
                                                         : "hover:bg-gray-50"
                                                 }`}
                                             >
+                                                {/* Row number */}
+                                                <td className="py-3 px-4 text-center">
+                                                    <span className="text-sm font-black text-gray-500">{index + 1}</span>
+                                                </td>
+
                                                 {/* Order ID */}
                                                 <td className="py-3 px-4 font-medium text-gray-900 text-xs whitespace-nowrap">
                                                     {item.order_number}
@@ -308,6 +428,19 @@ export default function StaffOrders() {
                                                         {item.address}
                                                     </p>
                                                 </td>
+
+                                                {/* Type (only on Preparation tab) */}
+                                                {activeTab === "preparation" && (
+                                                    <td className="py-3 px-4 text-center">
+                                                        <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${
+                                                            item.is_custom_prep
+                                                                ? "bg-purple-50 text-purple-700 border-purple-200"
+                                                                : "bg-sky-50 text-sky-700 border-sky-200"
+                                                        }`}>
+                                                            {item.is_custom_prep ? "🎨 Custom" : "📦 Ready-Made"}
+                                                        </span>
+                                                    </td>
+                                                )}
 
                                                 {/* Method */}
                                                 <td className="py-3 px-4 text-center whitespace-nowrap">
@@ -322,7 +455,17 @@ export default function StaffOrders() {
 
                                                 {/* Status */}
                                                 <td className="py-3 px-4 text-center">
-                                                    {isDispatched ? (
+                                                    {activeTab === "preparation" ? (
+                                                        <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border whitespace-nowrap ${
+                                                            item.is_awaiting_approval
+                                                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                                                : item.is_custom_prep
+                                                                    ? "bg-orange-50 text-orange-700 border-orange-200"
+                                                                    : "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                                        }`}>
+                                                            {item.is_awaiting_approval ? "⏳ Pending Admin" : item.is_custom_prep ? "🔧 In Production" : "📋 To Process"}
+                                                        </span>
+                                                    ) : isDispatched ? (
                                                         <div className="flex flex-col items-center gap-0.5">
                                                             <span className="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200">
                                                                 Dispatched
@@ -347,7 +490,34 @@ export default function StaffOrders() {
                                                     className="py-3 px-4 text-right whitespace-nowrap"
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
-                                                    {isDispatched ? (
+                                                    {activeTab === "preparation" ? (
+                                                        /* ── Preparation tab actions ── */
+                                                        item.is_awaiting_approval ? (
+                                                            <button
+                                                                disabled
+                                                                className="px-3 py-1.5 bg-gray-100 border border-gray-200 text-gray-400 text-xs font-medium rounded-lg cursor-not-allowed whitespace-nowrap"
+                                                            >
+                                                                ⏳ Waiting for Confirmation
+                                                            </button>
+                                                        ) : item.is_custom_prep ? (
+                                                            <button
+                                                                disabled={submittingPrep === item.order_id}
+                                                                onClick={() => handleCompleteProduction(item.order_id)}
+                                                                className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium rounded-lg transition disabled:opacity-50"
+                                                            >
+                                                                {submittingPrep === item.order_id ? "Processing..." : "✅ Complete Production"}
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                disabled={submittingPrep === item.order_id}
+                                                                onClick={() => handleRequestShipment(item.order_id)}
+                                                                className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-medium rounded-lg transition disabled:opacity-50"
+                                                            >
+                                                                {submittingPrep === item.order_id ? "Processing..." : "📦 Request Shipment"}
+                                                            </button>
+                                                        )
+                                                    ) : isDispatched ? (
+                                                        /* ── History tab: reprint waybill ── */
                                                         <button
                                                             onClick={() => setSelectedItemForPrint(item)}
                                                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-500 text-xs font-medium rounded-lg transition"
@@ -358,6 +528,7 @@ export default function StaffOrders() {
                                                             Waybill
                                                         </button>
                                                     ) : isApproved ? (
+                                                        /* ── Dispatch tab: confirm shipment ── */
                                                         <button
                                                             disabled={confirmingShipment === item.order_id}
                                                             onClick={async () => {
@@ -377,6 +548,7 @@ export default function StaffOrders() {
                                                             {confirmingShipment === item.order_id ? "Processing..." : "Prepare & ship"}
                                                         </button>
                                                     ) : (
+                                                        /* ── Dispatch tab: waybill + dispatch ── */
                                                         <div className="inline-flex items-center gap-2">
                                                             <button
                                                                 onClick={() => setSelectedItemForPrint(item)}
@@ -433,6 +605,9 @@ export default function StaffOrders() {
                                     <p><span className="font-bold uppercase">Payment:</span> {selectedItemForPrint.payment_method}</p>
                                     <p><span className="font-bold uppercase">Product:</span> {selectedItemForPrint.product_name} {selectedItemForPrint.size ? `(${selectedItemForPrint.size})` : ""}</p>
                                     <p><span className="font-bold uppercase">Qty:</span> x{selectedItemForPrint.quantity}</p>
+                                    {(selectedItemForPrint.product?.shelf_location || selectedItemForPrint.shelf_location) && (
+                                        <p><span className="font-bold uppercase">Shelf:</span> {selectedItemForPrint.product?.shelf_location || selectedItemForPrint.shelf_location}</p>
+                                    )}
                                 </div>
                                 <div className="text-center mt-4 border-t-2 border-black pt-2 text-[9px] font-mono text-black">
                                     Thank you for your order!
@@ -598,6 +773,11 @@ export default function StaffOrders() {
                                 <p className="text-xs text-gray-700 mt-2">
                                     Quantity: <span className="font-semibold text-indigo-600">{selectedItemForDetails.quantity} pcs</span>
                                 </p>
+                                {(selectedItemForDetails.product?.shelf_location || selectedItemForDetails.shelf_location) && (
+                                    <p className="text-xs text-amber-700 font-bold mt-2 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200 inline-block">
+                                        📍 Shelf: {selectedItemForDetails.product?.shelf_location || selectedItemForDetails.shelf_location}
+                                    </p>
+                                )}
                                 {selectedItemForDetails.comments && selectedItemForDetails.comments !== "None" && (
                                     <div className="mt-3 pt-3 border-t border-gray-200">
                                         <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider mb-1">Customer note</p>

@@ -28,7 +28,14 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
   const navigate = useNavigate();
   const { setCheckoutData } = useUI();
   const { currentUser } = useAuth();
-  const { addItem } = useCart();
+  const { addItem, cartItems } = useCart();
+
+  const cartCount = useMemo(() => {
+    const productId = giveaways.id || giveaways.product_id;
+    return cartItems
+      .filter((c) => c.productId === productId)
+      .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+  }, [cartItems, giveaways]);
 
   const isCustomizableProduct = giveaways.is_customizable !== 0 && giveaways.is_customizable !== false && giveaways.is_customizable !== "0" && giveaways.is_customizable !== undefined;
   const isCustomMode = isCustomizableProduct;
@@ -123,20 +130,26 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
   };
 
   const promo = getBestPromo(giveaways, promos);
-  const totalQuantity = useMemo(() => quantity * numSets, [quantity, numSets]);
+  const totalQuantity = quantity;
   const rawUnitPrice = getRawPricePerPiece(totalQuantity);
   let discountedUnitPrice = getDiscountedPrice(rawUnitPrice, promo);
   if (isNaN(discountedUnitPrice)) discountedUnitPrice = rawUnitPrice;
   const hasDiscount = discountedUnitPrice !== rawUnitPrice && promo && (promo.discount_type === "percentage" || promo.discount_type === "fixed");
 
-  const description = giveaways?.product_description || giveaways?.description;
-
-  useEffect(() => {
+  const handleGetSubtotal = () => {
     setIsCalculating(true);
     setUnitPrice(discountedUnitPrice);
     setSubtotal(discountedUnitPrice * totalQuantity);
-    setTimeout(() => setIsCalculating(false), 500);
-  }, [totalQuantity, discountedUnitPrice]);
+    setSubmitError(null);
+    setTimeout(() => setIsCalculating(false), 300);
+  };
+
+  // Run calculation initially when component mounts
+  useEffect(() => {
+    handleGetSubtotal();
+  }, [discountedUnitPrice, quantity]);
+
+  const description = giveaways?.product_description || giveaways?.description;
 
   const formatPrice = (num) => {
     if (num === undefined || num === null) return "0.00";
@@ -228,7 +241,7 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
 
           <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
             <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 overflow-hidden">
-              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizable ? 'flex-shrink-0' : 'flex-1'}`} style={isCustomizable ? { maxHeight: "55%" } : {}}>
+              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizableProduct ? 'flex-shrink-0' : 'flex-1'}`} style={isCustomizableProduct ? { maxHeight: "55%" } : {}}>
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{giveaways.category || giveaways.title}</h2>
                   <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">{giveaways.type}</p>
@@ -288,19 +301,55 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
                     </tbody>
                   </table>
                 </div>
-
-                <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Number of Sets</span>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => setNumSets(s => Math.max(1, s - 1))} className="w-10 h-10 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-xl transition-colors text-xl font-bold">−</button>
-                      <span className="w-10 text-center font-black text-lg">{numSets}</span>
-                      <button onClick={() => setNumSets(s => s + 1)} className="w-10 h-10 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-xl transition-colors text-xl font-bold">+</button>
-                    </div>
+                <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-50 pb-3">
+                    <span className="text-xs sm:text-sm font-bold text-gray-800">Quantity</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={quantity}
+                      onChange={(e) => {
+                        setQuantity(Math.max(1, parseInt(e.target.value) || 1));
+                        setSubtotal(0); // Reset subtotal
+                      }}
+                      className="w-20 px-3 py-1.5 text-center font-black border border-gray-200 rounded-xl focus:border-[#FFE100] focus:outline-none text-xs sm:text-sm"
+                    />
                   </div>
 
-
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={handleGetSubtotal}
+                      className="px-4 py-2 bg-black text-white font-black text-[10px] sm:text-[11px] rounded-xl tracking-wider hover:bg-gray-800 uppercase transition-all shadow-sm active:scale-95"
+                    >
+                      Get Subtotal
+                    </button>
+                  </div>
                 </div>
+
+                {subtotal > 0 && (
+                  <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-3">
+                    <div className="flex justify-between items-center text-xs sm:text-sm">
+                      <span className="text-gray-500 font-medium">Subtotal</span>
+                      <span className="text-base sm:text-lg font-black text-gray-900 font-mono tracking-tighter">₱ {formatPrice(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs sm:text-sm">
+                      <span className="text-gray-500 font-medium">Shipping</span>
+                      <span className="text-xs sm:text-sm font-bold text-green-600 uppercase">Free</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] sm:text-xs pl-4 text-gray-400">
+                      <span>Original shipping fee</span>
+                      <span className="font-mono">₱ 100.00</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] sm:text-xs pl-4 text-green-500">
+                      <span>Shipping discount</span>
+                      <span className="font-mono">- ₱ 100.00</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-gray-50 pt-3 text-xs sm:text-sm">
+                      <span className="text-gray-800 font-bold">Total</span>
+                      <span className="text-lg sm:text-xl font-black text-gray-900 font-mono tracking-tighter">₱ {formatPrice(subtotal)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex-1 min-h-0 px-8 pb-8 pt-2 bg-gray-50/30">
@@ -327,10 +376,10 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
             {/* RIGHT Panel */}
             <div ref={rightPanelRef} className="w-full md:w-1/2 p-8 overflow-y-auto custom-scrollbar bg-white flex flex-col">
               <div className="flex-1 space-y-6">
-                <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group">
+                <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group relative" style={{ minHeight: "220px" }}>
                   <img
                     src={getImageUrl(giveaways.image || giveaways.product_image)}
-                    className="w-full h-48 object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     alt={giveaways.type}
                   />
                 </div>
@@ -398,14 +447,33 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
                 >
                   {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
-                <button
-                  onClick={handleAddToCart}
-                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)}
-                  className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                    ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
-                >
-                  Add to Cart
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)}
+                    className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
+                      ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                  >
+                    Add to Cart
+                  </button>
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2 min-w-[24px] h-[24px] bg-[#FFE100] text-black text-xs font-black rounded-full flex items-center justify-center px-1.5 shadow-md leading-none border-2 border-white z-10 select-none pointer-events-none">
+                      {cartCount}
+                    </span>
+                  )}
+                  {showToast && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[100]">
+                      <CartToast
+                        onViewCart={() => {
+                          setShowToast(false);
+                          onClose();
+                          navigate("/cart");
+                        }}
+                        onClose={() => setShowToast(false)}
+                      />
+                    </div>
+                  )}
+                </div>
                 {submitError && <p className="text-red-500 text-[10px] text-center font-black uppercase tracking-widest mt-4">{submitError}</p>}
               </div>
             </div>
@@ -414,7 +482,6 @@ const ModalGiveawaysMugnShirt = ({ giveaways, onClose }) => {
       </div>
 
       {showAuthModal && <LoginRegisterModal onClose={() => setShowAuthModal(false)} />}
-      {showToast && <CartToast onViewCart={() => { setShowToast(false); onClose(); navigate("/cart"); }} onClose={() => setShowToast(false)} />}
     </>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import cart from "../../assets/servicesImgIcon/stickers/cart.svg";
-import ModalMoreStickers from "../../components/productmodal/ModalMoreStickers.jsx";
+import ModalSignage from "../../components/productmodal/ModalSignage.jsx";
 import StoreLocation from "../../components/StoreLocation.jsx";
 import { useProducts } from "../../context/ProductsContext";
 import { fetchCurrentUser } from "../../services/authService";
@@ -267,8 +267,8 @@ const Signage = () => {
       </div>
 
       {selectedSignage && (
-        <ModalMoreStickers
-          sticker={selectedSignage}
+        <ModalSignage
+          signage={selectedSignage}
           onClose={() => setSelectedSignage(null)}
         />
       )}

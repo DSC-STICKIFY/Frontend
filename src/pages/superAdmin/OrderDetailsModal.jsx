@@ -40,6 +40,12 @@ const OrderDetailsModal = ({ order, onClose }) => {
     Pending: "bg-orange-100 text-orange-700",
     "To Process": "bg-blue-100 text-blue-700",
     "To Ship": "bg-purple-100 text-purple-700",
+    "Approved for Shipping": "bg-purple-100 text-purple-700",
+    "Awaiting Shipment Approval": "bg-orange-100 text-orange-700",
+    "Design In Progress": "bg-blue-100 text-blue-700",
+    "Finalizing": "bg-yellow-100 text-yellow-700",
+    "Design Approved": "bg-emerald-100 text-emerald-700",
+    "In Production": "bg-emerald-100 text-emerald-700",
     "To Receive": "bg-indigo-100 text-indigo-700",
     "To Shipping": "bg-indigo-100 text-indigo-700",
     Shipped: "bg-indigo-100 text-indigo-700",
@@ -120,6 +126,19 @@ const OrderDetailsModal = ({ order, onClose }) => {
               </div>
             </div>
           </div>
+
+          {/* Shipment Note (from Staff or Artist) */}
+          {order.shipment_note && (
+            <div className="mb-6 bg-orange-50/50 rounded-xl p-5 border border-orange-200 shadow-sm relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1.5 h-full bg-orange-400"></div>
+              <h3 className="font-bold text-orange-800 text-[10px] uppercase tracking-widest flex items-center gap-2 mb-2">
+                <span className="text-sm">💬</span> Staff / Artist Note
+              </h3>
+              <p className="text-sm text-gray-700 italic leading-relaxed pl-1 border-l-2 border-orange-200/50 ml-6">
+                "{order.shipment_note}"
+              </p>
+            </div>
+          )}
 
           {/* Design Proof Preview if available */}
           {order.final_design_url && (

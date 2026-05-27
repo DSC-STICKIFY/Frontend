@@ -46,7 +46,7 @@ const ProductBadge = ({ name, category }) => {
   );
 };
 
-const ChatContact = ({ name, lastMessage, time, unread, productName, productCategory, onClick, isSelected }) => {
+const ChatContact = ({ name, lastMessage, time, unread, productName, productCategory, onClick, isSelected, rowNumber }) => {
   const needsAgent = lastMessage?.toLowerCase().includes("talk to a real person");
 
   return (
@@ -60,6 +60,8 @@ const ChatContact = ({ name, lastMessage, time, unread, productName, productCate
         }`}
     >
       <div className="flex items-start space-x-3 min-w-0 flex-1">
+        {/* Row number */}
+        <span className="text-[11px] font-black text-gray-400 w-5 text-right flex-shrink-0 mt-1">{rowNumber}</span>
         <UserAvatar name={name} className={`w-10 h-10 text-xs flex-shrink-0 ${needsAgent && !isSelected ? 'bg-orange-100 border-orange-200' : ''}`} />
         <div className="flex flex-col gap-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -144,7 +146,6 @@ const SubAdminInbox = () => {
 
   // ── Load conversations ────────────────────────────────────────────────────────
 
-  // Unique key per (user, product) pair — keeps general and product threads separate
   const buildContactKey = (c) => `${c.userId}_${c.productId ?? "general"}`;
 
   const loadConversations = useCallback(async () => {
@@ -153,8 +154,6 @@ const SubAdminInbox = () => {
       const data = await fetchConversations();
       if (!Array.isArray(data)) return;
 
-      // Sort: general threads (no product_id) first, then latest activity.
-      // First-seen in Map wins, so the best conversation per user is kept.
       const sorted = [...data].sort((a, b) => {
         const aGeneral = !a.product_id ? 0 : 1;
         const bGeneral = !b.product_id ? 0 : 1;
@@ -162,7 +161,6 @@ const SubAdminInbox = () => {
         return new Date(b.last_at || b.updated_at || 0) - new Date(a.last_at || a.updated_at || 0);
       });
 
-      // Strict dedup: ONE entry per user — keyed by user_id, then email, then name.
       const seenUsers = new Map();
       for (const conv of sorted) {
         const u = conv.user || {};
@@ -194,7 +192,6 @@ const SubAdminInbox = () => {
 
       setContacts(deduped);
 
-      // Restore last selected contact
       const savedKey = localStorage.getItem("subadmin_last_selected_key");
       if (savedKey && !selectedContact) {
         const last = deduped.find((c) => buildContactKey(c) === savedKey);
@@ -223,7 +220,6 @@ const SubAdminInbox = () => {
     try {
       if (!isPolling) setLoadingMessages(true);
 
-      // Use ref instead of state to avoid adding messages as a dependency
       const lastId = isPolling && messagesRef.current.length > 0
         ? messagesRef.current[messagesRef.current.length - 1].id.replace('msg-', '')
         : null;
@@ -248,9 +244,8 @@ const SubAdminInbox = () => {
     } finally {
       if (!isPolling) setLoadingMessages(false);
     }
-  }, [formatMsg]); // ✅ removed `messages` from deps — no more infinite loop
+  }, [formatMsg]);
 
-  // Polling every 3 seconds
   useEffect(() => {
     if (!selectedContact) return;
     const interval = setInterval(() => {
@@ -259,7 +254,6 @@ const SubAdminInbox = () => {
     return () => clearInterval(interval);
   }, [selectedContact, loadSelectedMessages]);
 
-  // Full load when contact changes
   useEffect(() => {
     if (selectedContact) {
       messagesRef.current = [];
@@ -278,7 +272,6 @@ const SubAdminInbox = () => {
       .listen(".MessageSent", (e) => {
         const msgData = e.message || e;
 
-        // Filter by product thread
         const incomingPid = msgData.product_id ?? null;
         const selectedPid = selectedContact.productId ?? null;
         if (String(incomingPid) !== String(selectedPid)) return;
@@ -288,7 +281,7 @@ const SubAdminInbox = () => {
           if (prev.some((m) => m.id === newMsg.id)) return prev;
           return [...prev, newMsg];
         });
-        loadConversations(); // ✅ called once (was called twice before)
+        loadConversations();
       });
 
     return () => { channel.stopListening(".MessageSent"); };
@@ -374,13 +367,11 @@ const SubAdminInbox = () => {
 
   // ── Filtering ─────────────────────────────────────────────────────────────────
 
-  // ✅ FIXED: removed the `!c.isCustomize` filter — show ALL conversations
   const filteredContacts = contacts.filter((c) => {
     const matchesSearch =
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.lastMessage || "").toLowerCase().includes(searchQuery.toLowerCase());
     if (!matchesSearch) return false;
-    // General chats only — no product thread
     return c.productId === null;
   });
 
@@ -456,6 +447,13 @@ const SubAdminInbox = () => {
             />
           </div>
 
+          {/* Contact count */}
+          {!loadingContacts && filteredContacts.length > 0 && (
+            <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-2 px-1">
+              {filteredContacts.length} conversation{filteredContacts.length !== 1 ? "s" : ""}
+            </p>
+          )}
+
           {/* Contact list */}
           <div className="bg-white border border-[#DCDCDC] rounded-[28px] lg:rounded-[32px] flex-1 overflow-y-auto p-2 custom-scrollbar shadow-sm">
             {loadingContacts ? (
@@ -469,10 +467,11 @@ const SubAdminInbox = () => {
                 </p>
               </div>
             ) : (
-              filteredContacts.map((contact) => (
+              filteredContacts.map((contact, index) => (
                 <ChatContact
                   key={buildContactKey(contact)}
                   {...contact}
+                  rowNumber={index + 1}
                   onClick={() => selectContact(contact)}
                   isSelected={selectedContact && buildContactKey(selectedContact) === buildContactKey(contact)}
                 />

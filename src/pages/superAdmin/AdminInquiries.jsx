@@ -4,6 +4,7 @@ import { getImageUrl } from "../../services/api";
 import { RefreshCw, Eye, X, CheckCircle, Clock, Tag, User, Phone, Mail, Calendar, MessageSquare, FileText, CheckCircle2 } from "lucide-react";
 import toast from 'react-hot-toast';
 import ModalConfirmAction from "../../components/modals/ModalConfirmAction";
+import InquiryChatbox from "../../components/InquiryChatbox";
 
 /* ─── Status config ───────────────────────────────────────────────────── */
 const STATUS = {
@@ -44,26 +45,64 @@ const InquiryDetailModal = ({ inquiry, onClose, onSave, onMarkPaid }) => {
   const [quotationAmount,   setQuotationAmount]   = useState(inquiry.quotation_amount || '');
   const [downpaymentAmount, setDownpaymentAmount] = useState(inquiry.downpayment_amount || '');
   const [scheduleDate,      setScheduleDate]      = useState(inquiry.schedule_date ? inquiry.schedule_date.substring(0, 16) : '');
-  const [paymentStatus,     setPaymentStatus]     = useState(inquiry.payment_status || 'unpaid');
   const [rejectionReason,   setRejectionReason]   = useState(inquiry.rejection_reason || '');
   const [isSaving,          setIsSaving]          = useState(false);
+  const [activeTab,         setActiveTab]         = useState('details'); // 'details' | 'chat'
+  const [avatarError,       setAvatarError]       = useState(false);
 
-  // Sync local state when the inquiry prop updates (e.g. after Mark as Paid)
+  // Sync local state when the inquiry prop updates
   useEffect(() => {
     setStatus(inquiry.status);
     setAdminMessage(inquiry.admin_message || '');
     setQuotationAmount(inquiry.quotation_amount || '');
     setDownpaymentAmount(inquiry.downpayment_amount || '');
     setScheduleDate(inquiry.schedule_date ? inquiry.schedule_date.substring(0, 16) : '');
-    setPaymentStatus(inquiry.payment_status || 'unpaid');
     setRejectionReason(inquiry.rejection_reason || '');
+    setAvatarError(false);
   }, [inquiry]);
+
+  const [quotationError,   setQuotationError]   = useState('');
+
+  const customerProfilePic = inquiry.user?.profile_image
+    ? `${import.meta.env.VITE_API_URL}/storage/${inquiry.user.profile_image}`
+    : null;
+
+  const customerInitials = (inquiry.customer_name || 'C')
+    .split(' ')
+    .map(n => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 
   const showQuotation = ['quoted', 'approved', 'scheduled', 'in_progress', 'completed'].includes(status);
   const showSchedule  = ['scheduled', 'in_progress', 'completed'].includes(status);
   const isRejected    = status === 'rejected';
 
+  const hasChanges = status !== inquiry.status ||
+    adminMessage !== (inquiry.admin_message || '') ||
+    quotationAmount !== (inquiry.quotation_amount || '') ||
+    downpaymentAmount !== (inquiry.downpayment_amount || '') ||
+    scheduleDate !== (inquiry.schedule_date ? inquiry.schedule_date.substring(0, 16) : '') ||
+    rejectionReason !== (inquiry.rejection_reason || '');
+
   const handleSave = async () => {
+    // ── Validate quotation fields when setting to 'quoted' ──
+    if (status === 'quoted') {
+      if (!quotationAmount || parseFloat(quotationAmount) <= 0) {
+        setQuotationError('Please enter the quotation price before saving.');
+        return;
+      }
+      if (!downpaymentAmount || parseFloat(downpaymentAmount) <= 0) {
+        setQuotationError('Please enter the downpayment amount before saving.');
+        return;
+      }
+      if (parseFloat(downpaymentAmount) > parseFloat(quotationAmount)) {
+        setQuotationError('Downpayment cannot exceed the total quotation amount.');
+        return;
+      }
+    }
+    setQuotationError('');
+
     // Determine if confirmation is needed (for critical statuses)
     const needsConfirm = ['quoted', 'scheduled', 'rejected'].includes(status) || status !== inquiry.status;
     
@@ -73,7 +112,7 @@ const InquiryDetailModal = ({ inquiry, onClose, onSave, onMarkPaid }) => {
           await onSave(inquiry.id, {
             status, admin_message: adminMessage,
             quotation_amount: quotationAmount, downpayment_amount: downpaymentAmount,
-            schedule_date: scheduleDate, payment_status: paymentStatus,
+            schedule_date: scheduleDate,
             rejection_reason: rejectionReason,
           });
           toast.success(`${status.replace('_', ' ').toUpperCase()} updated successfully!`);
@@ -85,9 +124,6 @@ const InquiryDetailModal = ({ inquiry, onClose, onSave, onMarkPaid }) => {
     };
 
     if (needsConfirm) {
-        // We'll pass a "triggerConfirm" prop or use the parent's state
-        // Since handleSave is in the child, let's just use a simple window confirm for now or better, move confirm to parent.
-        // Actually, the user wants a Modal. I will add a local confirm state to the modal too.
         setLocalConfirm({
             title: `Update to ${status.replace('_', ' ')}?`,
             message: `Are you sure you want to update this inquiry to ${status}?`,
@@ -126,13 +162,30 @@ const InquiryDetailModal = ({ inquiry, onClose, onSave, onMarkPaid }) => {
         onClick={e => e.stopPropagation()}
       >
         {/* ── Modal Header ── */}
-        <div className="flex-shrink-0 flex items-start justify-between px-10 pt-9 pb-7 border-b border-gray-100">
-          <div>
+        <div className="flex-shrink-0 flex items-start justify-between px-10 pt-9 pb-0 border-b border-gray-100">
+          <div className="pb-0">
             <StatusBadge status={status} />
             <h2 className="text-2xl font-black italic uppercase tracking-tighter text-gray-900 mt-2 leading-none">
               {inquiry.service_type?.replace(/_/g, ' ')}
             </h2>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">ID #{inquiry.id}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1 mb-5">ID #{inquiry.id}</p>
+
+            {/* ── Tab switcher (admin-style underline tabs) ── */}
+            <div className="flex items-end gap-0">
+              {[{ key: 'details', label: '📋 Details' }, { key: 'chat', label: '💬 Live Chat' }].map(t => (
+                <button
+                  key={t.key}
+                  onClick={() => setActiveTab(t.key)}
+                  className={`px-5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 ${
+                    activeTab === t.key
+                      ? 'border-[#FDE31E] text-gray-900'
+                      : 'border-transparent text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
           <button onClick={onClose} className="w-10 h-10 rounded-2xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center text-gray-500 hover:text-black flex-shrink-0 mt-1">
             <X className="w-5 h-5" />
@@ -140,7 +193,13 @@ const InquiryDetailModal = ({ inquiry, onClose, onSave, onMarkPaid }) => {
         </div>
 
         {/* ── Scrollable body ── */}
-        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {activeTab === 'chat' ? (
+            <div className="h-full p-6 flex flex-col">
+              <InquiryChatbox inquiryId={inquiry.id} currentUser={{ role: 'admin' }} />
+            </div>
+          ) : (
+          <div className="overflow-y-auto h-full custom-scrollbar">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-0 h-full">
 
             {/* Left — forms */}
@@ -150,9 +209,20 @@ const InquiryDetailModal = ({ inquiry, onClose, onSave, onMarkPaid }) => {
               <div className="bg-gray-50 rounded-[24px] p-6">
                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Customer</p>
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-2xl bg-gray-900 flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
+                  {customerProfilePic && !avatarError ? (
+                    <div className="w-12 h-12 rounded-[18px] flex-shrink-0 overflow-hidden ring-[3px] ring-[#FDE31E] ring-offset-2 ring-offset-gray-50">
+                      <img
+                        src={customerProfilePic}
+                        alt={inquiry.customer_name}
+                        onError={() => setAvatarError(true)}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-12 h-12 rounded-[18px] bg-gradient-to-br from-yellow-300 to-yellow-500 flex items-center justify-center font-black text-black text-sm flex-shrink-0 ring-[3px] ring-[#FDE31E] ring-offset-2 ring-offset-gray-50">
+                      {customerInitials}
+                    </div>
+                  )}
                   <div>
                     <p className="text-base font-black italic uppercase tracking-tighter text-gray-900 leading-none">{inquiry.customer_name}</p>
                     <div className="flex items-center gap-3 mt-1.5 flex-wrap">
@@ -174,13 +244,51 @@ const InquiryDetailModal = ({ inquiry, onClose, onSave, onMarkPaid }) => {
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Status</p>
                   <select
                     value={status}
+                    disabled={['completed', 'rejected'].includes(inquiry.status?.toLowerCase())}
                     onChange={e => setStatus(e.target.value)}
-                    className={`w-full px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none border-2 transition-all cursor-pointer ${s.bg} ${s.text} ${s.border}`}
+                    className={`w-full px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none border-2 transition-all cursor-pointer ${s.bg} ${s.text} ${s.border} disabled:opacity-75 disabled:cursor-not-allowed`}
                   >
-                    {['pending','reviewed','quoted','approved','scheduled','in_progress','completed','rejected'].map(v => (
-                      <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
-                    ))}
+                    {(() => {
+                      const currentDb = inquiry.status?.toLowerCase() || 'pending';
+                      let allowed = [];
+                      switch (currentDb) {
+                        case 'pending':
+                          allowed = ['pending', 'reviewed', 'rejected'];
+                          break;
+                        case 'reviewed':
+                          allowed = ['reviewed', 'quoted', 'rejected'];
+                          break;
+                        case 'quoted':
+                          allowed = ['quoted', 'rejected'];
+                          break;
+                        case 'approved':
+                          allowed = ['approved', 'scheduled', 'rejected'];
+                          break;
+                        case 'scheduled':
+                          allowed = ['scheduled', 'in_progress', 'rejected'];
+                          break;
+                        case 'in_progress':
+                          allowed = ['in_progress', 'completed', 'rejected'];
+                          break;
+                        case 'completed':
+                          allowed = ['completed'];
+                          break;
+                        case 'rejected':
+                          allowed = ['rejected'];
+                          break;
+                        default:
+                          allowed = [currentDb];
+                      }
+                      return allowed.map(v => (
+                        <option key={v} value={v}>{v.replace(/_/g, ' ')}</option>
+                      ));
+                    })()}
                   </select>
+                  {inquiry.status?.toLowerCase() === 'quoted' && (
+                    <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mt-2 leading-none animate-pulse">
+                      ⚠️ waiting for confirmation sa quotation
+                    </p>
+                  )}
                 </div>
 
                 {/* Service type badge */}
@@ -205,26 +313,48 @@ const InquiryDetailModal = ({ inquiry, onClose, onSave, onMarkPaid }) => {
                   <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Quotation</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Amount (₱)</label>
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Amount (₱)
+                        {status === 'quoted' && <span className="text-red-400 ml-1">*</span>}
+                      </label>
                       <input
                         type="number"
                         value={quotationAmount}
-                        onChange={e => setQuotationAmount(e.target.value)}
+                        onChange={e => { setQuotationAmount(e.target.value); setQuotationError(''); }}
                         placeholder="0.00"
-                        className="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#FDE31E] focus:border-[#FDE31E] outline-none transition"
+                        className={`w-full px-5 py-4 bg-white border-2 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#FDE31E] focus:border-[#FDE31E] outline-none transition ${
+                          quotationError && (!quotationAmount || parseFloat(quotationAmount) <= 0)
+                            ? 'border-red-300 bg-red-50'
+                            : 'border-gray-100'
+                        }`}
                       />
                     </div>
                     <div>
-                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Downpayment (₱)</label>
+                      <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Downpayment (₱)
+                        {status === 'quoted' && <span className="text-red-400 ml-1">*</span>}
+                      </label>
                       <input
                         type="number"
                         value={downpaymentAmount}
-                        onChange={e => setDownpaymentAmount(e.target.value)}
+                        onChange={e => { setDownpaymentAmount(e.target.value); setQuotationError(''); }}
                         placeholder="0.00"
-                        className="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#FDE31E] focus:border-[#FDE31E] outline-none transition"
+                        className={`w-full px-5 py-4 bg-white border-2 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#FDE31E] focus:border-[#FDE31E] outline-none transition ${
+                          quotationError && (!downpaymentAmount || parseFloat(downpaymentAmount) <= 0)
+                            ? 'border-red-300 bg-red-50'
+                            : 'border-gray-100'
+                        }`}
                       />
                     </div>
                   </div>
+
+                  {/* Inline validation warning */}
+                  {quotationError && (
+                    <div className="flex items-center gap-2.5 mt-3 px-4 py-3 bg-red-50 border border-red-200 rounded-2xl">
+                      <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                      </svg>
+                      <p className="text-xs font-black text-red-600">{quotationError}</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -257,19 +387,36 @@ const InquiryDetailModal = ({ inquiry, onClose, onSave, onMarkPaid }) => {
                 </div>
               )}
 
-              {/* Payment status */}
+              {/* Payment status — read-only, set by customer */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] block mb-2">Payment Status</label>
-                  <select
-                    value={paymentStatus}
-                    onChange={e => setPaymentStatus(e.target.value)}
-                    className="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl text-sm font-bold focus:ring-2 focus:ring-[#FDE31E] outline-none transition cursor-pointer"
-                  >
-                    <option value="unpaid">Unpaid</option>
-                    <option value="partial">Partial / Downpayment</option>
-                    <option value="paid">Fully Paid</option>
-                  </select>
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Payment Status</p>
+                  <div className={`flex items-center gap-3 px-5 py-4 rounded-2xl border-2 ${
+                    inquiry.payment_status === 'paid'    ? 'bg-emerald-50 border-emerald-100' :
+                    inquiry.payment_status === 'partial' ? 'bg-amber-50 border-amber-100' :
+                    inquiry.payment_status === 'pay_onsite' ? 'bg-blue-50 border-blue-100' :
+                                                             'bg-gray-50 border-gray-100'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                      inquiry.payment_status === 'paid'    ? 'bg-emerald-400' :
+                      inquiry.payment_status === 'partial' ? 'bg-amber-400' :
+                      inquiry.payment_status === 'pay_onsite' ? 'bg-blue-400' :
+                                                               'bg-red-400'
+                    }`} />
+                    <div>
+                      <p className={`text-xs font-black uppercase tracking-widest ${
+                        inquiry.payment_status === 'paid'    ? 'text-emerald-700' :
+                        inquiry.payment_status === 'partial' ? 'text-amber-700' :
+                        inquiry.payment_status === 'pay_onsite' ? 'text-blue-700' :
+                                                                 'text-red-500'
+                      }`}>
+                        {inquiry.payment_status === 'pay_onsite' ? 'Pay Onsite' :
+                         inquiry.payment_status === 'partial'    ? 'Partial / Downpayment' :
+                         inquiry.payment_status === 'paid'       ? 'Fully Paid' : 'Unpaid'}
+                      </p>
+                      <p className="text-[9px] text-gray-400 font-bold mt-0.5">Set by customer</p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Customer message inline */}
@@ -350,10 +497,13 @@ const InquiryDetailModal = ({ inquiry, onClose, onSave, onMarkPaid }) => {
               </div>
             </div>
           </div>
+          </div>
+          )}
         </div>
 
         {/* ── Footer actions ── */}
-        <div className="flex-shrink-0 px-10 py-6 bg-white border-t border-gray-100 flex items-center justify-end gap-3">
+        <div className="flex-shrink-0 px-10 py-6 bg-white border-t border-gray-100 flex items-center justify-end gap-3"
+          style={{ display: activeTab === 'chat' ? 'none' : 'flex' }}>
           <button onClick={onClose} className="px-6 py-3 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-gray-700 transition-colors rounded-2xl hover:bg-gray-50">
             Cancel
           </button>
@@ -367,7 +517,7 @@ const InquiryDetailModal = ({ inquiry, onClose, onSave, onMarkPaid }) => {
             </button>
           )}
 
-          {(status === 'quoted' || status === 'scheduled' || status === 'rejected' || status !== inquiry.status) && status !== 'completed' && (
+          {hasChanges && status !== 'completed' && (
             <button
               onClick={handleSave}
               disabled={isSaving}
@@ -544,8 +694,30 @@ const AdminInquiries = () => {
 
                     {/* Customer */}
                     <td className="px-6 py-4">
-                      <p className="text-sm font-black italic uppercase tracking-tighter text-gray-900 leading-none">{inq.customer_name}</p>
-                      <p className="text-[10px] text-gray-400 font-medium mt-0.5">{inq.contact_number}</p>
+                      <div className="flex items-center gap-3">
+                        {inq.user?.profile_image ? (
+                          <div className="w-8 h-8 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0">
+                            <img
+                              src={`${import.meta.env.VITE_API_URL}/storage/${inq.user.profile_image}`}
+                              alt={inq.customer_name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-yellow-300 to-yellow-500 flex items-center justify-center font-black text-black text-[10px] flex-shrink-0">
+                            {(inq.customer_name || 'C')
+                              .split(' ')
+                              .map(n => n[0])
+                              .slice(0, 2)
+                              .join('')
+                              .toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-black italic uppercase tracking-tighter text-gray-900 leading-none">{inq.customer_name}</p>
+                          <p className="text-[10px] text-gray-400 font-medium mt-1">{inq.contact_number}</p>
+                        </div>
+                      </div>
                     </td>
 
                     {/* Service */}

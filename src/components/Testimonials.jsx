@@ -83,7 +83,7 @@ const TestimonialCard = ({ testimonial: t }) => {
     const [imgErr, setImgErr] = React.useState(false);
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-[#FDE31E]/40 transition-all duration-300 flex flex-col overflow-hidden h-full">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:-translate-y-2 hover:shadow-xl hover:border-[#FDE31E]/80 transition-all duration-300 flex flex-col overflow-hidden h-full group">
 
             {/* Product image banner */}
             {t.product_image && !imgErr ? (

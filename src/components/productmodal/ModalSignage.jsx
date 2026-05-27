@@ -8,20 +8,9 @@ import DesignChatbox from "../DesignChatbox";
 import { getBestPromo, getDiscountedPrice } from "../PromoTag";
 import PromoApi from "../../services/PromoApi";
 import { getImageUrl } from "../../services/api";
+import CartToast from "../CartToast";
 
 const CHECKOUT_STORAGE_KEY = "stickify_checkout_data";
-
-const CartToast = ({ onViewCart, onClose }) => (
-  <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl" style={{ animation: "toastIn 0.25s cubic-bezier(.34,1.56,.64,1) both" }}>
-    <style>{`@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(16px) scale(0.95); } to { opacity:1; transform:translateX(-50%) translateY(0) scale(1); } }`}</style>
-    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-    </svg>
-    <span className="text-sm font-medium">Added to cart!</span>
-    <button onClick={onViewCart} className="ml-1 text-sm font-bold text-yellow-400 hover:text-yellow-300">View Cart</button>
-    <button onClick={onClose} className="ml-2 text-gray-500 hover:text-white text-lg leading-none">×</button>
-  </div>
-);
 
 const ModalSignage = ({ signage, onClose }) => {
   const rightPanelRef = useRef(null);
@@ -29,7 +18,6 @@ const ModalSignage = ({ signage, onClose }) => {
     const timer = setTimeout(() => {
       if (rightPanelRef.current) {
         rightPanelRef.current.scrollTop = 0;
-        // Also scroll the window/body just in case
         window.scrollTo(0, 0);
       }
     }, 50);
@@ -39,10 +27,25 @@ const ModalSignage = ({ signage, onClose }) => {
   const navigate = useNavigate();
   const { setCheckoutData } = useUI();
   const { currentUser, isVerified } = useAuth();
-  const { addItem } = useCart();
+  const { addItem, cartItems } = useCart();
 
-  const isCustomizableProduct = signage.is_customizable !== 0 && signage.is_customizable !== false && signage.is_customizable !== "0" && signage.is_customizable !== undefined;
+  const cartCount = useMemo(() => {
+    const productId = signage.id || signage.product_id;
+    return cartItems
+      .filter((c) => c.productId === productId)
+      .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
+  }, [cartItems, signage]);
+
+  const isCustomizableProduct =
+    signage.is_customizable !== 0 &&
+    signage.is_customizable !== false &&
+    signage.is_customizable !== "0" &&
+    signage.is_customizable !== undefined;
   const isCustomMode = isCustomizableProduct;
+
+  // Out of stock check — adjust field name to match your API
+  const stock = signage?.stock ?? signage?.quantity_in_stock ?? null;
+  const isOutOfStock = stock !== null && Number(stock) <= 0;
 
   const [quantity, setQuantity] = useState(1);
   const [width, setWidth] = useState("1");
@@ -71,8 +74,13 @@ const ModalSignage = ({ signage, onClose }) => {
     console.log("🛠️ ModalSignage - Signage Data:", signage);
     const raw = signage?.sqft || signage?.price || signage?.product_price || "0";
     console.log("💰 Extracted Raw Price:", raw);
-
-    const cleaned = String(raw).replace(/₱/g, '').replace(/,/g, '').replace(/\s+/g, '').replace(/per.*$/gi, '').replace(/[^0-9.]/g, '').trim();
+    const cleaned = String(raw)
+      .replace(/₱/g, '')
+      .replace(/,/g, '')
+      .replace(/\s+/g, '')
+      .replace(/per.*$/gi, '')
+      .replace(/[^0-9.]/g, '')
+      .trim();
     const parsed = parseFloat(cleaned);
     const result = isNaN(parsed) ? 0 : parsed;
     console.log("✅ Parsed Numeric Price:", result);
@@ -82,22 +90,31 @@ const ModalSignage = ({ signage, onClose }) => {
   const promo = getBestPromo(signage, promos);
   let discountedSqftPrice = getDiscountedPrice(rawSqftPrice, promo);
   if (isNaN(discountedSqftPrice)) discountedSqftPrice = rawSqftPrice;
-  const hasDiscount = discountedSqftPrice !== rawSqftPrice && promo && (promo.discount_type === "percentage" || promo.discount_type === "fixed");
+  const hasDiscount =
+    discountedSqftPrice !== rawSqftPrice &&
+    promo &&
+    (promo.discount_type === "percentage" || promo.discount_type === "fixed");
 
-  useEffect(() => {
+  const handleGetSubtotal = () => {
     const w = parseFloat(width);
     const h = parseFloat(height);
     const q = parseFloat(quantity);
     if (!isNaN(w) && w > 0 && !isNaN(h) && h > 0 && !isNaN(q) && q > 0) {
       setIsCalculating(true);
       const total = discountedSqftPrice * w * h * q;
-      console.log(`🧮 Calculating Signage Subtotal: ${discountedSqftPrice} * ${w} * ${h} * ${q} = ${total}`);
+      console.log(`🧮 Calculating Signage Subtotal on button click: ${discountedSqftPrice} * ${w} * ${h} * ${q} = ${total}`);
       setSubtotal(total);
-      setTimeout(() => setIsCalculating(false), 500);
+      setSubmitError(null);
+      setTimeout(() => setIsCalculating(false), 300);
     } else {
-      setSubtotal(0);
+      setSubmitError("Please enter valid width, height, and quantity.");
     }
-  }, [width, height, quantity, discountedSqftPrice]);
+  };
+
+  // Run calculation initially when component mounts
+  useEffect(() => {
+    handleGetSubtotal();
+  }, [discountedSqftPrice]);
 
   const formatPrice = (num) => {
     if (num === undefined || num === null) return "0.00";
@@ -163,7 +180,6 @@ const ModalSignage = ({ signage, onClose }) => {
       setShowAuthModal(true);
       return;
     }
-
     if (!isVerified) {
       setSubmitError("Please verify your email address to proceed with checkout.");
       return;
@@ -188,22 +204,54 @@ const ModalSignage = ({ signage, onClose }) => {
     setTimeout(() => setShowToast(false), 3500);
   };
 
+  // Derived button states
+  const checkoutDisabled =
+    isOutOfStock ||
+    isSubmitting ||
+    subtotal <= 0 ||
+    !paymentMethod ||
+    (currentUser && !isVerified) ||
+    (isCustomMode && !uploadedImage?.preview);
+
+  const checkoutLabel = isOutOfStock
+    ? "Out of Stock"
+    : isCustomMode && !uploadedImage?.preview
+      ? "Upload Design to Proceed"
+      : currentUser && !isVerified
+        ? "Verification Required"
+        : isSubmitting
+          ? "Processing..."
+          : "Proceed to Checkout";
+
+  const cartDisabled =
+    isOutOfStock ||
+    subtotal <= 0 ||
+    (isCustomMode && !uploadedImage?.preview);
+
   return (
     <>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" onClick={onClose}>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+        onClick={onClose}
+      >
         <div
           className="bg-white rounded-[40px] shadow-2xl max-w-6xl w-full flex flex-col overflow-hidden relative"
           style={{ height: "90vh", maxHeight: "90vh" }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button onClick={onClose} className="absolute top-8 right-10 z-20 text-3xl font-bold text-gray-300 hover:text-black transition-colors">×</button>
+          <button
+            onClick={onClose}
+            className="absolute top-8 right-10 z-20 text-3xl font-bold text-gray-300 hover:text-black transition-colors"
+          >
+            ×
+          </button>
 
           <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
             {/* LEFT Panel */}
             <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 overflow-hidden">
 
               {/* Static top info */}
-              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizable ? 'flex-shrink-0' : 'flex-1'}`}>
+              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizableProduct ? 'flex-shrink-0' : 'flex-1'}`}>
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{title}</h2>
                   <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">{category}</p>
@@ -220,36 +268,104 @@ const ModalSignage = ({ signage, onClose }) => {
                   )}
                   {promo && (
                     <span className="text-[10px] bg-[#FFE100] text-black font-black px-3 py-1 rounded-full uppercase tracking-tighter">
-                      {promo.discount_type === "percentage" ? `${promo.discount_value}% OFF` : promo.discount_type === "fixed" ? `₱${promo.discount_value} OFF` : "PROMO"}
+                      {promo.discount_type === "percentage"
+                        ? `${promo.discount_value}% OFF`
+                        : promo.discount_type === "fixed"
+                          ? `₱${promo.discount_value} OFF`
+                          : "PROMO"}
                     </span>
                   )}
                 </div>
 
                 {description && <p className="text-sm text-gray-500 leading-relaxed italic">{description}</p>}
 
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Width (ft)</span>
-                      <input type="number" min="0.1" step="any" value={width} onChange={(e) => setWidth(e.target.value)} className="w-full font-black text-lg outline-none" />
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Height (ft)</span>
-                      <input type="number" min="0.1" step="any" value={height} onChange={(e) => setHeight(e.target.value)} className="w-full font-black text-lg outline-none" />
+                <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-50 pb-3">
+                    <span className="text-xs sm:text-sm font-bold text-gray-800">Width</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-400 font-medium">feet</span>
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="any"
+                        value={width}
+                        onChange={(e) => {
+                          setWidth(e.target.value);
+                          setSubtotal(0); // Reset subtotal on input change
+                        }}
+                        className="w-20 px-3 py-1.5 text-center font-black border border-gray-200 rounded-xl focus:border-[#FFE100] focus:outline-none text-xs sm:text-sm"
+                      />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Quantity</span>
+                  <div className="flex items-center justify-between border-b border-gray-50 pb-3">
+                    <span className="text-xs sm:text-sm font-bold text-gray-800">Height</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-gray-400 font-medium">feet</span>
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="any"
+                        value={height}
+                        onChange={(e) => {
+                          setHeight(e.target.value);
+                          setSubtotal(0); // Reset subtotal on input change
+                        }}
+                        className="w-20 px-3 py-1.5 text-center font-black border border-gray-200 rounded-xl focus:border-[#FFE100] focus:outline-none text-xs sm:text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b border-gray-50 pb-3">
+                    <span className="text-xs sm:text-sm font-bold text-gray-800">Quantity</span>
                     <div className="flex items-center gap-1">
-                      <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-xl transition-colors text-xl font-bold">−</button>
-                      <span className="w-10 text-center font-black text-lg">{quantity}</span>
-                      <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-xl transition-colors text-xl font-bold">+</button>
+                      <button
+                        onClick={() => {
+                          setQuantity(q => Math.max(1, q - 1));
+                          setSubtotal(0); // Reset subtotal
+                        }}
+                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-lg transition-colors text-lg font-bold"
+                      >
+                        −
+                      </button>
+                      <span className="w-8 text-center font-black text-sm sm:text-base">{quantity}</span>
+                      <button
+                        onClick={() => {
+                          setQuantity(q => q + 1);
+                          setSubtotal(0); // Reset subtotal
+                        }}
+                        className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-lg transition-colors text-lg font-bold"
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
 
-
+                  <div className="flex justify-end pt-1">
+                    <button
+                      onClick={handleGetSubtotal}
+                      className="px-4 py-2 bg-black text-white font-black text-[10px] sm:text-[11px] rounded-xl tracking-wider hover:bg-gray-800 uppercase transition-all shadow-sm active:scale-95"
+                    >
+                      Get Subtotal
+                    </button>
+                  </div>
                 </div>
+
+                {subtotal > 0 && (
+                  <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-3">
+                    <div className="flex justify-between items-center text-xs sm:text-sm">
+                      <span className="text-gray-500 font-medium">Subtotal</span>
+                      <span className="text-base sm:text-lg font-black text-gray-900 font-mono tracking-tighter">₱ {formatPrice(subtotal)}</span>
+                    </div>
+                    <p className="text-[9px] sm:text-[10px] text-gray-400 leading-normal italic">
+                      Note: Free installment for areas around Davao City. For outside Davao City, installment fee may vary base on your location.
+                    </p>
+                    <div className="flex justify-between items-center border-t border-gray-50 pt-3 text-xs sm:text-sm">
+                      <span className="text-gray-800 font-bold">Total</span>
+                      <span className="text-lg sm:text-xl font-black text-gray-900 font-mono tracking-tighter">₱ {formatPrice(subtotal)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Chatbox — fills remaining height */}
@@ -277,10 +393,10 @@ const ModalSignage = ({ signage, onClose }) => {
             {/* RIGHT Panel */}
             <div ref={rightPanelRef} className="w-full md:w-1/2 p-8 overflow-y-auto custom-scrollbar bg-white flex flex-col">
               <div className="flex-1 space-y-6">
-                <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group">
+                <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group relative" style={{ minHeight: "220px" }}>
                   <img
                     src={getImageUrl(signage.image || signage.product_image)}
-                    className="w-full h-48 object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     alt={title}
                   />
                 </div>
@@ -307,9 +423,19 @@ const ModalSignage = ({ signage, onClose }) => {
                   <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-4 italic">Payment Method</h3>
                   <div className="grid grid-cols-1 gap-2">
                     {["COD", "GCash", "Pickup"].map((id) => (
-                      <label key={id} className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${paymentMethod === id ? "border-[#FFE100] bg-yellow-50/30" : "border-gray-50 hover:border-gray-100"}`}>
-                        <input type="radio" checked={paymentMethod === id} onChange={() => setPaymentMethod(id)} className="w-5 h-5 accent-yellow-500" />
-                        <span className="text-sm font-bold text-gray-700">{id === "COD" ? "Cash on Delivery" : id === "Pickup" ? "Store Pickup" : "GCash"}</span>
+                      <label
+                        key={id}
+                        className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${paymentMethod === id ? "border-[#FFE100] bg-yellow-50/30" : "border-gray-50 hover:border-gray-100"}`}
+                      >
+                        <input
+                          type="radio"
+                          checked={paymentMethod === id}
+                          onChange={() => setPaymentMethod(id)}
+                          className="w-5 h-5 accent-yellow-500"
+                        />
+                        <span className="text-sm font-bold text-gray-700">
+                          {id === "COD" ? "Cash on Delivery" : id === "Pickup" ? "Store Pickup" : "GCash"}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -323,40 +449,89 @@ const ModalSignage = ({ signage, onClose }) => {
                     <span className="text-5xl font-black tracking-tighter italic">{formatPrice(subtotal)}</span>
                   </div>
                   {promo?.discount_type === "free_shipping" && (
-                    <p className="text-[10px] text-green-400 font-bold uppercase tracking-widest mt-2">Free Installation (Davao City) + Free Shipping</p>
+                    <p className="text-[10px] text-green-400 font-bold uppercase tracking-widest mt-2">
+                      Free Installation (Davao City) + Free Shipping
+                    </p>
                   )}
                 </div>
               </div>
 
-              <div className="mt-8 space-y-4">
+              {/* ── BUTTONS ── */}
+              <div className="mt-8 space-y-3">
+
+                {/* Proceed to Checkout */}
                 <button
                   onClick={handleBuyNow}
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview)}
-                  className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
-                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview))
-                      ? "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed"
-                      : "bg-[#FFE100] text-black hover:bg-yellow-400 "
+                  disabled={checkoutDisabled}
+                  className={`w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm transition-all duration-200 active:scale-[0.98] shadow-lg
+                    ${isOutOfStock
+                      ? "bg-gray-200 text-gray-400 shadow-none cursor-not-allowed"
+                      : checkoutDisabled
+                        ? "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed"
+                        : "bg-[#FFE100] text-black hover:bg-yellow-400 hover:shadow-yellow-200 hover:shadow-2xl"
                     }`}
                 >
-                  {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
+                  {checkoutLabel}
                 </button>
-                <button
+
+                {/* Add to Cart */}
+                <div className="relative">
+                  <button
                   onClick={handleAddToCart}
-                  disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)}
-                  className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                    ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                  disabled={cartDisabled}
+                  style={
+                    isOutOfStock || cartDisabled
+                      ? { border: "1px solid #e5e7eb" } 
+                      : { border: "2px solid #000000" }  
+                  }
+                  className={`
+                    w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm 
+                    transition-all duration-200 active:scale-[0.98]
+                    ${isOutOfStock || cartDisabled
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-white text-gray-900 hover:bg-gray-900 hover:text-white"
+                    }
+                  `}
                 >
-                  Add to Cart
+                  {isOutOfStock ? "Out of Stock" : "ADD TO CART"}
                 </button>
-                {submitError && <p className="text-red-500 text-[10px] text-center font-black uppercase tracking-widest mt-4">{submitError}</p>}
+
+
+
+                  {cartCount > 0 && (
+                    <span className="absolute -top-2 -right-2 min-w-[24px] h-[24px] bg-[#FFE100] text-black text-xs font-black rounded-full flex items-center justify-center px-1.5 shadow-md leading-none border-2 border-white z-10 select-none pointer-events-none">
+                      {cartCount}
+                    </span>
+                  )}
+
+                  {showToast && (
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[100]">
+                      <CartToast
+                        onViewCart={() => {
+                          setShowToast(false);
+                          onClose();
+                          navigate("/cart");
+                        }}
+                        onClose={() => setShowToast(false)}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {submitError && (
+                  <p className="text-red-500 text-[10px] text-center font-black uppercase tracking-widest mt-2">
+                    {submitError}
+                  </p>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {showAuthModal && <LoginRegisterModal onClose={() => setShowAuthModal(false)} fromCheckout={true} />}
-      {showToast && <CartToast onViewCart={() => { setShowToast(false); onClose(); navigate("/cart"); }} onClose={() => setShowToast(false)} />}
+      {showAuthModal && (
+        <LoginRegisterModal onClose={() => setShowAuthModal(false)} fromCheckout={true} />
+      )}
     </>
   );
 };

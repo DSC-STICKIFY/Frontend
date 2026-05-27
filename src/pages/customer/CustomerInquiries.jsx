@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { getCustomerInquiries, acceptQuotation, declineQuotation, payInquiryGcash, payInquiryOnsite } from '../../services/InquiryAPI';
 import { format } from 'date-fns';
-import { Search, Eye, Clock, MessageSquare, Tag, Star, X, CheckCircle, XCircle, CreditCard, Banknote, Sparkles } from 'lucide-react';
+import { Search, Eye, Clock, MessageSquare, Tag, Star, X, CheckCircle, XCircle, CreditCard, Banknote, Sparkles, FileText } from 'lucide-react';
 import ModalRateService from '../../components/modals/ModalRateService';
+import InquiryChatbox from '../../components/InquiryChatbox';
 
 /* ─── Status config ───────────────────────────────────────────────────── */
 const STATUS_CONFIG = {
@@ -40,7 +41,7 @@ const ProgressTimeline = ({ currentStatus }) => {
   const currentIndex = STEPS.findIndex(s => s.key === currentStatus?.toLowerCase());
   const pct = currentIndex <= 0 ? 0 : (currentIndex / (STEPS.length - 1)) * 100;
   return (
-    <div className="w-full py-6 mb-8">
+    <div className="w-full pt-4 pb-2 mb-2">
       <div className="relative flex items-start justify-between">
         <div className="absolute left-0 top-[7px] w-full h-[2px] bg-gray-100 rounded-full" />
         <div className="absolute left-0 top-[7px] h-[2px] bg-gradient-to-r from-yellow-400 to-yellow-300 rounded-full transition-all duration-700" style={{ width: `${pct}%` }} />
@@ -158,55 +159,118 @@ const InquiryCard = ({ inquiry, onView, onRate }) => {
 
 /* ─── Detail Modal ────────────────────────────────────────────────────── */
 const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayOnsite, onRate }) => {
+  const [activeTab, setActiveTab] = useState('details');
   const s = getStatus(inquiry.status);
   const isCompleted = inquiry.status === 'completed';
   const hasRated    = !!inquiry.review;
   const needsRating = isCompleted && !hasRated;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-[40px] w-full max-w-5xl flex flex-col overflow-hidden shadow-2xl"
-        style={{ maxHeight: '92vh' }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden border border-gray-200"
+        style={{ height: '90vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between px-10 pt-10 pb-6 border-b border-gray-50 flex-shrink-0">
+        <div className="flex-shrink-0 flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
           <div>
-            <div className={`inline-flex items-center gap-1.5 ${s.bg} ${s.text} ${s.border} border px-4 py-1.5 rounded-full mb-3`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${s.dot} animate-pulse`} />
-              <span className="text-[10px] font-black uppercase tracking-widest">{inquiry.status?.replace(/_/g, ' ')}</span>
+            <p className="text-xs text-gray-400 uppercase font-semibold">Decal/Wrap Inquiry</p>
+            <div className="flex items-center gap-2.5 mt-0.5">
+              <h3 className="text-lg font-bold text-gray-900">#{inquiry.id} — {inquiry.service_type?.replace(/_/g, ' ')}</h3>
+              <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${s.bg} ${s.text} ${s.border}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                <span className="capitalize">{inquiry.status?.replace(/_/g, ' ')}</span>
+              </div>
             </div>
-            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight capitalize">
-              {inquiry.service_type?.replace(/_/g, ' ')}
-            </h2>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-0.5">Inquiry #{inquiry.id}</p>
           </div>
-          <button onClick={onClose} className="w-10 h-10 rounded-2xl bg-gray-100 hover:bg-gray-200 transition-colors flex items-center justify-center text-gray-500 hover:text-black flex-shrink-0">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition flex-shrink-0">
+            <X className="w-4 h-4 text-gray-500" />
           </button>
         </div>
 
-        {/* Scrollable body */}
-        <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0 px-10 py-8">
-          <ProgressTimeline currentStatus={inquiry.status} />
+        {/* Tabs */}
+        <div className="flex-shrink-0 flex gap-1 mx-6 mt-4 mb-3 bg-gray-100 p-1 rounded-xl">
+          {['details', 'chat'].map(t => (
+            <button
+              key={t}
+              onClick={() => setActiveTab(t)}
+              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition capitalize ${activeTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {t === 'chat' ? '💬 Chat' : '📋 Details'}
+            </button>
+          ))}
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            {/* Left col */}
-            <div className="space-y-8">
-              {inquiry.image && (
-                <div>
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 italic">Submitted Design</p>
-                  <div className="rounded-[24px] overflow-hidden border border-gray-100 shadow-inner group">
-                    <img src={`http://localhost:8000/storage/${inquiry.image}`}
-                      className="w-full object-cover group-hover:scale-105 transition-transform duration-700" alt="Design" />
+        {/* Scrollable body */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {activeTab === 'details' ? (
+            <div className="p-6 space-y-5">
+              
+              {/* Progress Timeline */}
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Service Progress</p>
+                <ProgressTimeline currentStatus={inquiry.status} />
+              </div>
+
+              {/* Quotation / Pricing result */}
+              <div className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+                <div className="p-4 space-y-2">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">Quotation details</p>
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-sm text-gray-500">Quoted Amount</span>
+                    <span className="text-lg font-bold text-gray-900">₱{inquiry.quotation_amount ? parseFloat(inquiry.quotation_amount).toLocaleString() : '—'}</span>
                   </div>
+                  {inquiry.downpayment_amount > 0 && (
+                    <div className="flex justify-between items-center py-1 border-t border-dashed border-gray-200">
+                      <span className="text-sm text-gray-500">Downpayment Required</span>
+                      <span className="text-sm font-bold text-amber-600">₱{parseFloat(inquiry.downpayment_amount).toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="bg-gray-900 px-4 py-3 flex items-center justify-between">
+                  <span className="text-sm font-bold text-white">Estimated Price</span>
+                  <span className="text-xl font-black text-[#FDE31E]">₱{inquiry.quotation_amount ? parseFloat(inquiry.quotation_amount).toLocaleString() : '—'}</span>
+                </div>
+              </div>
+
+              {/* Admin response message */}
+              {inquiry.admin_message && (
+                <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                  <p className="text-[10px] font-bold text-amber-600 uppercase mb-2">Admin Response</p>
+                  <p className="text-sm text-gray-800 font-medium leading-relaxed">{inquiry.admin_message}</p>
                 </div>
               )}
 
-              <div>
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 italic">Service Details</p>
-                <div className="bg-gray-50 rounded-[24px] p-6 space-y-3">
+              {/* Rejection reason */}
+              {inquiry.status === 'rejected' && inquiry.rejection_reason && (
+                <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+                  <p className="text-[10px] font-bold text-red-600 uppercase mb-2">Reason for Rejection</p>
+                  <p className="text-sm text-red-700 italic font-medium leading-relaxed">"{inquiry.rejection_reason}"</p>
+                </div>
+              )}
+
+              {/* Payment details card */}
+              {(inquiry.payment_status === 'paid' || inquiry.payment_status === 'pay_onsite') && (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-2">
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase mb-1">Payment Confirmation</p>
+                  {[
+                    ['Method',    inquiry.payment_method?.replace(/_/g, ' ')],
+                    ['Status',    inquiry.payment_status?.replace(/_/g, ' ')],
+                    ['Reference', inquiry.payment_reference],
+                  ].filter(([,v]) => v).map(([label, val]) => (
+                    <div key={label} className="flex justify-between items-center text-sm">
+                      <span className="text-gray-500">{label}</span>
+                      <span className="font-semibold text-gray-800 capitalize">{val}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Service details */}
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Service Details</p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                   {[
                     ['Vehicle Type',   inquiry.car_type],
                     ['Wrap Type',      inquiry.wrap_type],
@@ -215,46 +279,56 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
                     ['Placement',      inquiry.placement],
                     ['Estimated Size', inquiry.size],
                   ].filter(([,v]) => v).map(([label, val]) => (
-                    <div key={label} className="flex justify-between items-center">
-                      <span className="text-xs text-gray-400">{label}</span>
-                      <span className="text-xs font-bold text-gray-800 capitalize">{val}</span>
+                    <div key={label} className="flex justify-between text-sm">
+                      <span className="text-gray-500">{label}</span>
+                      <span className="font-semibold text-gray-800 capitalize">{val}</span>
                     </div>
                   ))}
                   {inquiry.schedule_date && (
-                    <div className="flex justify-between items-center pt-3 border-t border-gray-100">
-                      <span className="text-xs text-gray-400">Scheduled Date</span>
-                      <span className="text-xs font-bold text-yellow-600">{format(new Date(inquiry.schedule_date), 'MMM dd, yyyy – p')}</span>
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 text-sm col-span-2">
+                      <span className="text-gray-500">Scheduled Date</span>
+                      <span className="font-semibold text-yellow-600">{format(new Date(inquiry.schedule_date), 'MMM dd, yyyy – p')}</span>
                     </div>
                   )}
                   {inquiry.payment_status && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-400">Payment Status</span>
-                      <span className={`text-xs font-black uppercase ${inquiry.payment_status === 'paid' ? 'text-emerald-500' : 'text-red-400'}`}>{inquiry.payment_status}</span>
+                    <div className="flex justify-between items-center text-sm col-span-2">
+                      <span className="text-gray-500">Payment Status</span>
+                      <span className={`font-semibold uppercase ${inquiry.payment_status === 'paid' ? 'text-emerald-500' : 'text-red-400'}`}>{inquiry.payment_status}</span>
                     </div>
                   )}
                   {inquiry.amount_paid > 0 && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-400">Amount Paid</span>
-                      <span className="text-xs font-bold text-emerald-600">₱{parseFloat(inquiry.amount_paid).toLocaleString()}</span>
+                    <div className="flex justify-between items-center text-sm col-span-2">
+                      <span className="text-gray-500">Amount Paid</span>
+                      <span className="font-semibold text-emerald-600">₱{parseFloat(inquiry.amount_paid).toLocaleString()}</span>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div>
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 italic">Your Message</p>
-                <div className="bg-white border-2 border-gray-100 rounded-[24px] p-6 text-sm text-gray-600 leading-relaxed italic">
-                  "{inquiry.message || 'No additional notes provided.'}"
+              {/* Attached design */}
+              {inquiry.image && (
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Submitted Design</p>
+                  <div className="rounded-xl overflow-hidden border border-gray-200">
+                    <img src={`http://localhost:8000/storage/${inquiry.image}`}
+                      className="w-full object-cover" alt="Design" />
+                  </div>
                 </div>
+              )}
+
+              {/* Customer message */}
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Your Message</p>
+                <p className="text-sm text-gray-700 italic">"{inquiry.message || 'No additional notes provided.'}"</p>
               </div>
 
-              {/* ── Rating section (inside modal) ── */}
+              {/* Review rating section */}
               {isCompleted && (
-                <div>
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 italic">Your Review</p>
+                <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Your Review</p>
                   {hasRated ? (
-                    <div className="bg-yellow-50 border-2 border-yellow-100 rounded-[24px] p-6">
-                      <div className="flex items-center gap-3 mb-3">
+                    <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
+                      <div className="flex items-center gap-3 mb-2">
                         <StarDisplay rating={inquiry.review?.rating || 5} />
                         <span className="text-xs font-black text-yellow-700 uppercase tracking-widest">
                           {inquiry.review?.rating}/5
@@ -267,128 +341,77 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
                       )}
                     </div>
                   ) : (
-                    <div className="bg-gradient-to-br from-yellow-400 to-yellow-300 rounded-[24px] p-6">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 bg-black/10 rounded-2xl flex items-center justify-center flex-shrink-0">
-                          <Star className="w-5 h-5 text-black fill-black" />
+                    <div className="bg-gradient-to-br from-yellow-400 to-yellow-300 rounded-xl p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 bg-black/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Star className="w-4 h-4 text-black fill-black" />
                         </div>
                         <div>
-                          <p className="text-sm font-black text-black uppercase tracking-tight leading-none">How was your experience?</p>
-                          <p className="text-[10px] text-black/60 font-bold mt-0.5">Your feedback helps us improve</p>
+                          <p className="text-xs font-bold text-black uppercase tracking-tight">How was your experience?</p>
+                          <p className="text-[9px] text-black/60 font-bold mt-0.5">Your feedback helps us improve</p>
                         </div>
                       </div>
                       <button
                         onClick={() => { onClose(); onRate(inquiry); }}
-                        className="w-full py-4 bg-black text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-gray-900 transition-all flex items-center justify-center gap-2"
+                        className="w-full py-2.5 bg-black text-white rounded-lg font-black uppercase tracking-widest text-[9px] hover:bg-gray-900 transition-all flex items-center justify-center gap-2"
                       >
-                        <Star className="w-4 h-4 fill-white" />
+                        <Star className="w-3.5 h-3.5 fill-white" />
                         Leave a Review
                       </button>
                     </div>
                   )}
                 </div>
               )}
+
             </div>
-
-            {/* Right col */}
-            <div className="space-y-6">
-              {/* Quotation card */}
-              <div className="bg-gray-900 rounded-[32px] p-8 text-white relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-20 -mt-20 group-hover:scale-110 transition-transform duration-500" />
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-yellow-400/10 rounded-full -ml-12 -mb-12" />
-                <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2 italic">Quotation Result</p>
-                <div className="flex items-baseline gap-1 mb-1">
-                  <span className="text-2xl font-bold text-yellow-400">₱</span>
-                  <span className="text-6xl font-black tracking-tighter italic leading-none">
-                    {inquiry.quotation_amount ? parseFloat(inquiry.quotation_amount).toLocaleString() : '—'}
-                  </span>
-                </div>
-                {inquiry.downpayment_amount > 0 && inquiry.amount_paid < inquiry.downpayment_amount && (
-                  <div className="mt-4 p-4 bg-white/10 rounded-2xl border border-white/20">
-                    <p className="text-[9px] text-gray-400 uppercase font-black mb-1">Downpayment Required</p>
-                    <p className="text-xl font-black text-yellow-400 italic">₱{parseFloat(inquiry.downpayment_amount).toLocaleString()}</p>
-                  </div>
-                )}
-                <p className="text-[9px] text-gray-500 uppercase font-black mt-3">Estimated price based on requirements</p>
-              </div>
-
-              {inquiry.admin_message && (
-                <div className="bg-amber-50 border-2 border-amber-100 rounded-[24px] p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
-                    <p className="text-[9px] font-black text-amber-700 uppercase tracking-[0.2em] italic">Admin Response</p>
-                  </div>
-                  <p className="text-sm text-gray-700 leading-relaxed">{inquiry.admin_message}</p>
-                </div>
-              )}
-
-              {inquiry.status === 'rejected' && inquiry.rejection_reason && (
-                <div className="bg-red-50 border-2 border-red-100 rounded-[24px] p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    <XCircle className="w-4 h-4 text-red-400" />
-                    <p className="text-[9px] font-black text-red-700 uppercase tracking-[0.2em] italic">Rejection Reason</p>
-                  </div>
-                  <p className="text-sm text-red-700 leading-relaxed italic">"{inquiry.rejection_reason}"</p>
-                </div>
-              )}
-
-              {(inquiry.payment_status === 'paid' || inquiry.payment_status === 'pay_onsite') && (
-                <div className="bg-emerald-50 border-2 border-emerald-100 rounded-[24px] p-6 space-y-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle className="w-4 h-4 text-emerald-500" />
-                    <p className="text-[9px] font-black text-emerald-700 uppercase tracking-[0.2em] italic">Payment Confirmed</p>
-                  </div>
-                  {[
-                    ['Method',    inquiry.payment_method?.replace(/_/g, ' ')],
-                    ['Status',    inquiry.payment_status?.replace(/_/g, ' ')],
-                    ['Reference', inquiry.payment_reference],
-                  ].filter(([,v]) => v).map(([label, val]) => (
-                    <div key={label} className="flex justify-between items-center">
-                      <span className="text-[9px] font-black text-emerald-700 uppercase tracking-widest">{label}</span>
-                      <span className="text-xs font-bold text-gray-700 capitalize">{val}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="space-y-3 pt-2">
-                {inquiry.status === 'quoted' && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => onAccept(inquiry.id)}
-                      className="py-5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2">
-                      <CheckCircle className="w-4 h-4" /> Accept
-                    </button>
-                    <button onClick={() => onDecline(inquiry.id)}
-                      className="py-5 bg-white border-2 border-red-100 text-red-500 hover:bg-red-50 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2">
-                      <XCircle className="w-4 h-4" /> Decline
-                    </button>
-                  </div>
-                )}
-
-                {inquiry.status === 'approved' && inquiry.payment_status === 'unpaid' && (
-                  <div className="bg-blue-50 border-2 border-blue-100 rounded-[24px] p-6">
-                    <p className="text-[9px] font-black text-blue-700 uppercase tracking-[0.2em] mb-4 text-center italic">Complete Your Payment</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button onClick={() => onPayGcash(inquiry.id)}
-                        className="py-4 bg-[#FFE100] hover:bg-yellow-400 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 shadow-sm">
-                        <CreditCard className="w-4 h-4" />
-                        {inquiry.downpayment_amount > 0 && inquiry.amount_paid == 0 ? 'Downpayment' : 'Balance'} (GCash)
-                      </button>
-                      <button onClick={() => onPayOnsite(inquiry.id)}
-                        className="py-4 bg-white border-2 border-blue-200 text-blue-600 hover:bg-blue-50 rounded-2xl font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2">
-                        <Banknote className="w-4 h-4" /> Pay Onsite
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <button onClick={onClose}
-                  className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border-2 border-gray-100 text-gray-400 hover:bg-gray-50 hover:text-gray-700 transition-all">
-                  Close
-                </button>
-              </div>
+          ) : (
+            <div className="p-6 h-full flex flex-col min-h-0 bg-white">
+              <InquiryChatbox inquiryId={inquiry.id} currentUser={{ role: 'user' }} />
             </div>
-          </div>
+          )}
+        </div>
+
+        {/* ── Footer actions ── */}
+        <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-end gap-3">
+          <button onClick={onClose} className="px-5 py-2.5 text-xs font-bold uppercase text-gray-500 hover:text-gray-700 transition hover:bg-gray-100 rounded-xl">
+            Close
+          </button>
+
+          {activeTab === 'details' && inquiry.status === 'quoted' && (
+            <div className="flex gap-2">
+              <button onClick={() => onAccept(inquiry.id)}
+                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4" /> Accept
+              </button>
+              <button onClick={() => onDecline(inquiry.id)}
+                className="px-5 py-2.5 bg-white text-red-500 hover:bg-red-50 rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-red-200">
+                <XCircle className="w-4 h-4" /> Decline
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'details' && inquiry.status === 'approved' && inquiry.payment_status === 'unpaid' && (
+            <div className="flex gap-2">
+              <button onClick={() => onPayGcash(inquiry.id)}
+                className="px-5 py-2.5 bg-[#FFE100] hover:bg-yellow-400 text-black rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5">
+                <CreditCard className="w-4 h-4" />
+                GCash {inquiry.downpayment_amount > 0 && inquiry.amount_paid == 0 ? 'Downpayment' : 'Balance'}
+              </button>
+              <button onClick={() => onPayOnsite(inquiry.id)}
+                className="px-5 py-2.5 bg-white text-blue-600 hover:bg-blue-50 rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-blue-200">
+                <Banknote className="w-4 h-4" /> Pay Onsite
+              </button>
+            </div>
+          )}
+
+          {activeTab === 'details' && needsRating && (
+            <button
+              onClick={() => { onClose(); onRate(inquiry); }}
+              className="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-black rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5"
+            >
+              <Star className="w-4 h-4 fill-black" /> Rate Service
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -442,7 +465,6 @@ const CustomerInquiries = () => {
     return matchSearch && matchStatus;
   });
 
-  // Count unrated completed inquiries for an alert
   const unratedCount = inquiries.filter(i => i.status === 'completed' && !i.review).length;
 
   const tabs = [

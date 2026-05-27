@@ -5,7 +5,10 @@ import { useProducts } from '../../../context/ProductsContext';
 import PromoTag from '../../../components/PromoTag'; 
 
 // Components
-import ModalMoreStickers from '../../../components/productmodal/ModalMoreStickers.jsx';
+import ModalGiveawaysStandeenTarpulin from '../../../components/productmodal/ModalGiveawaysStandeenTarpulin.jsx';
+import ModalGiveawaysMugnShirt from '../../../components/productmodal/ModalGiveawaysMugnShirt.jsx';
+import ModalGiveawayCallingCard from '../../../components/productmodal/ModalGiveawayCallingCard.jsx';
+import ModalGiveawayMore from '../../../components/productmodal/ModalGiveawayMore.jsx';
 
 import defaultImage from '../../../assets/servicesImgIcon/giveaways/standee.png';
 
@@ -310,9 +313,27 @@ const Giveaways = () => {
                 </>
             )}
 
-            {selectedGiveaways && (
-                <ModalMoreStickers
-                    sticker={selectedGiveaways}
+            {selectedGiveaways && selectedGiveaways.modalType === "standee-tarpulinModal" && (
+                <ModalGiveawaysStandeenTarpulin
+                    giveaways={selectedGiveaways}
+                    onClose={() => setSelectedGiveaways(null)}
+                />
+            )}
+            {selectedGiveaways && selectedGiveaways.modalType === "mug-shirtModal" && (
+                <ModalGiveawaysMugnShirt
+                    giveaways={selectedGiveaways}
+                    onClose={() => setSelectedGiveaways(null)}
+                />
+            )}
+            {selectedGiveaways && selectedGiveaways.modalType === "callingcardModal" && (
+                <ModalGiveawayCallingCard
+                    giveaways={selectedGiveaways}
+                    onClose={() => setSelectedGiveaways(null)}
+                />
+            )}
+            {selectedGiveaways && selectedGiveaways.modalType === "moreModal" && (
+                <ModalGiveawayMore
+                    giveaways={selectedGiveaways}
                     onClose={() => setSelectedGiveaways(null)}
                 />
             )}

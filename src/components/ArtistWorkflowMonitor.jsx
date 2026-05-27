@@ -50,7 +50,7 @@ const getFutureDateTimeString = (daysAhead) => {
     return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
 };
 
-export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
+export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOnly = undefined, showAllOrders = false }) {
     const { currentUser } = useAdminAuth();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -63,6 +63,7 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
     const [jtTrackingNumber, setJtTrackingNumber] = useState("");
     const [dispatching, setDispatching] = useState(false);
     const isFulfillmentHistory = selectedOrder ? ['To Shipping', 'To Receive', 'Completed'].includes(selectedOrder.status) : false;
+    const effectiveChatReadOnly = isChatReadOnly !== undefined ? isChatReadOnly : isReadOnly;
 
     // Timeline States
     const [showTimelineForm, setShowTimelineForm] = useState(false);
@@ -72,18 +73,14 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
     const loadOrders = async () => {
         setLoading(true);
         try {
-            const res = isReadOnly ? await fetchAllOrders() : await fetchArtistOrders();
+            const res = (isReadOnly || showAllOrders) ? await fetchAllOrders() : await fetchArtistOrders();
             const ordersData = res.data?.orders || res.data || (Array.isArray(res) ? res : []);
             const data = Array.isArray(ordersData) ? ordersData : [];
 
-            // Only show orders that have an assigned artist and are in an active design phase
             const filtered = data.filter(o => {
                 const hasArtist = o.artist_id !== null && o.artist_id !== undefined;
                 const status = (o.status || "").toLowerCase();
                 const isTerminal = ['completed', 'cancelled', 'refunded', 'return/refund'].includes(status);
-
-                // If we are an artist, the backend already filters for our ID.
-                // If we are Admin/Sub-Admin (isReadOnly), we only want to see assigned, non-finished work.
                 return hasArtist && !isTerminal;
             });
 
@@ -123,7 +120,6 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                 expected_delivery_at: expectedDeliveryAt
             });
 
-            // Optimistic local update
             setSelectedOrder(prev => prev ? {
                 ...prev,
                 expected_shipped_at: expectedShippedAt,
@@ -261,7 +257,9 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
             <div className="w-[320px] flex flex-col border-r border-gray-100 bg-gray-50/30 flex-shrink-0">
                 <div className="p-8 border-b border-gray-100 bg-white">
                     <h2 className="font-black italic uppercase tracking-tighter text-xl text-gray-900">Queue</h2>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Assigned Tasks</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                        {loading ? "Loading..." : `${orders.length} Assigned Task${orders.length !== 1 ? "s" : ""}`}
+                    </p>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
@@ -274,7 +272,7 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                             <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Workspace Empty</p>
                         </div>
                     ) : (
-                        orders.map(order => {
+                        orders.map((order, index) => {
                             const customerName = `${order.user?.first_name || 'Unknown'} ${order.user?.last_name || ''}`.trim();
                             const initial = customerName.charAt(0).toUpperCase();
                             const product = order.order_details?.[0]?.product;
@@ -290,6 +288,9 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                             : 'hover:bg-white/60 border-transparent'
                                         }`}
                                 >
+                                    {/* Row number */}
+                                    <span className="text-[11px] font-black text-gray-400 w-5 text-right flex-shrink-0 mt-2.5">{index + 1}</span>
+
                                     {/* Avatar */}
                                     <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center font-black flex-shrink-0 text-gray-800 shadow-sm">
                                         {initial}
@@ -305,7 +306,6 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                             </span>
                                         </div>
 
-                                        {/* Product Badge & Artist Badge */}
                                         <div className="mb-2 flex flex-wrap gap-1">
                                             <span className="inline-block max-w-[140px] truncate text-[9px] font-black uppercase tracking-widest bg-[#FDE31E]/20 text-yellow-700 border border-[#FDE31E]/40 rounded-full px-2 py-0.5">
                                                 {productName}
@@ -352,7 +352,6 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                             </div>
 
                             <div className="flex items-center gap-3">
-                                {/* Deadline reminder — artist only */}
                                 {!isReadOnly && ['In Progress', 'Design In Progress', 'Finalizing'].includes(selectedOrder.status) && (
                                     <button
                                         onClick={handleSendReminder}
@@ -383,6 +382,7 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                 orderStatus={selectedOrder.status}
                                 onImageUpload={() => { }}
                                 onNewMessage={loadOrders}
+                                isReadOnly={effectiveChatReadOnly}
                             />
                         </div>
                     </>
@@ -464,7 +464,6 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                 </div>
                                 <div className="space-y-6">
                                     {isReadOnly ? (
-                                        /* ADMIN/SUB-ADMIN VIEW: Only show design proof review and physical shipping authorization */
                                         <div className="space-y-6 animate-in fade-in duration-300">
                                             {/* Design Proof Card */}
                                             <div className="p-8 rounded-[40px] border-2 border-gray-50 bg-white shadow-sm">
@@ -564,46 +563,52 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
 
                                                         <div className="bg-black rounded-[32px] p-8 text-white shadow-2xl space-y-4">
                                                             <h4 className="text-md font-black italic uppercase tracking-tight mb-1">Authorization Desk</h4>
-                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6 leading-relaxed">Please review the design quality above before confirming the physical shipment. This will notify the staff to prepare the product.</p>
-
-                                                            <button
-                                                                onClick={() => handleApproveForShipping(selectedOrder.order_id)}
-                                                                className="w-full py-5 bg-yellow-400 text-black text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-yellow-500 transition-all shadow-xl shadow-yellow-400/20 active:scale-95 flex items-center justify-center gap-2"
-                                                            >
-                                                                ✅ Confirm Request shipment
-                                                            </button>
-
-                                                            {!showRejectInput ? (
-                                                                <button
-                                                                    onClick={() => setShowRejectInput(true)}
-                                                                    className="w-full py-4 bg-white/10 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-red-600 hover:text-white transition-all active:scale-95 border border-white/20"
-                                                                >
-                                                                    ❌ Reject Shipment Request
-                                                                </button>
+                                                            {isReadOnly ? (
+                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-relaxed">This shipment request is currently under review by an Administrator.</p>
                                                             ) : (
-                                                                <div className="space-y-3 pt-2">
-                                                                    <textarea
-                                                                        placeholder="Specify the reason for rejection..."
-                                                                        value={rejectReason}
-                                                                        onChange={(e) => setRejectReason(e.target.value)}
-                                                                        className="w-full p-5 rounded-[24px] border border-white/20 bg-white/10 text-white placeholder:text-gray-500 text-[13px] font-bold outline-none focus:border-red-400 transition-all"
-                                                                        rows={3}
-                                                                    />
-                                                                    <div className="flex gap-2">
+                                                                <>
+                                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-6 leading-relaxed">Please review the design quality above before confirming the physical shipment. This will notify the staff to prepare the product.</p>
+
+                                                                    <button
+                                                                        onClick={() => handleApproveForShipping(selectedOrder.order_id)}
+                                                                        className="w-full py-5 bg-yellow-400 text-black text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-yellow-500 transition-all shadow-xl shadow-yellow-400/20 active:scale-95 flex items-center justify-center gap-2"
+                                                                    >
+                                                                        ✅ Confirm Request shipment
+                                                                    </button>
+
+                                                                    {!showRejectInput ? (
                                                                         <button
-                                                                            onClick={() => handleRejectShipment(selectedOrder.order_id)}
-                                                                            className="flex-1 py-4 bg-red-500 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-red-600 transition-all active:scale-95"
+                                                                            onClick={() => setShowRejectInput(true)}
+                                                                            className="w-full py-4 bg-white/10 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-red-600 hover:text-white transition-all active:scale-95 border border-white/20"
                                                                         >
-                                                                            Confirm Reject
+                                                                            ❌ Reject Shipment Request
                                                                         </button>
-                                                                        <button
-                                                                            onClick={() => { setShowRejectInput(false); setRejectReason(""); }}
-                                                                            className="px-5 py-4 bg-white/10 text-white text-[11px] font-black uppercase rounded-2xl hover:bg-white/20 transition-all"
-                                                                        >
-                                                                            Cancel
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
+                                                                    ) : (
+                                                                        <div className="space-y-3 pt-2">
+                                                                            <textarea
+                                                                                placeholder="Specify the reason for rejection..."
+                                                                                value={rejectReason}
+                                                                                onChange={(e) => setRejectReason(e.target.value)}
+                                                                                className="w-full p-5 rounded-[24px] border border-white/20 bg-white/10 text-white placeholder:text-gray-500 text-[13px] font-bold outline-none focus:border-red-400 transition-all"
+                                                                                rows={3}
+                                                                            />
+                                                                            <div className="flex gap-2">
+                                                                                <button
+                                                                                    onClick={() => handleRejectShipment(selectedOrder.order_id)}
+                                                                                    className="flex-1 py-4 bg-red-500 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-red-600 transition-all active:scale-95"
+                                                                                >
+                                                                                    Confirm Reject
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => { setShowRejectInput(false); setRejectReason(""); }}
+                                                                                    className="px-5 py-4 bg-white/10 text-white text-[11px] font-black uppercase rounded-2xl hover:bg-white/20 transition-all"
+                                                                                >
+                                                                                    Cancel
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </>
                                                             )}
                                                         </div>
                                                     </div>
@@ -615,7 +620,6 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                             </div>
                                         </div>
                                     ) : (
-                                        /* ARTIST VIEW: Show the step-by-step progress cards */
                                         <>
                                             {/* Phase 1 */}
                                             <div className={`p-8 rounded-[40px] border-2 transition-all ${isFulfillmentHistory ? 'border-green-100 bg-green-50/10' : !selectedOrder.in_progress_at ? 'border-yellow-400 bg-yellow-50/30 shadow-2xl shadow-yellow-400/10' : 'border-gray-50 bg-white'}`}>
@@ -632,7 +636,6 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                                             <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
                                                             Started {selectedOrder.in_progress_at ? new Date(selectedOrder.in_progress_at).toLocaleString() : "N/A"}
                                                         </div>
-
                                                         <div className="bg-gray-50 border border-gray-100 p-4 rounded-2xl text-[10px] font-bold text-gray-600 space-y-1.5 shadow-inner">
                                                             <div>🚢 <span className="uppercase tracking-widest text-[9px] font-black text-gray-400">Expected Ship Date:</span> {selectedOrder.expected_shipped_at ? new Date(selectedOrder.expected_shipped_at).toLocaleString() : "Not set"}</div>
                                                             <div>🎁 <span className="uppercase tracking-widest text-[9px] font-black text-gray-400">Expected Delivery Date:</span> {selectedOrder.expected_delivery_at ? new Date(selectedOrder.expected_delivery_at).toLocaleString() : "Not set"}</div>
@@ -651,41 +654,19 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                                             ) : (
                                                                 <div className="space-y-4 bg-gray-50 border border-gray-100 p-6 rounded-[28px] animate-in slide-in-from-top duration-300">
                                                                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Set Expected Schedule Range</p>
-
                                                                     <div className="space-y-3">
                                                                         <div>
                                                                             <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">Expected Shipped Date & Time</label>
-                                                                            <input
-                                                                                type="datetime-local"
-                                                                                value={expectedShippedAt}
-                                                                                onChange={(e) => setExpectedShippedAt(e.target.value)}
-                                                                                className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400"
-                                                                            />
+                                                                            <input type="datetime-local" value={expectedShippedAt} onChange={(e) => setExpectedShippedAt(e.target.value)} className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400" />
                                                                         </div>
                                                                         <div>
                                                                             <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">Expected Delivery Date & Time</label>
-                                                                            <input
-                                                                                type="datetime-local"
-                                                                                value={expectedDeliveryAt}
-                                                                                onChange={(e) => setExpectedDeliveryAt(e.target.value)}
-                                                                                className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400"
-                                                                            />
+                                                                            <input type="datetime-local" value={expectedDeliveryAt} onChange={(e) => setExpectedDeliveryAt(e.target.value)} className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400" />
                                                                         </div>
                                                                     </div>
-
                                                                     <div className="flex gap-2 pt-2">
-                                                                        <button
-                                                                            onClick={() => handleMarkInProgress(selectedOrder.order_id)}
-                                                                            className="flex-1 py-3.5 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-800 transition-all active:scale-95"
-                                                                        >
-                                                                            Confirm & Start
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => setShowTimelineForm(false)}
-                                                                            className="px-4 py-3.5 bg-white text-gray-400 border border-gray-200 text-[10px] font-black uppercase rounded-xl hover:bg-gray-50 transition-all"
-                                                                        >
-                                                                            Cancel
-                                                                        </button>
+                                                                        <button onClick={() => handleMarkInProgress(selectedOrder.order_id)} className="flex-1 py-3.5 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-800 transition-all active:scale-95">Confirm & Start</button>
+                                                                        <button onClick={() => setShowTimelineForm(false)} className="px-4 py-3.5 bg-white text-gray-400 border border-gray-200 text-[10px] font-black uppercase rounded-xl hover:bg-gray-50 transition-all">Cancel</button>
                                                                     </div>
                                                                 </div>
                                                             )
@@ -696,63 +677,30 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                                                     <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)] animate-pulse"></div>
                                                                     Started {new Date(selectedOrder.in_progress_at).toLocaleString()}
                                                                 </div>
-
                                                                 <div className="bg-gray-50 border border-gray-100 p-4 rounded-2xl text-[10px] font-bold text-gray-600 space-y-1.5 shadow-inner">
                                                                     <div>🚢 <span className="uppercase tracking-widest text-[9px] font-black text-gray-400">Expected Ship Date:</span> {selectedOrder.expected_shipped_at ? new Date(selectedOrder.expected_shipped_at).toLocaleString() : "Not set"}</div>
                                                                     <div>🎁 <span className="uppercase tracking-widest text-[9px] font-black text-gray-400">Expected Delivery Date:</span> {selectedOrder.expected_delivery_at ? new Date(selectedOrder.expected_delivery_at).toLocaleString() : "Not set"}</div>
                                                                 </div>
-
                                                                 {!showTimelineForm ? (
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setExpectedShippedAt(selectedOrder.expected_shipped_at ? selectedOrder.expected_shipped_at.substring(0, 16) : getFutureDateTimeString(2));
-                                                                            setExpectedDeliveryAt(selectedOrder.expected_delivery_at ? selectedOrder.expected_delivery_at.substring(0, 16) : getFutureDateTimeString(5));
-                                                                            setShowTimelineForm(true);
-                                                                        }}
-                                                                        className="w-full py-3 bg-white hover:bg-gray-50 text-black border border-gray-200 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-sm"
-                                                                    >
+                                                                    <button onClick={() => { setExpectedShippedAt(selectedOrder.expected_shipped_at ? selectedOrder.expected_shipped_at.substring(0, 16) : getFutureDateTimeString(2)); setExpectedDeliveryAt(selectedOrder.expected_delivery_at ? selectedOrder.expected_delivery_at.substring(0, 16) : getFutureDateTimeString(5)); setShowTimelineForm(true); }} className="w-full py-3 bg-white hover:bg-gray-50 text-black border border-gray-200 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-sm">
                                                                         ✏️ Change Schedule
                                                                     </button>
                                                                 ) : (
                                                                     <div className="space-y-4 bg-gray-50 border border-gray-100 p-6 rounded-[28px] animate-in slide-in-from-top duration-300">
                                                                         <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Reschedule timeline</p>
-
                                                                         <div className="space-y-3">
                                                                             <div>
                                                                                 <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">Expected Shipped Date & Time</label>
-                                                                                <input
-                                                                                    type="datetime-local"
-                                                                                    value={expectedShippedAt}
-                                                                                    onChange={(e) => setExpectedShippedAt(e.target.value)}
-                                                                                    className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400"
-                                                                                />
+                                                                                <input type="datetime-local" value={expectedShippedAt} onChange={(e) => setExpectedShippedAt(e.target.value)} className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400" />
                                                                             </div>
                                                                             <div>
                                                                                 <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">Expected Delivery Date & Time</label>
-                                                                                <input
-                                                                                    type="datetime-local"
-                                                                                    value={expectedDeliveryAt}
-                                                                                    onChange={(e) => setExpectedDeliveryAt(e.target.value)}
-                                                                                    className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400"
-                                                                                />
+                                                                                <input type="datetime-local" value={expectedDeliveryAt} onChange={(e) => setExpectedDeliveryAt(e.target.value)} className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400" />
                                                                             </div>
                                                                         </div>
-
                                                                         <div className="flex gap-2 pt-2">
-                                                                            <button
-                                                                                onClick={async () => {
-                                                                                    await handleMarkInProgress(selectedOrder.order_id);
-                                                                                }}
-                                                                                className="flex-1 py-3 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-800 transition-all"
-                                                                            >
-                                                                                Save Changes
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => setShowTimelineForm(false)}
-                                                                                className="px-4 py-3 bg-white text-gray-400 border border-gray-200 text-[10px] font-black uppercase rounded-xl hover:bg-gray-50 transition-all"
-                                                                            >
-                                                                                Cancel
-                                                                            </button>
+                                                                            <button onClick={async () => { await handleMarkInProgress(selectedOrder.order_id); }} className="flex-1 py-3 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-800 transition-all">Save Changes</button>
+                                                                            <button onClick={() => setShowTimelineForm(false)} className="px-4 py-3 bg-white text-gray-400 border border-gray-200 text-[10px] font-black uppercase rounded-xl hover:bg-gray-50 transition-all">Cancel</button>
                                                                         </div>
                                                                     </div>
                                                                 )}
@@ -776,28 +724,17 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                                         {selectedOrder.final_design_url ? (
                                                             <div className="space-y-4">
                                                                 <div className="w-full aspect-video rounded-[32px] bg-gray-50 border border-gray-100 flex items-center justify-center p-4 overflow-hidden shadow-inner">
-                                                                    <img
-                                                                        src={getImageUrl(selectedOrder.final_design_url)}
-                                                                        className="w-full h-full object-contain"
-                                                                        alt="Finalized design proof"
-                                                                    />
+                                                                    <img src={getImageUrl(selectedOrder.final_design_url)} className="w-full h-full object-contain" alt="Finalized design proof" />
                                                                 </div>
                                                                 <div className="flex justify-center">
-                                                                    <a
-                                                                        href={getImageUrl(selectedOrder.final_design_url)}
-                                                                        target="_blank"
-                                                                        rel="noopener noreferrer"
-                                                                        className="inline-flex items-center gap-3 px-6 py-3 bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-black transition-all shadow-lg"
-                                                                    >
+                                                                    <a href={getImageUrl(selectedOrder.final_design_url)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 px-6 py-3 bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-black transition-all shadow-lg">
                                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                                                                         View Final Resolution
                                                                     </a>
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center py-4 bg-gray-50 border border-gray-100 rounded-3xl">
-                                                                No design proof uploaded
-                                                            </div>
+                                                            <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center py-4 bg-gray-50 border border-gray-100 rounded-3xl">No design proof uploaded</div>
                                                         )}
                                                     </div>
                                                 ) : (
@@ -805,26 +742,19 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                                         {selectedOrder.in_progress_at && !selectedOrder.shipment_requested_at && (
                                                             selectedOrder.final_design_url ? (
                                                                 <div className="w-full aspect-video rounded-[32px] bg-gray-50 border-4 border-dashed border-gray-100 flex items-center justify-center p-4 overflow-hidden shadow-inner relative group/image">
-                                                                    <img
-                                                                        src={getImageUrl(selectedOrder.final_design_url)}
-                                                                        className="w-full h-full object-contain rounded-2xl"
-                                                                        alt="Uploaded design proof"
-                                                                    />
+                                                                    <img src={getImageUrl(selectedOrder.final_design_url)} className="w-full h-full object-contain rounded-2xl" alt="Uploaded design proof" />
                                                                     <div className="absolute inset-0 bg-black/65 opacity-0 group-hover/image:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-3.5 rounded-[24px] backdrop-blur-xs">
-                                                                        <a
-                                                                            href={getImageUrl(selectedOrder.final_design_url)}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="px-6 py-3 bg-white text-black hover:bg-gray-100 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg flex items-center gap-2 hover:scale-105 active:scale-95"
-                                                                        >
-                                                                            👁️ View Full Resolution
-                                                                        </a>
-                                                                        <label className="px-6 py-3 bg-yellow-400 text-black hover:bg-yellow-500 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95">
-                                                                            <input type="file" className="hidden" onChange={(e) => handleUpload(e, selectedOrder.order_id)} />
-                                                                            📤 Upload New Version
-                                                                        </label>
+                                                                        <a href={getImageUrl(selectedOrder.final_design_url)} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-white text-black hover:bg-gray-100 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg flex items-center gap-2 hover:scale-105 active:scale-95">👁️ View Full Resolution</a>
+                                                                        {!isReadOnly && (
+                                                                            <label className="px-6 py-3 bg-yellow-400 text-black hover:bg-yellow-500 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95">
+                                                                                <input type="file" className="hidden" onChange={(e) => handleUpload(e, selectedOrder.order_id)} />
+                                                                                📤 Upload New Version
+                                                                            </label>
+                                                                        )}
                                                                     </div>
                                                                 </div>
+                                                            ) : isReadOnly ? (
+                                                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center py-14 bg-gray-50 border border-gray-100 rounded-3xl">No design proof uploaded yet</div>
                                                             ) : (
                                                                 <label className="w-full flex flex-col items-center justify-center gap-4 py-14 border-4 border-dashed border-gray-100 rounded-[40px] cursor-pointer hover:border-yellow-400 hover:bg-white transition-all duration-500 group shadow-inner">
                                                                     <input type="file" className="hidden" onChange={(e) => handleUpload(e, selectedOrder.order_id)} />
@@ -832,23 +762,19 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                                                         <img src={uploadIcn} className="w-8 h-8 opacity-20 group-hover:opacity-100 transition-opacity" alt="" />
                                                                     </div>
                                                                     <div className="text-center">
-                                                                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 group-hover:text-black block mb-1">
-                                                                            {uploading ? 'Processing File...' : 'Upload Design File'}
-                                                                        </span>
+                                                                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 group-hover:text-black block mb-1">{uploading ? 'Processing File...' : 'Upload Design File'}</span>
                                                                         <span className="text-[9px] font-bold text-gray-300 uppercase tracking-widest">Supports high-res images & PDFs</span>
                                                                     </div>
                                                                 </label>
                                                             )
                                                         )}
-
                                                         {!selectedOrder.in_progress_at && (
                                                             <div className="flex flex-col items-center justify-center py-10 bg-gray-50 border border-gray-100 rounded-[32px] text-center shadow-inner">
                                                                 <span className="text-xl mb-2">🔒</span>
-                                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
-                                                                    Initialize Phase 1 to unlock file uploader
-                                                                </span>
+                                                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Initialize Phase 1 to unlock file uploader</span>
                                                             </div>
-                                                        )}</>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
 
@@ -888,39 +814,23 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                                 ) : (
                                                     <>
                                                         <p className="text-[12px] font-medium text-gray-500 mb-8 leading-relaxed">After client approval, request the admin to handle the physical shipping.</p>
-
                                                         {!selectedOrder.shipment_requested_at && selectedOrder.status !== 'Awaiting Shipment Approval' && selectedOrder.status !== 'To Shipping' && (
                                                             <div className="space-y-4">
-                                                                <textarea
-                                                                    placeholder="Add any specific shipping or handling notes..."
-                                                                    value={note}
-                                                                    onChange={(e) => setNote(e.target.value)}
-                                                                    className="w-full p-8 rounded-[32px] border-2 border-gray-50 text-[13px] font-bold bg-gray-50 outline-none focus:bg-white focus:border-yellow-400/50 focus:ring-4 focus:ring-yellow-400/5 transition-all placeholder:text-gray-300"
-                                                                    rows={4}
-                                                                />
-                                                                <button
-                                                                    onClick={() => handleRequestShipment(selectedOrder.order_id)}
-                                                                    disabled={!selectedOrder.final_design_url}
-                                                                    className="w-full py-6 bg-yellow-400 text-black text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-yellow-500 transition-all shadow-xl shadow-yellow-400/20 active:scale-95 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed disabled:shadow-none"
-                                                                >
+                                                                <textarea placeholder="Add any specific shipping or handling notes..." value={note} onChange={(e) => setNote(e.target.value)} className="w-full p-8 rounded-[32px] border-2 border-gray-50 text-[13px] font-bold bg-gray-50 outline-none focus:bg-white focus:border-yellow-400/50 focus:ring-4 focus:ring-yellow-400/5 transition-all placeholder:text-gray-300" rows={4} />
+                                                                <button onClick={() => handleRequestShipment(selectedOrder.order_id)} disabled={!selectedOrder.final_design_url} className="w-full py-6 bg-yellow-400 text-black text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-yellow-500 transition-all shadow-xl shadow-yellow-400/20 active:scale-95 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed disabled:shadow-none">
                                                                     Finalize & Request Shipment
                                                                 </button>
                                                                 {!selectedOrder.final_design_url && (
-                                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center mt-2">
-                                                                        🔒 Upload a design in Phase 2 to unlock shipment request
-                                                                    </p>
+                                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center mt-2">🔒 Upload a design in Phase 2 to unlock shipment request</p>
                                                                 )}
                                                             </div>
                                                         )}
-
                                                         {selectedOrder.customer_approved_at && !selectedOrder.shipment_requested_at && (
                                                             <div className="mt-4 flex items-center gap-3 p-5 rounded-[24px] bg-green-50 border border-green-100 text-green-700 shadow-sm">
                                                                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                                                                 <span className="text-[10px] font-black uppercase tracking-widest">Client Sign-off Received</span>
                                                             </div>
                                                         )}
-
-                                                        {/* Rejection notice from admin */}
                                                         {selectedOrder.shipment_note && selectedOrder.status === 'Design In Progress' && (
                                                             <div className="mt-4 p-6 rounded-[24px] bg-red-50 border border-red-200">
                                                                 <p className="text-[10px] font-black uppercase tracking-widest text-red-600 mb-2">⚠ Admin Rejected Shipment</p>
@@ -928,7 +838,6 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false }) {
                                                                 <p className="text-[10px] text-red-400 font-bold mt-2 uppercase tracking-wider">Please revise the design and resubmit.</p>
                                                             </div>
                                                         )}
-
                                                         {selectedOrder.shipment_requested_at && (
                                                             <div className="mt-4 flex items-center gap-3 p-5 rounded-[24px] bg-orange-50 border border-orange-100 text-orange-700 shadow-sm">
                                                                 <div className="w-2 h-2 rounded-full bg-orange-500"></div>

@@ -1,58 +1,48 @@
-import React from "react";
+import { useEffect } from "react";
 
-const CartToast = ({ onViewCart, onClose }) => (
-  <div
-    className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl"
-    style={{
-      animation: "toastIn 0.25s cubic-bezier(.34,1.56,.64,1) both",
-    }}
-  >
-    <style>
-      {`
-        @keyframes toastIn {
-          from {
-            opacity:0;
-            transform:translateX(-50%) translateY(16px) scale(0.95);
-          }
-          to {
-            opacity:1;
-            transform:translateX(-50%) translateY(0) scale(1);
-          }
+const CartToast = ({ onViewCart, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 3500);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <>
+      <style>{`
+        @keyframes toastPopUp {
+          from { opacity: 0; transform: translateY(6px) scale(0.95); }
+          to   { opacity: 1; transform: translateY(0)   scale(1);    }
         }
-      `}
-    </style>
-
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className="w-5 h-5 text-yellow-400 flex-shrink-0"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={2.5}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M4.5 12.75l6 6 9-13.5"
-      />
-    </svg>
-
-    <span className="text-sm font-medium">Added to cart!</span>
-
-    <button
-      onClick={onViewCart}
-      className="ml-1 text-sm font-bold text-yellow-400 hover:text-yellow-300 transition-colors"
-    >
-      View Cart
-    </button>
-
-    <button
-      onClick={onClose}
-      className="ml-2 text-gray-500 hover:text-white transition-colors text-lg leading-none"
-    >
-      ×
-    </button>
-  </div>
-);
+      `}</style>
+      <div
+        className="flex items-center gap-3 bg-gray-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-gray-700 whitespace-nowrap mb-2"
+        style={{ animation: "toastPopUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards" }}
+      >
+        {/* little arrow pointing down */}
+        <span className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-gray-900 border-r border-b border-gray-700 rotate-45" />
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-green-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
+        </svg>
+        <span className="text-sm font-bold">Added to cart!</span>
+        <div className="flex gap-2 ml-1">
+          <button
+            onClick={onViewCart}
+            className="px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-lg transition-colors text-xs"
+          >
+            View Cart
+          </button>
+          <button
+            onClick={onClose}
+            className="px-2 py-1 text-gray-400 hover:text-white transition-colors text-lg leading-none"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </>
+  );
+};
 
 export default CartToast;

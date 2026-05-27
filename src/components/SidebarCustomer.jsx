@@ -14,6 +14,7 @@ import expand from '../assets/sidebarExpand/expand.svg';
 import users from '../assets/sidebarAdminsIcons/users.svg';
 import { logoutUser } from '../services/authService';
 import { useAuth } from '../context/CustomerAuthContext';
+import { useCart } from '../context/CartContext';
 import LogoutConfirmationModal from './modals/LogoutConfirmationModal';
 
 const SidebarCustomer = ({ expanded, setExpanded, setSelectedCategory }) => {
@@ -21,6 +22,7 @@ const SidebarCustomer = ({ expanded, setExpanded, setSelectedCategory }) => {
     const location = useLocation();
     const { currentUser, logout } = useAuth();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const { totalItems } = useCart();
 
     const isCustomer = currentUser?.role === 'user';
     const navUser = isCustomer ? currentUser : null;
@@ -147,17 +149,24 @@ const SidebarCustomer = ({ expanded, setExpanded, setSelectedCategory }) => {
                 <div className="flex-1 overflow-y-auto custom-scrollbar px-2">
                     <nav className="py-3">
                         {navPages.map(({ label, icon, path }) => (
-                            <button
-                                key={label}
-                                onClick={() => navigate(path)}
-                                className={`flex items-center gap-3 w-full p-2 rounded-md text-sm transition-all
-                                ${location.pathname === path ? 'bg-[#c0d8ff] font-medium' : 'hover:bg-gray-200'}
-                                ${expanded ? 'justify-start' : 'justify-center'}`}
-                            >
-                                <img src={icon} alt={label} className="w-5 h-5 flex-shrink-0" />
-                                {expanded && <span>{label}</span>}
-                            </button>
-                        ))}
+                        <button
+                            key={label}
+                            onClick={() => navigate(path)}
+                            className={`flex items-center gap-3 w-full p-2 rounded-md text-sm transition-all
+                            ${location.pathname === path ? 'bg-[#c0d8ff] font-medium' : 'hover:bg-gray-200'}
+                            ${expanded ? 'justify-start' : 'justify-center'}`}
+                        >
+                            <div className="relative flex-shrink-0">
+                                <img src={icon} alt={label} className="w-5 h-5" />
+                                {label === 'Cart' && totalItems > 0 && (
+                                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                                        {totalItems > 99 ? '99+' : totalItems}
+                                    </span>
+                                )}
+                            </div>
+                            {expanded && <span>{label}</span>}
+                        </button>
+                    ))}
 
                         {/* Products Dropdown */}
                         <div className="w-full mt-2 relative" ref={dropdownRef}>
@@ -239,14 +248,19 @@ const SidebarCustomer = ({ expanded, setExpanded, setSelectedCategory }) => {
                 {mobileMenuOpen && (
                     <div className="absolute top-16 left-0 w-full bg-white shadow-lg px-5 py-6 space-y-5 max-h-[calc(100vh-4rem)] overflow-y-auto">
                         {navPages.map(({ label, path }) => (
-                            <button
-                                key={label}
-                                onClick={() => handleMobileNav(path)}
-                                className={`block w-full text-left font-medium py-3 ${location.pathname === path ? 'text-blue-600' : 'text-gray-800'}`}
-                            >
-                                {label}
-                            </button>
-                        ))}
+                        <button
+                            key={label}
+                            onClick={() => handleMobileNav(path)}
+                            className={`flex items-center justify-between w-full text-left font-medium py-3 ${location.pathname === path ? 'text-blue-600' : 'text-gray-800'}`}
+                        >
+                            <span>{label}</span>
+                            {label === 'Cart' && totalItems > 0 && (
+                                <span className="bg-red-500 text-white text-[9px] font-black rounded-full w-5 h-5 flex items-center justify-center">
+                                    {totalItems > 99 ? '99+' : totalItems}
+                                </span>
+                            )}
+                        </button>
+                    ))}
 
                         {/* Mobile Products Dropdown */}
                         <div>

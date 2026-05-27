@@ -53,19 +53,47 @@ const ModalCarServiceInquiry = ({ onClose, product }) => {
     }
   }, [currentUser]);
 
+  const [formErrors, setFormErrors] = useState({});
   const [imageFile, setImageFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState({});
 
+  const validateForm = () => {
+    let errs = {};
+    if (serviceType === "car_wrap") {
+      if (!formData.car_type) errs.car_type = "This field is required";
+      if (!formData.wrap_type) errs.wrap_type = "This field is required";
+      if (!formData.color_style) errs.color_style = "This field is required";
+    } else if (serviceType === "car_decal") {
+      if (!formData.decal_type) errs.decal_type = "This field is required";
+      if (!formData.placement) errs.placement = "This field is required";
+      if (!formData.size) errs.size = "This field is required";
+    }
+
+    if (currentUser) {
+      if (!formData.contact_number) errs.contact_number = "This field is required";
+      if (!formData.address) errs.address = "This field is required";
+    }
+
+    if (!formData.schedule_date) errs.schedule_date = "This field is required";
+
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   // Removed automatic auth modal trigger. User can fill the form as guest first.
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (formErrors[e.target.name]) {
+      setFormErrors({ ...formErrors, [e.target.name]: null });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
     if (!currentUser) {
       // Save form data for auto-submit after login
@@ -174,7 +202,7 @@ const ModalCarServiceInquiry = ({ onClose, product }) => {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} noValidate className="space-y-6">
             {/* Service Type Selection */}
             <div className="space-y-4">
               <label className="block text-xs font-black uppercase tracking-widest text-gray-400">Select Service Type <span className="text-red-500">*</span></label>
@@ -182,14 +210,14 @@ const ModalCarServiceInquiry = ({ onClose, product }) => {
                 <button
                   type="button"
                   onClick={() => setServiceType("car_wrap")}
-                  className={`p-6 rounded-3xl border-2 font-black uppercase italic tracking-widest text-sm transition-all ${serviceType === "car_wrap" ? "border-[#FDE31E] bg-yellow-50 text-black shadow-lg" : "border-gray-100 text-gray-400 hover:border-gray-200"}`}
+                  className={`p-6 rounded-3xl border-2 font-black uppercase italic tracking-widest text-sm transition-all hover:scale-[1.02] active:scale-95 ${serviceType === "car_wrap" ? "border-[#FDE31E] bg-yellow-50 text-black shadow-lg" : "border-gray-100 text-gray-400 hover:border-yellow-400 hover:bg-yellow-50/30"}`}
                 >
                   Car Wrap
                 </button>
                 <button
                   type="button"
                   onClick={() => setServiceType("car_decal")}
-                  className={`p-6 rounded-3xl border-2 font-black uppercase italic tracking-widest text-sm transition-all ${serviceType === "car_decal" ? "border-[#FDE31E] bg-yellow-50 text-black shadow-lg" : "border-gray-100 text-gray-400 hover:border-gray-200"}`}
+                  className={`p-6 rounded-3xl border-2 font-black uppercase italic tracking-widest text-sm transition-all hover:scale-[1.02] active:scale-95 ${serviceType === "car_decal" ? "border-[#FDE31E] bg-yellow-50 text-black shadow-lg" : "border-gray-100 text-gray-400 hover:border-yellow-400 hover:bg-yellow-50/30"}`}
                 >
                   Car Decal
                 </button>
@@ -202,12 +230,13 @@ const ModalCarServiceInquiry = ({ onClose, product }) => {
                 {serviceType === "car_wrap" ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Car Type</label>
-                      <input name="car_type" value={formData.car_type} onChange={handleChange} placeholder="e.g. Sedan, SUV, etc." className="w-full p-4 rounded-2xl border-2 border-gray-50 focus:border-[#FDE31E] outline-none font-bold" />
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Car Type <span className="text-red-500">*</span></label>
+                      <input name="car_type" value={formData.car_type} onChange={handleChange} placeholder="e.g. Sedan, SUV, etc." className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${formErrors.car_type ? "border-red-500" : "border-gray-50 focus:border-[#FDE31E]"}`} />
+                      {formErrors.car_type && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.car_type}</p>}
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Wrap Type</label>
-                      <select name="wrap_type" value={formData.wrap_type} onChange={handleChange} className="w-full p-4 rounded-2xl border-2 border-gray-50 focus:border-[#FDE31E] outline-none font-bold">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Wrap Type <span className="text-red-500">*</span></label>
+                      <select name="wrap_type" value={formData.wrap_type} onChange={handleChange} className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${formErrors.wrap_type ? "border-red-500" : "border-gray-50 focus:border-[#FDE31E]"}`}>
                         <option value="">Select Wrap Type</option>
                         <option value="Full Wrap">Full Wrap</option>
                         <option value="Partial Wrap">Partial Wrap</option>
@@ -215,25 +244,30 @@ const ModalCarServiceInquiry = ({ onClose, product }) => {
                         <option value="Hood Wrap">Hood Wrap</option>
                         <option value="Dechroming">Dechroming</option>
                       </select>
+                      {formErrors.wrap_type && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.wrap_type}</p>}
                     </div>
                     <div className="md:col-span-2 space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Preferred Color / Style</label>
-                      <input name="color_style" value={formData.color_style} onChange={handleChange} placeholder="e.g. Matte Black, Glossy Red, etc." className="w-full p-4 rounded-2xl border-2 border-gray-50 focus:border-[#FDE31E] outline-none font-bold" />
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Preferred Color / Style <span className="text-red-500">*</span></label>
+                      <input name="color_style" value={formData.color_style} onChange={handleChange} placeholder="e.g. Matte Black, Glossy Red, etc." className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${formErrors.color_style ? "border-red-500" : "border-gray-50 focus:border-[#FDE31E]"}`} />
+                      {formErrors.color_style && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.color_style}</p>}
                     </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Decal Type</label>
-                      <input name="decal_type" value={formData.decal_type} onChange={handleChange} placeholder="e.g. Racing Stripes, Graphics" className="w-full p-4 rounded-2xl border-2 border-gray-50 focus:border-[#FDE31E] outline-none font-bold" />
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Decal Type <span className="text-red-500">*</span></label>
+                      <input name="decal_type" value={formData.decal_type} onChange={handleChange} placeholder="e.g. Racing Stripes, Graphics" className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${formErrors.decal_type ? "border-red-500" : "border-gray-50 focus:border-[#FDE31E]"}`} />
+                      {formErrors.decal_type && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.decal_type}</p>}
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Placement</label>
-                      <input name="placement" value={formData.placement} onChange={handleChange} placeholder="e.g. Sides, Hood, Rear" className="w-full p-4 rounded-2xl border-2 border-gray-50 focus:border-[#FDE31E] outline-none font-bold" />
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Placement <span className="text-red-500">*</span></label>
+                      <input name="placement" value={formData.placement} onChange={handleChange} placeholder="e.g. Sides, Hood, Rear" className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${formErrors.placement ? "border-red-500" : "border-gray-50 focus:border-[#FDE31E]"}`} />
+                      {formErrors.placement && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.placement}</p>}
                     </div>
                     <div className="md:col-span-2 space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Size</label>
-                      <input name="size" value={formData.size} onChange={handleChange} placeholder="e.g. 24x36 inches" className="w-full p-4 rounded-2xl border-2 border-gray-50 focus:border-[#FDE31E] outline-none font-bold" />
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Size <span className="text-red-500">*</span></label>
+                      <input name="size" value={formData.size} onChange={handleChange} placeholder="e.g. 24x36 inches" className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${formErrors.size ? "border-red-500" : "border-gray-50 focus:border-[#FDE31E]"}`} />
+                      {formErrors.size && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.size}</p>}
                     </div>
                   </div>
                 )}
@@ -264,23 +298,24 @@ const ModalCarServiceInquiry = ({ onClose, product }) => {
 
                       <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Customer Name <span className="text-red-500">*</span></label>
-                        <input name="customer_name" required value={formData.customer_name} onChange={handleChange} readOnly={true} className="w-full p-4 rounded-2xl border-2 border-gray-50 bg-gray-50 text-gray-500 cursor-not-allowed outline-none font-bold" />
-                        {errors.customer_name && <p className="text-red-500 text-[10px] font-black uppercase">{errors.customer_name[0]}</p>}
+                        <input name="customer_name" value={formData.customer_name} onChange={handleChange} readOnly={true} className="w-full p-4 rounded-2xl border-2 border-gray-50 bg-gray-50 text-gray-500 cursor-not-allowed outline-none font-bold" />
                       </div>
 
                       <div className="space-y-1">
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Contact Number <span className="text-red-500">*</span></label>
-                        <input name="contact_number" required value={formData.contact_number} onChange={handleChange} readOnly={!isEditingProfile} className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${(!isEditingProfile) ? 'bg-gray-50 border-gray-50 text-gray-500 cursor-not-allowed' : 'border-gray-50 focus:border-[#FDE31E]'}`} />
+                        <input name="contact_number" value={formData.contact_number} onChange={handleChange} readOnly={!isEditingProfile} className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${(!isEditingProfile) ? 'bg-gray-50 border-gray-50 text-gray-500 cursor-not-allowed' : (formErrors.contact_number ? 'border-red-500' : 'border-gray-50 focus:border-[#FDE31E]')}`} />
+                        {formErrors.contact_number && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.contact_number}</p>}
                       </div>
 
                       <div className="md:col-span-2 space-y-1">
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Email Address <span className="text-red-500">*</span></label>
-                        <input type="email" name="email" required value={formData.email} onChange={handleChange} readOnly={true} className="w-full p-4 rounded-2xl border-2 border-gray-50 bg-gray-50 text-gray-500 cursor-not-allowed outline-none font-bold" />
+                        <input type="email" name="email" value={formData.email} onChange={handleChange} readOnly={true} className="w-full p-4 rounded-2xl border-2 border-gray-50 bg-gray-50 text-gray-500 cursor-not-allowed outline-none font-bold" />
                       </div>
 
                       <div className="md:col-span-2 space-y-1">
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">Current Address <span className="text-red-500">*</span></label>
-                        <input name="address" required value={formData.address} onChange={handleChange} readOnly={!isEditingProfile} placeholder="e.g. Brgy. 1, City, Province" className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${(!isEditingProfile) ? 'bg-gray-50 border-gray-50 text-gray-500 cursor-not-allowed' : 'border-gray-50 focus:border-[#FDE31E]'}`} />
+                        <input name="address" value={formData.address} onChange={handleChange} readOnly={!isEditingProfile} placeholder="e.g. Brgy. 1, City, Province" className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${(!isEditingProfile) ? 'bg-gray-50 border-gray-50 text-gray-500 cursor-not-allowed' : (formErrors.address ? 'border-red-500' : 'border-gray-50 focus:border-[#FDE31E]')}`} />
+                        {formErrors.address && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.address}</p>}
                       </div>
                     </>
                   )}
@@ -290,11 +325,11 @@ const ModalCarServiceInquiry = ({ onClose, product }) => {
                     <input
                       type="datetime-local"
                       name="schedule_date"
-                      required
                       value={formData.schedule_date}
                       onChange={handleChange}
-                      className="w-full p-4 rounded-2xl border-2 border-gray-50 focus:border-[#FDE31E] outline-none font-bold"
+                      className={`w-full p-4 rounded-2xl border-2 outline-none font-bold ${formErrors.schedule_date ? "border-red-500" : "border-gray-50 focus:border-[#FDE31E]"}`}
                     />
+                    {formErrors.schedule_date && <p className="text-red-500 text-[10px] font-black uppercase mt-1">{formErrors.schedule_date}</p>}
                     <p className="text-[9px] text-gray-400 font-bold italic uppercase mt-1">Note: This is subject to availability and confirmation.</p>
                   </div>
 
@@ -311,11 +346,11 @@ const ModalCarServiceInquiry = ({ onClose, product }) => {
 
                 <button
                   type="submit"
-                  disabled={isSubmitting || !imageFile}
-                  className={`w-full py-6 rounded-[28px] font-black uppercase italic tracking-widest text-sm transition-all shadow-xl active:scale-95
-                    ${(isSubmitting || !imageFile) ? "bg-gray-100 text-gray-300 cursor-not-allowed" : "bg-[#FDE31E] text-black hover:bg-yellow-400"}`}
+                  disabled={isSubmitting}
+                  className={`w-full py-6 rounded-[28px] font-black uppercase italic tracking-widest text-sm transition-all shadow-xl hover:scale-[1.02] active:scale-95
+                    ${isSubmitting ? "bg-gray-100 text-gray-300 cursor-not-allowed" : "bg-[#FDE31E] text-black hover:bg-yellow-400"}`}
                 >
-                  {!imageFile ? "Upload Photo to Proceed" : (isSubmitting ? "Submitting..." : "Send Inquiry Now")}
+                  {isSubmitting ? "Submitting..." : "Send Inquiry Now"}
                 </button>
               </>
             )}
