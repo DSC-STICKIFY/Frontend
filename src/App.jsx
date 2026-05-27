@@ -94,6 +94,7 @@ const CustomerServiceOffers = React.lazy(() => import("./pages/customerService/C
 const CustomerServiceInbox = React.lazy(() => import("./pages/customerService/CustomerServiceInbox.jsx"));
 const CustomerServiceDashboard = React.lazy(() => import("./pages/customerService/CustomerServiceDashboard.jsx"));
 const CustomerServiceArtistInbox = React.lazy(() => import("./pages/customerService/CustomerServiceArtistInbox.jsx"));
+const SuperAdminArtistInbox = React.lazy(() => import("./pages/superAdmin/SuperAdminArtistInbox.jsx"));
 const CustomerServiceInquiries = React.lazy(() => import("./pages/customerService/CustomerServiceInquiries.jsx"));
 const ReturnRefundManagement = React.lazy(() => import("./pages/superAdmin/ReturnRefundManagement.jsx"));
 const AdminInquiries = React.lazy(() => import("./pages/superAdmin/AdminInquiries.jsx"));
@@ -285,6 +286,7 @@ const AppContent = () => {
                         <Route path="/super-admin-return-refund" element={<ReturnRefundManagement />} />
                         <Route path="/super-admin-inquiries" element={<AdminInquiries />} />
                         <Route path="/super-admin-artists" element={<SuperAdminArtists />} />
+                        <Route path="/super-admin-artist-inbox" element={<SuperAdminArtistInbox />} />
                     </Route>
 
                     {/* ==================== CUSTOMER SERVICE ==================== */}

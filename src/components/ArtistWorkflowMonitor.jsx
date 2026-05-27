@@ -63,7 +63,8 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
     const [jtTrackingNumber, setJtTrackingNumber] = useState("");
     const [dispatching, setDispatching] = useState(false);
     const isFulfillmentHistory = selectedOrder ? ['To Shipping', 'To Receive', 'Completed'].includes(selectedOrder.status) : false;
-    const effectiveChatReadOnly = isChatReadOnly !== undefined ? isChatReadOnly : isReadOnly;
+    const isAdminOrSubAdmin = currentUser?.role === 'admin' || currentUser?.role === 'subadmin';
+    const effectiveChatReadOnly = isChatReadOnly !== undefined ? isChatReadOnly : (isAdminOrSubAdmin ? false : isReadOnly);
 
     // Timeline States
     const [showTimelineForm, setShowTimelineForm] = useState(false);

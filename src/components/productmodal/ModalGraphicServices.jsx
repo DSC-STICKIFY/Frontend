@@ -64,7 +64,106 @@ const ModalGraphicServices = ({ product, onClose }) => {
   const promo = product.applied_promo;
   const hasDiscount = !!promo;
   const description = product.product_description || product.description;
-  const packageDetails = product.package_details || {};
+
+  const packageDetails = useMemo(() => {
+    // 1. If product already has package_details, return it
+    if (product.package_details) {
+      return {
+        inclusions: product.package_details.inclusions || product.package_details.packageInclusions || [],
+        timeline: product.package_details.timeline || [],
+        payment: product.package_details.payment || []
+      };
+    }
+    
+    // 2. If product has packageInclusions / timeline / payment directly
+    if (product.packageInclusions || product.timeline || product.payment) {
+      return {
+        inclusions: product.packageInclusions || product.inclusions || [],
+        timeline: product.timeline || [],
+        payment: product.payment || []
+      };
+    }
+
+    // 3. Parse from description
+    const desc = description || "";
+    const tierName = product.name || product.product_name || "";
+    const subType = product.type || "";
+    
+    // Fallback generator
+    const getFallback = (tName, sType) => {
+      const name = (tName || "").toLowerCase();
+      const type = (sType || "").toLowerCase();
+
+      let inclusions = [
+        "35pcs 2x2 Stickers",
+        "FB & Youtube Cover Design",
+        "Profile Design",
+        ".JPG & .PNG",
+      ];
+      let timeline = ["7-10 Days Process"];
+      let payment = [
+        "50% Down payment before we proceed for editing",
+        "50% Full payment upon approval and before we send the design",
+      ];
+
+      if (name.includes("basic")) {
+        const stickerCount = type.includes("moto") || type.includes("vlog") ? "45pcs" : "35pcs";
+        inclusions = [
+          `${stickerCount} 2x2 Stickers`,
+          "FB & Youtube Cover Design",
+          "Profile Design",
+          ".JPG & .PNG",
+        ];
+        timeline = ["7-10 Days Process"];
+      } else if (name.includes("standard")) {
+        inclusions = [
+          "60pcs 2x2 Stickers",
+          "FB & Youtube Cover Design",
+          "Profile Design",
+          ".JPG & .PNG",
+        ];
+        timeline = ["7-10 Days Process"];
+      } else if (name.includes("premium")) {
+        inclusions = [
+          "70pcs 2x2 Stickers",
+          "FB & Youtube Cover Design",
+          "Profile Design",
+          ".JPG & .PNG",
+        ];
+        timeline = ["7-10 Days Process"];
+      } else if (name.includes("starter") && (type.includes("moto") || type.includes("vlog"))) {
+        timeline = ["7-10 Days Process"];
+      }
+
+      return { inclusions, timeline, payment };
+    };
+
+    const fallback = getFallback(tierName, subType);
+    if (!desc || desc.trim() === "" || !desc.includes('|')) {
+      return fallback;
+    }
+
+    const sections = desc.split('|').map(s => s.trim());
+    const details = {};
+    sections.forEach(section => {
+      if (section.toLowerCase().includes('inclusion')) {
+        const items = section.split(':')[1]?.split(',').map(i => i.trim()) || [];
+        details.inclusions = items;
+      } else if (section.toLowerCase().includes('timeline')) {
+        const timelineStr = section.split(':')[1]?.trim() || '';
+        details.timeline = [timelineStr];
+      } else if (section.toLowerCase().includes('payment')) {
+        const payments = section.split(':')[1]?.split(',').map(p => p.trim()) || [];
+        details.payment = payments;
+      }
+    });
+
+    return {
+      inclusions: details.inclusions || fallback.inclusions,
+      timeline: details.timeline || fallback.timeline,
+      payment: details.payment || fallback.payment
+    };
+  }, [product, description]);
 
   let discountedPrice = getDiscountedPrice(rawPrice, promo);
   if (isNaN(discountedPrice)) discountedPrice = rawPrice;
@@ -139,7 +238,6 @@ const ModalGraphicServices = ({ product, onClose }) => {
 
   const handleAddToCart = () => {
     if (isCustomMode && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return; }
-    if (!paymentMethod) { setSubmitError("Please select a payment method."); return; }
     const p = buildPayload();
     addItem({
       productId: p.product.id,
@@ -175,7 +273,7 @@ const ModalGraphicServices = ({ product, onClose }) => {
             <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 overflow-hidden">
 
               {/* Static top info */}
-              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizable ? 'flex-shrink-0' : 'flex-1'}`}>
+              <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomMode ? 'flex-shrink-0' : 'flex-1'}`}>
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{title}</h2>
                   <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">{tier}</p>
@@ -199,12 +297,40 @@ const ModalGraphicServices = ({ product, onClose }) => {
 
                 {description && <p className="text-sm text-gray-500 leading-relaxed italic">{description}</p>}
 
-                {packageDetails.inclusions && (
+                {packageDetails.inclusions && packageDetails.inclusions.length > 0 && (
                   <div>
-                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Package Inclusions</h4>
+                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 italic">Package Inclusions</h4>
                     <div className="grid grid-cols-1 gap-2">
                       {packageDetails.inclusions.map((item, idx) => (
                         <div key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                          <img src={check} className="w-4 h-4 mt-0.5" alt="" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {packageDetails.timeline && packageDetails.timeline.length > 0 && (
+                  <div>
+                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 italic">Timeline</h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      {packageDetails.timeline.map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                          <img src={check} className="w-4 h-4 mt-0.5" alt="" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {packageDetails.payment && packageDetails.payment.length > 0 && (
+                  <div>
+                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 italic">Payment Term</h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      {packageDetails.payment.map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-2 text-sm font-semibold text-yellow-600">
                           <img src={check} className="w-4 h-4 mt-0.5" alt="" />
                           <span>{item}</span>
                         </div>
@@ -235,10 +361,10 @@ const ModalGraphicServices = ({ product, onClose }) => {
                   />
                 ) : (
                   <div className="h-full flex flex-col items-center justify-center p-6 bg-white rounded-3xl border border-gray-100 shadow-sm text-center">
-                    <span className="text-4xl mb-3">📦</span>
-                    <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Standard / Readymade Order</h4>
+                    <span className="text-4xl mb-3">🎨</span>
+                    <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Ready-Made Design Service</h4>
                     <p className="text-xs text-gray-400 mt-2 max-w-[280px]">
-                      This product will be printed using the standard/default design shown in the preview. No design files or artist approvals are needed.
+                      This service will be processed as a standard ready-made design. The finalized design files will be sent to you directly after purchase.
                     </p>
                   </div>
                 )}
@@ -292,10 +418,10 @@ const ModalGraphicServices = ({ product, onClose }) => {
                 <button
                   onClick={handleBuyNow}
                   disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview)}
-                  className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
+                  className={`w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm transition-all duration-200 active:scale-[0.98] shadow-lg
                     ${(isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed"
-                      : "bg-[#FFE100] text-black hover:bg-yellow-400 "
+                      : "bg-[#FFE100] text-black hover:bg-yellow-400 hover:shadow-yellow-200 hover:shadow-2xl"
                     }`}
                 >
                   {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
@@ -303,9 +429,20 @@ const ModalGraphicServices = ({ product, onClose }) => {
                 <div className="relative">
                   <button 
                     onClick={handleAddToCart} 
-                    disabled={subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)} 
-                    className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                      ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                    disabled={subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)} 
+                    style={
+                      (subtotal <= 0 || (isCustomMode && !uploadedImage?.preview))
+                        ? { border: "1px solid #e5e7eb" }
+                        : { border: "1px solid #FFE100" }
+                    }
+                    className={`
+                      w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm
+                      transition-all duration-200 active:scale-[0.98]
+                      ${(subtotal <= 0 || (isCustomMode && !uploadedImage?.preview))
+                        ? "bg-white text-gray-300 cursor-not-allowed"
+                        : "bg-white text-gray-900 hover:bg-gray-900 hover:text-white"
+                      }
+                    `}
                   >
                     Add to Cart
                   </button>

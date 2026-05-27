@@ -168,17 +168,17 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden border-2 border-black"
+        className="bg-white rounded-[32px] shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden border border-gray-200"
         style={{ height: '90vh' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 pt-6 pb-4 border-b-2 border-black">
+        <div className="flex-shrink-0 flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200">
           <div>
             <p className="text-xs text-gray-400 uppercase font-semibold">Decal/Wrap Inquiry</p>
             <div className="flex items-center gap-2.5 mt-0.5">
               <h3 className="text-lg font-bold text-gray-900">#{inquiry.id} — {inquiry.service_type?.replace(/_/g, ' ')}</h3>
-              <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-black ${s.bg} ${s.text}`}>
+              <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${s.border} ${s.bg} ${s.text}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                 <span className="capitalize">{inquiry.status?.replace(/_/g, ' ')}</span>
               </div>
@@ -190,12 +190,12 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
         </div>
 
         {/* Tabs */}
-        <div className="flex-shrink-0 flex gap-1 mx-6 mt-4 mb-3 bg-gray-100 p-1 rounded-xl border border-black">
+        <div className="flex-shrink-0 flex gap-1 mx-6 mt-4 mb-3 bg-gray-100 p-1 rounded-xl">
           {['details', 'chat'].map(t => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
-              className={`flex-1 py-2 text-sm font-semibold rounded-lg transition capitalize ${activeTab === t ? 'bg-white text-gray-900 shadow-sm border border-black' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex-1 py-2 text-sm font-black rounded-lg transition capitalize ${activeTab === t ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
             >
               {t === 'chat' ? '💬 Chat' : '📋 Details'}
             </button>
@@ -208,13 +208,13 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
             <div className="p-6 space-y-5">
 
               {/* Progress Timeline */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-black">
+              <div className="bg-gray-50/50 rounded-2xl p-6 border border-gray-200">
                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Service Progress</p>
                 <ProgressTimeline currentStatus={inquiry.status} />
               </div>
 
               {/* Quotation / Pricing result */}
-              <div className="bg-gray-50 rounded-xl border border-black overflow-hidden">
+              <div className="bg-gray-50/50 rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
                 <div className="p-4 space-y-2">
                   <p className="text-[10px] font-bold text-gray-400 uppercase">Quotation details</p>
                   <div className="flex justify-between items-center py-1">
@@ -222,13 +222,13 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
                     <span className="text-lg font-bold text-gray-900">₱{inquiry.quotation_amount ? parseFloat(inquiry.quotation_amount).toLocaleString() : '—'}</span>
                   </div>
                   {inquiry.downpayment_amount > 0 && (
-                    <div className="flex justify-between items-center py-1 border-t border-dashed border-gray-300">
+                    <div className="flex justify-between items-center py-2.5 border-t border-dashed border-gray-200">
                       <span className="text-sm text-gray-500">Downpayment Required</span>
                       <span className="text-sm font-bold text-amber-600">₱{parseFloat(inquiry.downpayment_amount).toLocaleString()}</span>
                     </div>
                   )}
                 </div>
-                <div className="bg-gray-900 px-4 py-3 flex items-center justify-between border-t border-black">
+                <div className="bg-gray-900 px-6 py-4 flex items-center justify-between">
                   <span className="text-sm font-bold text-white">Estimated Price</span>
                   <span className="text-xl font-black text-[#FDE31E]">₱{inquiry.quotation_amount ? parseFloat(inquiry.quotation_amount).toLocaleString() : '—'}</span>
                 </div>
@@ -236,7 +236,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
 
               {/* Admin response message */}
               {inquiry.admin_message && (
-                <div className="bg-amber-50 border border-black rounded-xl p-4">
+                <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-6">
                   <p className="text-[10px] font-bold text-amber-600 uppercase mb-2">Admin Response</p>
                   <p className="text-sm text-gray-800 font-medium leading-relaxed">{inquiry.admin_message}</p>
                 </div>
@@ -244,7 +244,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
 
               {/* Rejection reason */}
               {inquiry.status === 'rejected' && inquiry.rejection_reason && (
-                <div className="bg-red-50 border border-black rounded-xl p-4">
+                <div className="bg-red-50/50 border border-red-100 rounded-2xl p-6">
                   <p className="text-[10px] font-bold text-red-600 uppercase mb-2">Reason for Rejection</p>
                   <p className="text-sm text-red-700 italic font-medium leading-relaxed">"{inquiry.rejection_reason}"</p>
                 </div>
@@ -252,7 +252,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
 
               {/* Payment details card */}
               {(inquiry.payment_status === 'paid' || inquiry.payment_status === 'pay_onsite') && (
-                <div className="bg-emerald-50 border border-black rounded-xl p-4 space-y-2">
+                <div className="bg-emerald-50/50 border border-emerald-100 rounded-2xl p-6 space-y-2">
                   <p className="text-[10px] font-bold text-emerald-600 uppercase mb-1">Payment Confirmation</p>
                   {[
                     ['Method', inquiry.payment_method?.replace(/_/g, ' ')],
@@ -268,7 +268,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
               )}
 
               {/* Service details */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-black">
+              <div className="bg-gray-50/50 rounded-2xl p-6 border border-gray-200">
                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Service Details</p>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-2">
                   {[
@@ -285,7 +285,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
                     </div>
                   ))}
                   {inquiry.schedule_date && (
-                    <div className="flex justify-between items-center pt-2 border-t border-black text-sm col-span-2">
+                    <div className="flex justify-between items-center pt-3 border-t border-gray-200/60 text-sm col-span-2">
                       <span className="text-gray-500">Scheduled Date</span>
                       <span className="font-semibold text-yellow-600">{format(new Date(inquiry.schedule_date), 'MMM dd, yyyy – p')}</span>
                     </div>
@@ -307,9 +307,9 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
 
               {/* Attached design */}
               {inquiry.image && (
-                <div className="bg-gray-50 rounded-xl p-4 border border-black">
+                <div className="bg-gray-50/50 rounded-2xl p-6 border border-gray-200">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Submitted Design</p>
-                  <div className="rounded-xl overflow-hidden border border-black">
+                  <div className="rounded-2xl overflow-hidden border border-gray-200">
                     <img src={`http://localhost:8000/storage/${inquiry.image}`}
                       className="w-full object-cover" alt="Design" />
                   </div>
@@ -317,17 +317,17 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
               )}
 
               {/* Customer message */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-black">
+              <div className="bg-gray-50/50 rounded-2xl p-6 border border-gray-200">
                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Your Message</p>
                 <p className="text-sm text-gray-700 italic">"{inquiry.message || 'No additional notes provided.'}"</p>
               </div>
 
               {/* Review rating section */}
               {isCompleted && (
-                <div className="bg-gray-50 rounded-xl p-4 border border-black">
+                <div className="bg-gray-50/50 rounded-2xl p-6 border border-gray-200">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Your Review</p>
                   {hasRated ? (
-                    <div className="bg-yellow-50 border border-black rounded-xl p-4">
+                    <div className="bg-yellow-50/50 border border-yellow-100 rounded-2xl p-6">
                       <div className="flex items-center gap-3 mb-2">
                         <StarDisplay rating={inquiry.review?.rating || 5} />
                         <span className="text-xs font-black text-yellow-700 uppercase tracking-widest">
@@ -341,7 +341,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
                       )}
                     </div>
                   ) : (
-                    <div className="bg-gradient-to-br from-yellow-400 to-yellow-300 rounded-xl p-4 border border-black">
+                    <div className="bg-gradient-to-br from-yellow-400/90 to-yellow-300/90 rounded-2xl p-6 border border-yellow-400/20">
                       <div className="flex items-center gap-3 mb-3">
                         <div className="w-8 h-8 bg-black/10 rounded-lg flex items-center justify-center flex-shrink-0">
                           <Star className="w-4 h-4 text-black fill-black" />
@@ -353,7 +353,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
                       </div>
                       <button
                         onClick={() => { onClose(); onRate(inquiry); }}
-                        className="w-full py-2.5 bg-black text-white rounded-lg font-black uppercase tracking-widest text-[9px] hover:bg-gray-900 transition-all flex items-center justify-center gap-2 border border-black"
+                        className="w-full py-3 bg-gray-900 text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-gray-900/10"
                       >
                         <Star className="w-3.5 h-3.5 fill-white" />
                         Leave a Review
@@ -372,7 +372,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
         </div>
 
         {/* ── Footer actions ── */}
-        <div className="flex-shrink-0 px-6 py-4 bg-white border-t-2 border-black flex items-center justify-end gap-3">
+        <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-100 flex items-center justify-end gap-3">
           <button onClick={onClose} className="px-5 py-2.5 text-xs font-bold uppercase text-gray-500 hover:text-gray-700 transition hover:bg-gray-100 rounded-xl border border-transparent">
             Close
           </button>
@@ -380,11 +380,11 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
           {activeTab === 'details' && inquiry.status === 'quoted' && (
             <div className="flex gap-2">
               <button onClick={() => onAccept(inquiry.id)}
-                className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-black">
+                className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold uppercase text-xs transition flex items-center gap-1.5 shadow-lg shadow-emerald-500/10">
                 <CheckCircle className="w-4 h-4" /> Accept
               </button>
               <button onClick={() => onDecline(inquiry.id)}
-                className="px-5 py-2.5 bg-white text-red-500 hover:bg-red-50 rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-red-500">
+                className="px-6 py-3 bg-white text-red-500 hover:bg-red-50 rounded-2xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-red-200">
                 <XCircle className="w-4 h-4" /> Decline
               </button>
             </div>
@@ -393,12 +393,12 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
           {activeTab === 'details' && inquiry.status === 'approved' && inquiry.payment_status === 'unpaid' && (
             <div className="flex gap-2">
               <button onClick={() => onPayGcash(inquiry.id)}
-                className="px-5 py-2.5 bg-[#FFE100] hover:bg-yellow-400 text-black rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-black">
+                className="px-6 py-3 bg-[#FFE100] hover:bg-yellow-400 text-black rounded-2xl font-bold uppercase text-xs transition flex items-center gap-1.5 shadow-lg shadow-yellow-400/20">
                 <CreditCard className="w-4 h-4" />
                 GCash {inquiry.downpayment_amount > 0 && inquiry.amount_paid == 0 ? 'Downpayment' : 'Balance'}
               </button>
               <button onClick={() => onPayOnsite(inquiry.id)}
-                className="px-5 py-2.5 bg-white text-blue-600 hover:bg-blue-50 rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-blue-500">
+                className="px-6 py-3 bg-white text-blue-600 hover:bg-blue-50/50 rounded-2xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-blue-200">
                 <Banknote className="w-4 h-4" /> Pay Onsite
               </button>
             </div>
@@ -407,7 +407,7 @@ const DetailModal = ({ inquiry, onClose, onAccept, onDecline, onPayGcash, onPayO
           {activeTab === 'details' && needsRating && (
             <button
               onClick={() => { onClose(); onRate(inquiry); }}
-              className="px-5 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-black rounded-xl font-bold uppercase text-xs transition flex items-center gap-1.5 border border-black"
+              className="px-6 py-3 bg-yellow-400 hover:bg-yellow-500 text-black rounded-2xl font-bold uppercase text-xs transition flex items-center gap-1.5 shadow-lg shadow-yellow-400/20"
             >
               <Star className="w-4 h-4 fill-black" /> Rate Service
             </button>

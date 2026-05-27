@@ -88,9 +88,9 @@ export default function InquiryChatbox({ inquiryId, currentUser }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-2xl border border-black shadow-sm overflow-hidden">
+    <div className="flex flex-col h-full bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="flex-shrink-0 bg-gray-900 px-6 py-4 flex items-center justify-between border-b border-black">
+      <div className="flex-shrink-0 bg-gray-900 px-6 py-4 flex items-center justify-between border-b border-gray-800">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
             <MessageSquare className="w-4 h-4 text-[#FDE31E]" />
@@ -136,8 +136,8 @@ export default function InquiryChatbox({ inquiryId, currentUser }) {
                 <div
                   className={`max-w-[85%] px-4 py-3 rounded-2xl text-xs font-medium shadow-sm leading-relaxed ${
                     isOwn
-                      ? "bg-[#FDE31E] text-black rounded-tr-none border border-black"
-                      : "bg-white text-gray-800 border border-black rounded-tl-none"
+                      ? "bg-[#FDE31E] text-black rounded-tr-none border border-yellow-400/20"
+                      : "bg-white text-gray-800 border border-gray-200 rounded-tl-none"
                   }`}
                 >
                   {msg.message}
@@ -155,18 +155,18 @@ export default function InquiryChatbox({ inquiryId, currentUser }) {
       </div>
 
       {/* Input Form */}
-      <form onSubmit={handleSend} className="flex-shrink-0 bg-white p-4 border-t border-black flex items-center gap-2">
+      <form onSubmit={handleSend} className="flex-shrink-0 bg-white p-4 border-t border-gray-200 flex items-center gap-2">
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Type message here..."
-          className="flex-1 bg-gray-50 border border-black rounded-xl px-4 py-2.5 text-xs font-bold placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FDE31E] focus:bg-white transition-all"
+          className="flex-1 bg-gray-50 border border-gray-300 rounded-xl px-4 py-2.5 text-xs font-bold placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FDE31E] focus:bg-white transition-all"
         />
         <button
           type="submit"
           disabled={!newMessage.trim() || sending}
-          className="w-9 h-9 rounded-xl bg-gray-900 hover:bg-black text-white flex items-center justify-center transition-all shadow-md hover:scale-105 disabled:opacity-40 disabled:pointer-events-none border border-black"
+          className="w-9 h-9 rounded-xl bg-gray-900 hover:bg-black text-white flex items-center justify-center transition-all shadow-md hover:scale-105 disabled:opacity-40 disabled:pointer-events-none"
         >
           <Send className="w-4 h-4" />
         </button>

@@ -184,7 +184,7 @@ const buildGiveawayPayload = (item) => {
     product_description: item.description || item.product_description,
     product_price: item.price || item.product_price,
     product_image: item.image || item.product_image,
-    product_quantity: item.quantity || 1,
+    product_quantity: item.product_quantity ?? item.quantity ?? 0,
     type: item.type || item.product_type,
     category: "Giveaways",
   };

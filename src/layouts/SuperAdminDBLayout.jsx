@@ -36,6 +36,7 @@ const SuperAdminLayoutContent = ({ expanded, setExpanded, setSelectedCategory })
         { label: 'Return/Refund',    icon: orders,       path: '/super-admin-return-refund', badge: badges.returns },
         { label: 'Decal/Wrap Inquiries', icon: inbox,        path: '/super-admin-inquiries', badge: badges.inquiries },
         { label: 'Inbox',            icon: inbox,        path: '/sub-admin-inbox', badge: badges.inbox },
+        { label: 'Artist Inbox',     icon: inbox,        path: '/super-admin-artist-inbox' },
         { label: 'Account Settings', icon: users,        path: '/sub-admin-account-settings' },
     ] : [
         { label: 'Dashboard',        icon: dashboardIcn, path: '/sub-admin-dashboard' },
@@ -50,6 +51,7 @@ const SuperAdminLayoutContent = ({ expanded, setExpanded, setSelectedCategory })
         { label: 'Return/Refund',    icon: orders,       path: '/super-admin-return-refund', badge: badges.returns },
         { label: 'Decal/Wrap Inquiries', icon: inbox,        path: '/super-admin-inquiries', badge: badges.inquiries },
         { label: 'Inbox',            icon: inbox,        path: '/sub-admin-inbox', badge: badges.inbox },
+        { label: 'Artist Inbox',     icon: inbox,        path: '/super-admin-artist-inbox' },
         { label: 'Account Settings', icon: users,        path: '/sub-admin-account-settings' },
     ];
 

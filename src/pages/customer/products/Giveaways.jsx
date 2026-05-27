@@ -83,7 +83,7 @@ const Giveaways = () => {
                 product_description: product.description,
                 product_price: product.discounted_price || product.price,
                 product_image: product.image,
-                product_quantity: product.quantity || 1,
+                product_quantity: product.product_quantity ?? product.quantity ?? 0,
                 type: product.type,
                 category: product.category,
                 modalType: getModalType(product),

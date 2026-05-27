@@ -38,14 +38,14 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
   const { currentUser, isVerified } = useAuth();
   const { addItem, cartItems } = useCart();
 
+  const item = sticker || product;
+
   const cartCount = useMemo(() => {
     const productId = item.id || item.product_id;
     return cartItems
       .filter((c) => c.productId === productId)
       .reduce((sum, c) => sum + (Number(c.quantity) || 0), 0);
   }, [cartItems, item]);
-
-  const item = sticker || product;
 
   const isCustomizable = item.is_customizable !== 0 && item.is_customizable !== false && item.is_customizable !== "0" && item.is_customizable !== undefined;
 
@@ -147,7 +147,6 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
 
   const handleAddToCart = () => {
     if (isCustomMode && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return; }
-    if (!paymentMethod) { setSubmitError("Please select a payment method."); return; }
     const p = buildPayload();
     addItem({
       productId: p.product.id,
@@ -358,10 +357,10 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
                 <button
                   onClick={handleBuyNow}
                   disabled={isOutOfStock || isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview)}
-                  className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
+                  className={`w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
                     ${(isOutOfStock || isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed"
-                      : "bg-[#FFE100] text-black hover:bg-yellow-400 "
+                      : "bg-[#FFE100] text-black hover:bg-yellow-400"
                     }`}
                 >
                   {isOutOfStock ? "SOLD OUT / OUT OF STOCK" : ((isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout"))}
@@ -370,12 +369,15 @@ const ModalAssortedHologram = ({ sticker, product, onClose }) => {
                   <button
                     onClick={handleAddToCart}
                     disabled={isOutOfStock || subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)}
-                    className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                      ${isOutOfStock 
-                        ? "border-red-500 bg-red-500 text-white cursor-not-allowed" 
-                        : (isCustomMode && !uploadedImage?.preview) 
-                          ? "border-gray-50 text-gray-300 cursor-not-allowed" 
-                          : "border-[#FDE31E] text-gray-900 hover:bg-[#FDE31E]/10 hover:border-yellow-400"
+                    style={
+                      (isOutOfStock || subtotal <= 0 || (isCustomMode && !uploadedImage?.preview))
+                        ? { border: "1px solid #e5e7eb" }
+                        : { border: "1px solid #FFE100" }
+                    }
+                    className={`w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm transition-all duration-200 active:scale-[0.98]
+                      ${(isOutOfStock || subtotal <= 0 || (isCustomMode && !uploadedImage?.preview))
+                        ? "bg-white text-gray-300 cursor-not-allowed"
+                        : "bg-white text-gray-900 hover:bg-gray-900 hover:text-white"
                       }`}
                   >
                     {isOutOfStock ? "Out of Stock" : "Add to Cart"}

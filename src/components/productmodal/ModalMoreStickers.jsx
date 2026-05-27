@@ -321,11 +321,16 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                       <tbody className="divide-y divide-gray-50">
                         {sizes.map(({ size, pieces }) => {
                           const isSelected = selectedLegacySize === size;
+                          const isOutOfStockForSize = pieces > stockCount; // Disable if pieces exceed stock
                           const sizeRawPrice = sizePricing[size] || dbPrice;
                           const sizeDiscounted = getDiscountedPrice(sizeRawPrice, promo);
                           const sizeHasDiscount = sizeDiscounted !== sizeRawPrice && promo && (promo.discount_type === "percentage" || promo.discount_type === "fixed");
+                          const rowClass = `group cursor-pointer transition-colors ${isSelected ? 'bg-yellow-50/30' : 'hover:bg-gray-50/50'} ${isOutOfStockForSize ? 'opacity-50 cursor-not-allowed' : ''}`;
+                          const handleClick = () => {
+                            if (!isOutOfStockForSize) setSelectedLegacySize(size);
+                          };
                           return (
-                            <tr key={size} className={`group cursor-pointer transition-colors ${isSelected ? 'bg-yellow-50/30' : 'hover:bg-gray-50/50'}`} onClick={() => setSelectedLegacySize(size)}>
+                            <tr key={size} className={rowClass} onClick={handleClick}>
                               <td className="py-2.5 sm:py-3 font-bold flex items-center gap-2">
                                 <div className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-[#FFE100]' : 'border-gray-200'}`}>
                                   {isSelected && <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#FFE100]" />}
@@ -549,8 +554,16 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                   <button
                     onClick={handleAddToCart}
                     disabled={isOutOfStock || (isCustomMode && !uploadedImage?.preview)}
-                    className={`w-full py-5 sm:py-6 rounded-[20px] sm:rounded-[24px] font-black uppercase tracking-widest text-xs sm:text-sm border-2 transition-all
-                      ${(isOutOfStock || (isCustomMode && !uploadedImage?.preview)) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                    style={
+                      (isOutOfStock || (isCustomMode && !uploadedImage?.preview))
+                        ? { border: "1px solid #e5e7eb" }
+                        : { border: "1px solid #FFE100" }
+                    }
+                    className={`w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm transition-all duration-200 active:scale-[0.98]
+                      ${(isOutOfStock || (isCustomMode && !uploadedImage?.preview))
+                        ? "bg-white text-gray-300 cursor-not-allowed"
+                        : "bg-white text-gray-900 hover:bg-gray-900 hover:text-white"
+                      }`}
                   >
                     Add to Cart
                   </button>

@@ -464,7 +464,7 @@ function LandingPage() {
             {selectedSticker?.modalType === "assorted" && <ModalAssortedHologram sticker={selectedSticker} onClose={() => setSelectedSticker(null)} />}
             {selectedSticker?.modalType === "more" && <ModalMoreStickers sticker={selectedSticker} onClose={() => setSelectedSticker(null)} />}
             {selectedGraphicItem && <ModalGraphicServices onClose={() => setSelectedGraphicItem(null)} product={selectedGraphicItem} />}
-            {selectedGiveaway?.modalType === "standee-tarpulinModal" && <ModalGiveawaysStandeenTarpulin giveaways={selectedGiveaway.giveaways} onClose={() => setSelectedGiveaway(null)} />}
+            {selectedGiveaway?.modalType === "standee-tarpulinModal" && <ModalGiveawaysStandeenTarpulin giveaways={selectedGiveaway} onClose={() => setSelectedGiveaway(null)} />}
             {selectedGiveaway?.modalType === "mug-shirtModal" && <ModalGiveawaysMugnShirt giveaways={selectedGiveaway} onClose={() => setSelectedGiveaway(null)} />}
             {selectedGiveaway?.modalType === "callingcardModal" && <ModalGiveawayCallingCard giveaways={selectedGiveaway} onClose={() => setSelectedGiveaway(null)} />}
             {selectedGiveaway?.modalType === "moreModal" && <ModalGiveawayMore giveaways={selectedGiveaway} onClose={() => setSelectedGiveaway(null)} />}

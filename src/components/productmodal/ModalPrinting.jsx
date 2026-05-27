@@ -88,6 +88,17 @@ const ModalPrinting = ({ product, onClose }) => {
   if (isNaN(discountedPrice)) discountedPrice = rawPrice;
 
   const [quantity, setQuantity] = useState(1);
+
+  const stockCount = product.product_quantity !== undefined ? parseInt(product.product_quantity) : 0;
+  const isOutOfStock = !isCustomizableProduct && stockCount <= 0;
+
+  // Clamp quantity to stockCount if ready-made
+  useEffect(() => {
+    if (!isCustomizableProduct && quantity > stockCount) {
+      setQuantity(Math.max(1, stockCount));
+    }
+  }, [isOutOfStock, stockCount, isCustomizableProduct, quantity]);
+
   const [selectedSubtype, setSelectedSubtype] = useState(null);
   const [subtotal, setSubtotal] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState("");
@@ -155,7 +166,6 @@ const ModalPrinting = ({ product, onClose }) => {
 
   const handleAddToCart = () => {
     if (isCustomMode && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return; }
-    if (!paymentMethod) { setSubmitError("Please select a payment method."); return; }
     const p = buildPayload();
     addItem({
       productId: p.product.id,
@@ -194,7 +204,24 @@ const ModalPrinting = ({ product, onClose }) => {
               <div className="flex-shrink-0 p-8 pb-4 bg-gray-50/30 flex flex-col gap-4">
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{title}</h2>
-                  <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1">{category}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest">{category}</p>
+                    {!isCustomizableProduct && (
+                      isOutOfStock ? (
+                        <span className="text-[10px] font-black uppercase bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full border border-red-200">
+                          Sold Out
+                        </span>
+                      ) : stockCount <= 5 ? (
+                        <span className="text-[10px] font-black uppercase bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full border border-amber-200 animate-pulse">
+                          Only {stockCount} Left!
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          {stockCount} In Stock
+                        </span>
+                      )
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-3 flex-wrap">
@@ -220,7 +247,13 @@ const ModalPrinting = ({ product, onClose }) => {
                   <div className="flex items-center gap-1">
                     <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 h-10 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-xl transition-colors text-xl font-bold">−</button>
                     <span className="w-10 text-center font-black text-lg">{quantity}</span>
-                    <button onClick={() => setQuantity(q => q + 1)} className="w-10 h-10 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-xl transition-colors text-xl font-bold">+</button>
+                    <button 
+                      onClick={() => setQuantity(q => !isCustomizableProduct ? Math.min(stockCount, q + 1) : q + 1)} 
+                      disabled={!isCustomizableProduct && quantity >= stockCount}
+                      className="w-10 h-10 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-xl transition-colors text-xl font-bold disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
 
@@ -300,21 +333,32 @@ const ModalPrinting = ({ product, onClose }) => {
               <div className="mt-8 space-y-4">
                 <button
                   onClick={handleBuyNow}
-                  disabled={isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview)}
-                  className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm shadow-xl transition-all active:scale-[0.98]
-                    ${(isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview))
+                  disabled={isOutOfStock || isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview)}
+                  className={`w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm transition-all duration-200 active:scale-[0.98] shadow-lg
+                    ${(isOutOfStock || isSubmitting || subtotal <= 0 || !paymentMethod || (currentUser && !isVerified) || (isCustomMode && !uploadedImage?.preview))
                       ? "bg-gray-100 text-gray-300 shadow-none cursor-not-allowed"
-                      : "bg-[#FFE100] text-black hover:bg-yellow-400 "
+                      : "bg-[#FFE100] text-black hover:bg-yellow-400 hover:shadow-yellow-200 hover:shadow-2xl"
                     }`}
                 >
-                  {(isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
+                  {isOutOfStock ? "Out of Stock" : (isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (currentUser && !isVerified ? "Verification Required" : isSubmitting ? "Processing..." : "Proceed to Checkout")}
                 </button>
                 <div className="relative">
                   <button 
                     onClick={handleAddToCart} 
-                    disabled={subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)} 
-                    className={`w-full py-6 rounded-[24px] font-black uppercase tracking-widest text-sm border-2 transition-all
-                      ${(isCustomMode && !uploadedImage?.preview) ? "border-gray-50 text-gray-300 cursor-not-allowed" : "border-gray-100 text-gray-900 hover:bg-gray-50"}`}
+                    disabled={isOutOfStock || subtotal <= 0 || (isCustomMode && !uploadedImage?.preview)} 
+                    style={
+                      (isOutOfStock || subtotal <= 0 || (isCustomMode && !uploadedImage?.preview))
+                        ? { border: "1px solid #e5e7eb" }
+                        : { border: "1px solid #FFE100" }
+                    }
+                    className={`
+                      w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm
+                      transition-all duration-200 active:scale-[0.98]
+                      ${(isOutOfStock || subtotal <= 0 || (isCustomMode && !uploadedImage?.preview))
+                        ? "bg-white text-gray-300 cursor-not-allowed"
+                        : "bg-white text-gray-900 hover:bg-gray-900 hover:text-white"
+                      }
+                    `}
                   >
                     Add to Cart
                   </button>

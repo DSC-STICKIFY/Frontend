@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useProducts } from '../../context/ProductsContext';
 import cart from '../../assets/servicesImgIcon/graphicservices/cart.svg';
-import ModalMoreStickers from '../../components/productmodal/ModalMoreStickers.jsx';
+import ModalGraphicServices from '../../components/productmodal/ModalGraphicServices.jsx';
 import StoreLocation from '../../components/StoreLocation.jsx';
 import { getImageUrl } from '../../services/api.js';
 import PromoTag from '../../components/PromoTag'; 
@@ -257,8 +257,8 @@ const GraphicServices = () => {
             <StoreLocation />
 
             {selectedItem && (
-                <ModalMoreStickers
-                    sticker={selectedItem}
+                <ModalGraphicServices
+                    product={selectedItem}
                     onClose={() => setSelectedItem(null)}
                 />
             )}

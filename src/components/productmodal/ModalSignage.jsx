@@ -44,8 +44,14 @@ const ModalSignage = ({ signage, onClose }) => {
   const isCustomMode = isCustomizableProduct;
 
   // Out of stock check — adjust field name to match your API
-  const stock = signage?.stock ?? signage?.quantity_in_stock ?? null;
-  const isOutOfStock = stock !== null && Number(stock) <= 0;
+  const stockCount = signage.product_quantity !== undefined ? parseInt(signage.product_quantity) : 0;
+  const isOutOfStock = !isCustomizableProduct && stockCount <= 0;
+
+  const hasDbSizes = signage.sizes && signage.sizes.length > 0;
+  const hasDbDesigns = signage.designs && signage.designs.length > 0;
+
+  const [selectedDesign, setSelectedDesign] = useState(null);
+  const [selectedSizeObj, setSelectedSizeObj] = useState(hasDbSizes ? signage.sizes[0] : null);
 
   const [quantity, setQuantity] = useState(1);
   const [width, setWidth] = useState("1");
@@ -65,6 +71,18 @@ const ModalSignage = ({ signage, onClose }) => {
       .then((data) => setPromos(Array.isArray(data) ? data : []))
       .catch(() => setPromos([]));
   }, []);
+
+  // Reset all user configurations whenever a new signage product is loaded
+  useEffect(() => {
+    setSelectedDesign(null);
+    setSelectedSizeObj(signage?.sizes && signage.sizes.length > 0 ? signage.sizes[0] : null);
+    setQuantity(1);
+    setWidth("1");
+    setHeight("1");
+    setSubtotal(0);
+    setUploadedImage(null);
+    setSubmitError(null);
+  }, [signage]);
 
   const title = signage?.title || signage?.product_name || "Signage Product";
   const category = signage?.category || signage?.product_type || "Signage";
@@ -87,15 +105,31 @@ const ModalSignage = ({ signage, onClose }) => {
     return result;
   }, [signage]);
 
+  const designAddon = selectedDesign ? parseFloat(selectedDesign.additional_price || 0) : 0;
+  const sizeAddon = (!isCustomMode && selectedSizeObj) ? parseFloat(selectedSizeObj.additional_price || 0) : 0;
+  const baseUnitPrice = rawSqftPrice + designAddon + sizeAddon;
+
   const promo = getBestPromo(signage, promos);
-  let discountedSqftPrice = getDiscountedPrice(rawSqftPrice, promo);
-  if (isNaN(discountedSqftPrice)) discountedSqftPrice = rawSqftPrice;
+  let discountedSqftPrice = getDiscountedPrice(baseUnitPrice, promo);
+  if (isNaN(discountedSqftPrice)) discountedSqftPrice = baseUnitPrice;
   const hasDiscount =
-    discountedSqftPrice !== rawSqftPrice &&
+    discountedSqftPrice !== baseUnitPrice &&
     promo &&
     (promo.discount_type === "percentage" || promo.discount_type === "fixed");
 
   const handleGetSubtotal = () => {
+    if (!isCustomMode) {
+      const q = parseFloat(quantity);
+      if (!isNaN(q) && q > 0) {
+        setIsCalculating(true);
+        const total = discountedSqftPrice * q;
+        setSubtotal(total);
+        setSubmitError(null);
+        setTimeout(() => setIsCalculating(false), 300);
+      }
+      return;
+    }
+
     const w = parseFloat(width);
     const h = parseFloat(height);
     const q = parseFloat(quantity);
@@ -111,10 +145,27 @@ const ModalSignage = ({ signage, onClose }) => {
     }
   };
 
-  // Run calculation initially when component mounts
+  // Run calculation initially when component mounts or price changes
   useEffect(() => {
-    handleGetSubtotal();
-  }, [discountedSqftPrice]);
+    if (!isCustomMode) {
+      const q = parseFloat(quantity);
+      if (!isNaN(q) && q > 0) {
+        setSubtotal(discountedSqftPrice * q);
+      }
+    } else {
+      handleGetSubtotal();
+    }
+  }, [discountedSqftPrice, isCustomMode]);
+
+  // Keep ready-made subtotal in sync with quantity changes
+  useEffect(() => {
+    if (!isCustomMode) {
+      const q = parseFloat(quantity);
+      if (!isNaN(q) && q > 0) {
+        setSubtotal(discountedSqftPrice * q);
+      }
+    }
+  }, [quantity, isCustomMode, discountedSqftPrice]);
 
   const formatPrice = (num) => {
     if (num === undefined || num === null) return "0.00";
@@ -123,10 +174,23 @@ const ModalSignage = ({ signage, onClose }) => {
 
   const validateOrder = (checkPaymentMethod = true) => {
     if (isCustomMode && !uploadedImage?.preview) { setSubmitError("Please upload your design first."); return false; }
-    if (subtotal <= 0) { setSubmitError("Please enter valid dimensions and quantity."); return false; }
+    if (isCustomMode && (isNaN(parseFloat(width)) || parseFloat(width) <= 0 || isNaN(parseFloat(height)) || parseFloat(height) <= 0)) {
+      setSubmitError("Please enter valid width and height dimensions.");
+      return false;
+    }
+    if (subtotal <= 0) {
+      setSubmitError(isCustomMode ? "Please click 'Get Subtotal' after setting dimensions." : "Please enter a valid quantity.");
+      return false;
+    }
     if (checkPaymentMethod && !paymentMethod) { setSubmitError("Please select a payment method."); return false; }
     setSubmitError(null);
     return true;
+  };
+
+  const getPreviewImage = () => {
+    if (isCustomMode && uploadedImage?.preview) return uploadedImage.preview;
+    if (!isCustomMode && selectedDesign && selectedDesign.design_image) return getImageUrl(selectedDesign.design_image);
+    return getImageUrl(signage.image || signage.product_image);
   };
 
   const buildPayload = () => ({
@@ -134,20 +198,23 @@ const ModalSignage = ({ signage, onClose }) => {
       id: signage.id || signage._id || "unknown",
       title,
       price: discountedSqftPrice,
-      image: signage.image || signage.product_image || null,
-      originalPrice: hasDiscount ? rawSqftPrice : null,
+      image: getPreviewImage(),
+      originalPrice: hasDiscount ? baseUnitPrice : null,
       promotion_id: promo?.promotion_id || null,
       promoApplied: promo?.name || null,
     },
     quantity,
-    size: `${width} x ${height} ft`,
+    size: isCustomMode ? `${width} x ${height} ft` : (selectedSizeObj ? selectedSizeObj.size_name : "Standard Size"),
     pieces: quantity,
     category: "Signage",
     type: category,
     subtotal,
     initialPaymentMethod: paymentMethod,
     customMode: isCustomMode ? "custom" : "standard",
-    designImage: isCustomMode ? (uploadedImage?.preview || null) : null,
+    designImage: isCustomMode ? (uploadedImage?.preview || null) : (selectedDesign ? getImageUrl(selectedDesign.design_image) : null),
+    designId: (!isCustomMode && selectedDesign) ? selectedDesign.id : null,
+    designName: (!isCustomMode && selectedDesign) ? selectedDesign.design_name : (isCustomMode ? "Custom Design" : "Standard Design"),
+    sizeId: (!isCustomMode && selectedSizeObj) ? selectedSizeObj.id : null,
     timestamp: Date.now()
   });
 
@@ -155,8 +222,8 @@ const ModalSignage = ({ signage, onClose }) => {
     productId: signage.id || signage._id || "unknown",
     title,
     price: discountedSqftPrice,
-    image: signage.image || signage.product_image || null,
-    size: `${width} x ${height} ft`,
+    image: getPreviewImage(),
+    size: isCustomMode ? `${width} x ${height} ft` : (selectedSizeObj ? selectedSizeObj.size_name : "Standard Size"),
     pieces: quantity,
     quantity,
     paymentMethod,
@@ -164,8 +231,11 @@ const ModalSignage = ({ signage, onClose }) => {
     type: category,
     subtotal,
     customMode: isCustomMode ? "custom" : "standard",
-    designImage: isCustomMode ? (uploadedImage?.preview || null) : null,
-    originalPrice: hasDiscount ? rawSqftPrice : null,
+    designImage: isCustomMode ? (uploadedImage?.preview || null) : (selectedDesign ? getImageUrl(selectedDesign.design_image) : null),
+    designId: (!isCustomMode && selectedDesign) ? selectedDesign.id : null,
+    designName: (!isCustomMode && selectedDesign) ? selectedDesign.design_name : (isCustomMode ? "Custom Design" : "Standard Design"),
+    sizeId: (!isCustomMode && selectedSizeObj) ? selectedSizeObj.id : null,
+    originalPrice: hasDiscount ? baseUnitPrice : null,
     promoApplied: promo?.name || null,
     discountType: promo?.discount_type || null,
   });
@@ -254,17 +324,34 @@ const ModalSignage = ({ signage, onClose }) => {
               <div className={`p-8 pb-4 bg-gray-50/30 flex flex-col gap-4 overflow-y-auto custom-scrollbar ${isCustomizableProduct ? 'flex-shrink-0' : 'flex-1'}`}>
                 <div>
                   <h2 className="text-3xl font-black text-gray-900 tracking-tight leading-tight">{title}</h2>
-                  <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest mt-1 italic">{category}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <p className="text-sm font-bold text-yellow-600 uppercase tracking-widest italic">{category}</p>
+                    {!isCustomizableProduct && (
+                      isOutOfStock ? (
+                        <span className="text-[10px] font-black uppercase bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full border border-red-200">
+                          Sold Out
+                        </span>
+                      ) : stockCount <= 5 ? (
+                        <span className="text-[10px] font-black uppercase bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full border border-amber-200 animate-pulse">
+                          Only {stockCount} Left!
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                          {stockCount} In Stock
+                        </span>
+                      )
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-3 flex-wrap">
                   {hasDiscount ? (
                     <>
-                      <span className="text-sm line-through text-gray-400 font-medium">₱ {formatPrice(rawSqftPrice)} per sqft</span>
-                      <span className="text-2xl font-black text-gray-900 italic">₱ {formatPrice(discountedSqftPrice)} per sqft</span>
+                      <span className="text-sm line-through text-gray-400 font-medium">₱ {formatPrice(rawSqftPrice)} {isCustomMode ? "per sqft" : ""}</span>
+                      <span className="text-2xl font-black text-gray-900 italic">₱ {formatPrice(discountedSqftPrice)} {isCustomMode ? "per sqft" : ""}</span>
                     </>
                   ) : (
-                    <span className="text-2xl font-black text-gray-900 italic">₱ {formatPrice(rawSqftPrice)} per sqft</span>
+                    <span className="text-2xl font-black text-gray-900 italic">₱ {formatPrice(rawSqftPrice)} {isCustomMode ? "per sqft" : ""}</span>
                   )}
                   {promo && (
                     <span className="text-[10px] bg-[#FFE100] text-black font-black px-3 py-1 rounded-full uppercase tracking-tighter">
@@ -280,41 +367,45 @@ const ModalSignage = ({ signage, onClose }) => {
                 {description && <p className="text-sm text-gray-500 leading-relaxed italic">{description}</p>}
 
                 <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between border-b border-gray-50 pb-3">
-                    <span className="text-xs sm:text-sm font-bold text-gray-800">Width</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-400 font-medium">feet</span>
-                      <input
-                        type="number"
-                        min="0.1"
-                        step="any"
-                        value={width}
-                        onChange={(e) => {
-                          setWidth(e.target.value);
-                          setSubtotal(0); // Reset subtotal on input change
-                        }}
-                        className="w-20 px-3 py-1.5 text-center font-black border border-gray-200 rounded-xl focus:border-[#FFE100] focus:outline-none text-xs sm:text-sm"
-                      />
-                    </div>
-                  </div>
+                  {isCustomMode && (
+                    <>
+                      <div className="flex items-center justify-between border-b border-gray-50 pb-3">
+                        <span className="text-xs sm:text-sm font-bold text-gray-800">Width</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-400 font-medium">feet</span>
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="any"
+                            value={width}
+                            onChange={(e) => {
+                              setWidth(e.target.value);
+                              setSubtotal(0); // Reset subtotal on input change
+                            }}
+                            className="w-20 px-3 py-1.5 text-center font-black border border-gray-200 rounded-xl focus:border-[#FFE100] focus:outline-none text-xs sm:text-sm"
+                          />
+                        </div>
+                      </div>
 
-                  <div className="flex items-center justify-between border-b border-gray-50 pb-3">
-                    <span className="text-xs sm:text-sm font-bold text-gray-800">Height</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-400 font-medium">feet</span>
-                      <input
-                        type="number"
-                        min="0.1"
-                        step="any"
-                        value={height}
-                        onChange={(e) => {
-                          setHeight(e.target.value);
-                          setSubtotal(0); // Reset subtotal on input change
-                        }}
-                        className="w-20 px-3 py-1.5 text-center font-black border border-gray-200 rounded-xl focus:border-[#FFE100] focus:outline-none text-xs sm:text-sm"
-                      />
-                    </div>
-                  </div>
+                      <div className="flex items-center justify-between border-b border-gray-50 pb-3">
+                        <span className="text-xs sm:text-sm font-bold text-gray-800">Height</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-gray-400 font-medium">feet</span>
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="any"
+                            value={height}
+                            onChange={(e) => {
+                              setHeight(e.target.value);
+                              setSubtotal(0); // Reset subtotal on input change
+                            }}
+                            className="w-20 px-3 py-1.5 text-center font-black border border-gray-200 rounded-xl focus:border-[#FFE100] focus:outline-none text-xs sm:text-sm"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   <div className="flex items-center justify-between border-b border-gray-50 pb-3">
                     <span className="text-xs sm:text-sm font-bold text-gray-800">Quantity</span>
@@ -322,7 +413,7 @@ const ModalSignage = ({ signage, onClose }) => {
                       <button
                         onClick={() => {
                           setQuantity(q => Math.max(1, q - 1));
-                          setSubtotal(0); // Reset subtotal
+                          if (isCustomMode) setSubtotal(0); // Reset subtotal for custom
                         }}
                         className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-lg transition-colors text-lg font-bold"
                       >
@@ -332,7 +423,7 @@ const ModalSignage = ({ signage, onClose }) => {
                       <button
                         onClick={() => {
                           setQuantity(q => q + 1);
-                          setSubtotal(0); // Reset subtotal
+                          if (isCustomMode) setSubtotal(0); // Reset subtotal for custom
                         }}
                         className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-50 rounded-lg transition-colors text-lg font-bold"
                       >
@@ -341,29 +432,21 @@ const ModalSignage = ({ signage, onClose }) => {
                     </div>
                   </div>
 
-                  <div className="flex justify-end pt-1">
-                    <button
-                      onClick={handleGetSubtotal}
-                      className="px-4 py-2 bg-black text-white font-black text-[10px] sm:text-[11px] rounded-xl tracking-wider hover:bg-gray-800 uppercase transition-all shadow-sm active:scale-95"
-                    >
-                      Get Subtotal
-                    </button>
-                  </div>
+                  {isCustomMode && (
+                    <div className="flex justify-end pt-1">
+                      <button
+                        onClick={handleGetSubtotal}
+                        className="px-4 py-2 bg-black text-white font-black text-[10px] sm:text-[11px] rounded-xl tracking-wider hover:bg-gray-800 uppercase transition-all shadow-sm active:scale-95"
+                      >
+                        Get Subtotal
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {subtotal > 0 && (
                   <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-3">
-                    <div className="flex justify-between items-center text-xs sm:text-sm">
-                      <span className="text-gray-500 font-medium">Subtotal</span>
-                      <span className="text-base sm:text-lg font-black text-gray-900 font-mono tracking-tighter">₱ {formatPrice(subtotal)}</span>
-                    </div>
-                    <p className="text-[9px] sm:text-[10px] text-gray-400 leading-normal italic">
-                      Note: Free installment for areas around Davao City. For outside Davao City, installment fee may vary base on your location.
-                    </p>
-                    <div className="flex justify-between items-center border-t border-gray-50 pt-3 text-xs sm:text-sm">
-                      <span className="text-gray-800 font-bold">Total</span>
-                      <span className="text-lg sm:text-xl font-black text-gray-900 font-mono tracking-tighter">₱ {formatPrice(subtotal)}</span>
-                    </div>
+
                   </div>
                 )}
               </div>
@@ -393,25 +476,140 @@ const ModalSignage = ({ signage, onClose }) => {
             {/* RIGHT Panel */}
             <div ref={rightPanelRef} className="w-full md:w-1/2 p-8 overflow-y-auto custom-scrollbar bg-white flex flex-col">
               <div className="flex-1 space-y-6">
-                <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group relative" style={{ minHeight: "220px" }}>
-                  <img
-                    src={getImageUrl(signage.image || signage.product_image)}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    alt={title}
-                  />
+                <div className="space-y-4">
+                  <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group relative" style={{ minHeight: "220px" }}>
+                    <img
+                      src={getPreviewImage()}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      alt={title}
+                    />
+                  </div>
+
+                  {/* Design Thumbnail Gallery */}
+                  {hasDbDesigns && (
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider italic">Available Designs Gallery</span>
+                      <div className="flex gap-2 overflow-x-auto pb-1.5 pt-0.5 custom-scrollbar">
+                        <button
+                          onClick={() => {
+                            setSelectedDesign(null);
+                            if (isCustomMode) setSubtotal(0);
+                          }}
+                          className={`w-12 h-12 rounded-xl border-2 overflow-hidden flex-shrink-0 transition-all hover:scale-105 active:scale-95 ${selectedDesign === null ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-gray-200 hover:border-gray-300'}`}
+                          title="Default Design"
+                        >
+                          <img src={getImageUrl(signage.image || signage.product_image)} className="w-full h-full object-cover" alt="Default Design" />
+                        </button>
+                        {signage.designs.map((design) => {
+                          const isActive = selectedDesign?.id === design.id;
+                          return (
+                            <button
+                              key={design.id}
+                              onClick={() => {
+                                setSelectedDesign(design);
+                                if (isCustomMode) setSubtotal(0);
+                              }}
+                              className={`w-12 h-12 rounded-xl border-2 overflow-hidden flex-shrink-0 transition-all hover:scale-105 active:scale-95 ${isActive ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-gray-200 hover:border-gray-300'}`}
+                              title={design.design_name}
+                            >
+                              <img src={getImageUrl(design.design_image || signage.image || signage.product_image)} className="w-full h-full object-cover" alt={design.design_name} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Configurations */}
+                {((!isCustomMode && hasDbSizes) || hasDbDesigns) && (
+                  <div className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+                    <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest italic">Configurations</h3>
+
+                    {/* Choose Design Selector Grid */}
+                    {hasDbDesigns && (
+                      <div>
+                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">1. Choose Design</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedDesign(null);
+                              if (isCustomMode) setSubtotal(0);
+                            }}
+                            className={`relative flex items-center gap-3 p-3 rounded-xl border-2 transition-all overflow-hidden ${selectedDesign === null ? 'border-yellow-400 bg-yellow-50/30' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+                          >
+                            <img src={getImageUrl(signage.image || signage.product_image)} className="w-12 h-12 object-cover rounded-lg bg-gray-50 flex-shrink-0" alt="Standard Design" />
+                            <div className="text-left min-w-0">
+                              <span className="text-[10px] font-bold text-gray-800 block truncate leading-tight">Standard Design</span>
+                              <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">Default</span>
+                            </div>
+                          </button>
+                          {signage.designs.map((design) => {
+                            const isSelected = selectedDesign?.id === design.id;
+                            return (
+                              <button
+                                key={design.id}
+                                onClick={() => {
+                                  setSelectedDesign(design);
+                                  if (isCustomMode) setSubtotal(0);
+                                }}
+                                className={`relative flex items-center gap-3 p-3 rounded-xl border-2 transition-all overflow-hidden ${isSelected ? 'border-yellow-400 bg-yellow-50/30' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+                              >
+                                <img src={getImageUrl(design.design_image || signage.image || signage.product_image)} className="w-12 h-12 object-cover rounded-lg bg-gray-50 flex-shrink-0" alt={design.design_name} />
+                                <div className="text-left min-w-0">
+                                  <span className="text-[10px] font-bold text-gray-800 block truncate leading-tight">{design.design_name}</span>
+                                  {parseFloat(design.additional_price) > 0 ? (
+                                    <span className="text-[8px] font-black text-yellow-600">+ ₱{parseFloat(design.additional_price).toFixed(2)}</span>
+                                  ) : (
+                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-tighter">Free</span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Choose Size Option Selector */}
+                    {!isCustomMode && hasDbSizes && (
+                      <div>
+                        <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                          {hasDbDesigns ? "2." : "1."} Size Option
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {signage.sizes.map((size) => {
+                            const isSelected = selectedSizeObj?.id === size.id;
+                            return (
+                              <button
+                                key={size.id}
+                                onClick={() => setSelectedSizeObj(size)}
+                                className={`px-4 py-2 rounded-xl border-2 text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${isSelected ? 'border-yellow-400 bg-yellow-50 text-gray-900' : 'border-gray-100 bg-white text-gray-600 hover:border-gray-200'}`}
+                              >
+                                <span>{size.size_name}</span>
+                                {parseFloat(size.additional_price) > 0 && <span className="text-[9px] font-black text-yellow-600">+₱{parseFloat(size.additional_price)}</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6 italic">Project Summary</h3>
                   <div className="space-y-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Material Cost (per sqft)</span>
+                      <span className="text-gray-500">{isCustomMode ? "Material Cost (per sqft)" : "Unit Price"}</span>
                       <span className="font-bold text-gray-900">₱ {formatPrice(discountedSqftPrice)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Dimensions</span>
-                      <span className="font-bold text-gray-900">{width} x {height} ft</span>
-                    </div>
+                    {isCustomMode && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Dimensions</span>
+                        <span className="font-bold text-gray-900">{width} x {height} ft</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-500">Quantity</span>
                       <span className="font-bold text-gray-900">{quantity} Unit(s)</span>
@@ -482,7 +680,7 @@ const ModalSignage = ({ signage, onClose }) => {
                   style={
                     isOutOfStock || cartDisabled
                       ? { border: "1px solid #e5e7eb" } 
-                      : { border: "2px solid #000000" }  
+                      : { border: "1px solid #FFE100" }  
                   }
                   className={`
                     w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm 

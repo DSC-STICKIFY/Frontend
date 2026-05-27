@@ -70,7 +70,7 @@ const CustomerProducts = () => {
                 product_description: product.description || product.product_description,
                 product_price: product.price || product.product_price,
                 product_image: product.image || product.product_image,
-                product_quantity: product.quantity || 1,
+                product_quantity: product.product_quantity ?? product.quantity ?? 0,
             });
         } else {
             setSelectedSticker({
