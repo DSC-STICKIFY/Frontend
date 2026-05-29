@@ -4,6 +4,7 @@ import {
     fetchStaffPendingValidation,
     staffSubmitValidation,
 } from "../../services/customValidationAPI";
+import CustomizationAPI from "../../services/CustomizationAPI";
 
 const REJECTION_REASONS = [
     "Requested material is out of stock",
@@ -14,7 +15,14 @@ const REJECTION_REASONS = [
     "Custom note (see below)",
 ];
 
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status, isCust }) => {
+    if (isCust) {
+        return (
+            <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">
+                ⏳ Pending Feasibility Check (V3 Customization)
+            </span>
+        );
+    }
     const styles = {
         pending_validation:  "bg-orange-50 text-orange-700 border-orange-200",
         can_accommodate:     "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -45,8 +53,9 @@ const ValidationModal = ({ order, onClose, onSubmit }) => {
 
     if (!order) return null;
 
-    const requestedQty = order.order_details?.[0]?.quantity || order.quantity || "—";
-    const designUrl = order.final_design_url
+    const isCust = order.isCustomizationRequest;
+    const requestedQty = isCust ? order.quantity : (order.order_details?.[0]?.quantity || order.quantity || "—");
+    const designUrl = (!isCust && order.final_design_url)
         ? `${IMAGE_BASE_URL}${order.final_design_url.startsWith("/") ? order.final_design_url.slice(1) : order.final_design_url}`
         : null;
 
@@ -55,12 +64,30 @@ const ValidationModal = ({ order, onClose, onSubmit }) => {
         setSubmitting(true);
         const finalReason = rejectionReason === "Custom note (see below)" ? customRejection : rejectionReason;
         try {
-            await onSubmit(order.order_id, {
-                validation_status:  validationStatus,
-                staff_note:         staffNote.trim() || null,
-                approved_quantity:  validationStatus === "partially_accommodate" ? parseInt(approvedQty) : null,
-                rejection_reason:   validationStatus === "cannot_accommodate" ? finalReason : null,
-            });
+            if (isCust) {
+                // V3 submit feasibility
+                const payload = {
+                    validation_status: validationStatus,
+                    validation_notes: staffNote.trim() || null,
+                };
+                if (validationStatus === "partially_accommodate") {
+                    payload.approved_quantity = parseInt(approvedQty) || null;
+                }
+                await onSubmit(order.id, payload, true);
+            } else {
+                // Cart custom order validation
+                const payload = {
+                    validation_status: validationStatus,
+                    staff_note: staffNote.trim() || null,
+                };
+                if (validationStatus === "partially_accommodate") {
+                    payload.approved_quantity = parseInt(approvedQty) || null;
+                }
+                if (validationStatus === "cannot_accommodate") {
+                    payload.rejection_reason = finalReason;
+                }
+                await onSubmit(order.order_id, payload, false);
+            }
             onClose();
         } catch (err) {
             alert("Error: Failed to submit validation.");
@@ -75,53 +102,48 @@ const ValidationModal = ({ order, onClose, onSubmit }) => {
                 <div className="p-8">
                     <h3 className="text-2xl font-black italic uppercase tracking-tighter text-gray-900 mb-1">Manual Feasibility Check</h3>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-6">
-                        Order #{order.order_number} — {order.name || "Customer"}
+                        {isCust ? `Custom Inquiry #${order.id}` : `Order #${order.order_number}`} — {order.name || "Customer"}
                     </p>
 
                     {/* Order Summary */}
                     <div className="bg-slate-50 rounded-2xl p-4 mb-6 space-y-2">
                         <p className="text-xs font-bold text-gray-700">
-                            📦 Product: <span className="font-black text-gray-900">{order.order_details?.[0]?.product_name || "Custom Order"}</span>
+                            📦 Product: <span className="font-black text-gray-900">{isCust ? order.product_name : (order.order_details?.[0]?.product_name || "Custom Order")}</span>
                         </p>
                         <p className="text-xs font-bold text-gray-700">
                             🔢 Requested Qty: <span className="font-black text-gray-900">{requestedQty} pcs</span>
                         </p>
-                        {order.order_details?.[0]?.size && (
+                        {(isCust ? order.size_requested : order.order_details?.[0]?.size) && (
                             <p className="text-xs font-bold text-gray-700">
-                                📐 Size: <span className="font-black text-gray-900">{order.order_details[0].size}</span>
+                                📐 Size: <span className="font-black text-gray-900">{isCust ? order.size_requested : order.order_details[0].size}</span>
                             </p>
                         )}
-                        {order.order_details?.[0]?.comments && order.order_details[0].comments !== "None" && (
+                        {isCust && order.material_type && (
+                            <p className="text-xs font-bold text-gray-700">
+                                ✨ Material: <span className="font-black text-gray-900">{order.material_type}</span>
+                            </p>
+                        )}
+                        {(isCust ? order.instructions : order.order_details?.[0]?.comments) && (
                             <div className="mt-2 pt-2 border-t border-slate-200">
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Customer Instructions:</p>
-                                <p className="text-xs text-gray-700 italic">"{order.order_details[0].comments}"</p>
+                                <p className="text-xs text-gray-700 italic">"{isCust ? order.instructions : order.order_details[0].comments}"</p>
                             </div>
                         )}
                         
-                        {/* Customer Uploaded Design Details */}
-                        {order.order_details?.[0]?.custom_design_image && (
+                        {/* Reference Image */}
+                        {(isCust ? order.reference_image : order.order_details?.[0]?.custom_design_image) && (
                             <div className="pt-2 mt-2 border-t border-slate-200 space-y-2">
                                 <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">
                                     📸 Customer Reference Image:
                                 </p>
                                 <div className="relative group w-32 rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition">
                                     <img
-                                        src={getImageUrl(order.order_details[0].custom_design_image)}
+                                        src={getImageUrl(isCust ? order.reference_image : order.order_details[0].custom_design_image)}
                                         alt="Customer Reference"
                                         className="w-full h-24 object-cover cursor-zoom-in group-hover:scale-105 transition-transform"
-                                        onClick={() => window.open(getImageUrl(order.order_details[0].custom_design_image), "_blank")}
+                                        onClick={() => window.open(getImageUrl(isCust ? order.reference_image : order.order_details[0].custom_design_image), "_blank")}
                                     />
                                 </div>
-                            </div>
-                        )}
-                        {order.order_details?.[0]?.custom_design_comments && (
-                            <div className="pt-2 mt-2 border-t border-slate-200">
-                                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">
-                                    💬 Customer Request / Message:
-                                </p>
-                                <p className="text-xs text-slate-700 font-bold bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm leading-relaxed">
-                                    "{order.order_details[0].custom_design_comments}"
-                                </p>
                             </div>
                         )}
 
@@ -251,8 +273,29 @@ export default function StaffValidationQueue() {
     const loadOrders = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await fetchStaffPendingValidation();
-            setOrders(data);
+            const [validations, customizationsData] = await Promise.all([
+                fetchStaffPendingValidation(),
+                CustomizationAPI.fetchAllCustomizations(),
+            ]);
+
+            // Map standard validations
+            const mappedOrders = (Array.isArray(validations) ? validations : []).map(o => ({
+                ...o,
+                isCustomizationRequest: false,
+            }));
+
+            // Filter customizations that are in 'pending_feasibility' status
+            const pendingCusts = (Array.isArray(customizationsData) ? customizationsData : [])
+                .filter(c => c.status === 'pending_feasibility')
+                .map(c => ({
+                    ...c,
+                    isCustomizationRequest: true,
+                    order_number: `CUST-#${c.id}`,
+                    name: c.customer ? `${c.customer.first_name} ${c.customer.last_name}` : "N/A",
+                    payment_method: "V3 Customization Flow"
+                }));
+
+            setOrders([...mappedOrders, ...pendingCusts]);
         } catch (err) {
             console.error("Failed to load pending validations:", err);
         } finally {
@@ -262,14 +305,21 @@ export default function StaffValidationQueue() {
 
     useEffect(() => { loadOrders(); }, [loadOrders]);
 
-    const handleSubmit = async (orderId, payload) => {
-        await staffSubmitValidation(orderId, payload);
-        const verdicts = {
-            can_accommodate:      "✅ Marked as Can Accommodate!",
-            partially_accommodate:"⚠️ Partial accommodation recorded.",
-            cannot_accommodate:   "❌ Order marked as Cannot Accommodate.",
-        };
-        showToast(verdicts[payload.validation_status] || "Validation submitted.");
+    const handleSubmit = async (id, payload, isCustomizationRequest) => {
+        if (isCustomizationRequest) {
+            // V3 payload matches submitFeasibility parameters:
+            // validation_status, validation_notes?, approved_quantity?
+            await CustomizationAPI.submitFeasibility(id, payload);
+            showToast("✅ Customization feasibility review submitted!");
+        } else {
+            await staffSubmitValidation(id, payload);
+            const verdicts = {
+                can_accommodate:      "✅ Marked as Can Accommodate!",
+                partially_accommodate:"⚠️ Partial accommodation recorded.",
+                cannot_accommodate:   "❌ Order marked as Cannot Accommodate.",
+            };
+            showToast(verdicts[payload.validation_status] || "Validation submitted.");
+        }
         await loadOrders();
     };
 
@@ -299,7 +349,7 @@ export default function StaffValidationQueue() {
                     Feasibility Check Queue
                 </h1>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    Manually verify if custom orders can be accommodated before artist assignment
+                    Manually verify if custom orders or customizations can be accommodated before proceeding
                 </p>
             </header>
 
@@ -321,72 +371,87 @@ export default function StaffValidationQueue() {
             ) : (
                 <div className="space-y-4">
                     {orders.map(order => {
-                        const firstItem  = order.order_details?.[0] || {};
-                        const designUrl  = order.final_design_url
+                        const isCust = order.isCustomizationRequest;
+                        const firstItem  = isCust ? {} : (order.order_details?.[0] || {});
+                        
+                        const designUrl = (!isCust && order.final_design_url)
                             ? `${IMAGE_BASE_URL}${order.final_design_url.startsWith("/") ? order.final_design_url.slice(1) : order.final_design_url}`
                             : null;
 
+                        const productName = isCust ? order.product_name : (firstItem.product_name || "Custom Item");
+                        const requestedQty = isCust ? order.quantity : (firstItem.quantity || "—");
+                        const size = isCust ? order.size_requested : firstItem.size;
+                        const comments = isCust ? order.instructions : firstItem.comments;
+                        const referenceImage = isCust ? order.reference_image : firstItem.custom_design_image;
+                        const referenceComments = isCust ? null : firstItem.custom_design_comments;
+
                         return (
-                            <div key={order.order_id}
+                            <div key={isCust ? `cust-${order.id}` : `order-${order.order_id}`}
                                 className="bg-white rounded-3xl shadow-md border border-gray-100 p-6 hover:shadow-xl transition-shadow duration-300">
                                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                                     <div className="space-y-2 flex-1">
                                         <div className="flex items-center gap-3 flex-wrap">
                                             <span className="font-black text-gray-900 text-sm">{order.order_number}</span>
-                                            <StatusBadge status={order.staff_validation_status}/>
+                                            <StatusBadge status={order.staff_validation_status} isCust={isCust}/>
                                             <span className="text-[10px] font-bold text-gray-400 uppercase">{order.payment_method}</span>
                                         </div>
 
                                         <div className="flex flex-col gap-1">
                                             <p className="text-xs font-bold text-gray-700">
                                                 👤 Customer: <span className="font-black text-gray-900">
-                                                    {order.user ? `${order.user.first_name} ${order.user.last_name}` : "N/A"}
+                                                    {order.user ? `${order.user.first_name} ${order.user.last_name}` : (order.name || "N/A")}
                                                 </span>
                                             </p>
                                             <p className="text-xs font-bold text-gray-700">
-                                                📦 Product: <span className="font-black text-gray-900">{firstItem.product_name || "Custom Item"}</span>
+                                                📦 Product: <span className="font-black text-gray-900">{productName}</span>
                                             </p>
                                             <p className="text-xs font-bold text-gray-700">
-                                                🔢 Requested Qty: <span className="font-black text-gray-900">{firstItem.quantity || "—"} pcs</span>
+                                                🔢 Requested Qty: <span className="font-black text-gray-900">{requestedQty} pcs</span>
                                             </p>
-                                            {firstItem.size && (
+                                            {size && (
                                                 <p className="text-xs font-bold text-gray-700">
-                                                    📐 Size: <span className="font-black text-gray-900">{firstItem.size}</span>
+                                                    📐 Size: <span className="font-black text-gray-900">{size}</span>
+                                                </p>
+                                            )}
+                                            {isCust && order.material_type && (
+                                                <p className="text-xs font-bold text-gray-700">
+                                                    ✨ Material: <span className="font-black text-gray-900">{order.material_type}</span>
                                                 </p>
                                             )}
                                         </div>
 
                                         {/* Customer instructions */}
-                                        {firstItem.comments && firstItem.comments !== "None" && (
+                                        {comments && comments !== "None" && (
                                             <div className="bg-slate-50 rounded-xl p-3 mt-2">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Customer Instructions</p>
-                                                <p className="text-xs text-slate-700 italic">"{firstItem.comments}"</p>
+                                                <p className="text-xs text-slate-700 italic">"{comments}"</p>
                                             </div>
                                         )}
 
-                                        {/* Customer Uploaded Design Details */}
-                                        {firstItem.custom_design_image && (
+                                        {/* Reference Image */}
+                                        {referenceImage && (
                                             <div className="pt-3 mt-3 border-t border-slate-100 space-y-2">
                                                 <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">
                                                     📸 Customer Reference Image:
                                                 </p>
                                                 <div className="relative group w-32 rounded-xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition">
                                                     <img
-                                                        src={getImageUrl(firstItem.custom_design_image)}
+                                                        src={getImageUrl(referenceImage)}
                                                         alt="Customer Reference"
                                                         className="w-full h-24 object-cover cursor-zoom-in group-hover:scale-105 transition-transform"
-                                                        onClick={() => window.open(getImageUrl(firstItem.custom_design_image), "_blank")}
+                                                        onClick={() => window.open(getImageUrl(referenceImage), "_blank")}
                                                     />
                                                 </div>
                                             </div>
                                         )}
-                                        {firstItem.custom_design_comments && (
+
+                                        {referenceComments && (
                                             <div className="pt-2 mt-2 border-t border-slate-100">
                                                 <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-1">
                                                     💬 Customer Request / Message:
                                                 </p>
                                                 <p className="text-xs text-slate-700 font-bold bg-slate-50/50 p-3 rounded-xl border border-slate-200/60 leading-relaxed">
-                                                    "{firstItem.custom_design_comments}"
+                                                    "{referenceComments}"
                                                 </p>
                                             </div>
                                         )}

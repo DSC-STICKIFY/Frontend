@@ -1361,7 +1361,7 @@ const AddProductForm = ({
               </div>
             ))}
           </div>
-        ) : !isCarService && !isMotorService ? (
+        ) : !isCarService && !isMotorService && !formValues.is_customizable ? (
           <div>
             <label className="block text-sm font-semibold mb-2 text-gray-700">
               Price <span className="text-red-500">*</span>
@@ -1847,6 +1847,11 @@ const ProductTable = ({
                               </div>
                             )
                           ) : (
+                          (key === "product_price" && (isEditing ? (tempValues.is_customizable !== undefined ? tempValues.is_customizable : item.is_customizable) : item.is_customizable)) ? (
+                            <div className="text-gray-400 italic text-xs font-semibold px-4 py-2">
+                              N/A (Customizable)
+                            </div>
+                          ) : (
                             <input
                               type={key.includes("price") ? "number" : "text"}
                               value={
@@ -1874,6 +1879,7 @@ const ProductTable = ({
                                 : "bg-gray-50 border border-gray-100 focus:bg-white focus:border-yellow-400 focus:ring-4 focus:ring-yellow-400/10"
                                 } ${key.includes("price") ? "text-yellow-700" : ""}`}
                             />
+                          )
                           )
                         )}
                       </td>

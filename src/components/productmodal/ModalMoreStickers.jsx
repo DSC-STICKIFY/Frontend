@@ -4,11 +4,11 @@ import { useUI } from "../../context/UIContext";
 import { useAuth } from "../../context/CustomerAuthContext";
 import { useCart } from "../../context/CartContext";
 import LoginRegisterModal from "../LoginRegisterModal";
-import DesignChatbox from "../DesignChatbox";
 import { getBestPromo, getDiscountedPrice } from "../PromoTag";
 import PromoApi from "../../services/PromoApi";
 import { getImageUrl } from "../../services/api";
 import CartToast from "../CartToast";
+import ModalRequestCustomization from "../modals/ModalRequestCustomization";
 
 const CHECKOUT_STORAGE_KEY = "stickify_checkout_data";
 
@@ -18,7 +18,6 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
     const timer = setTimeout(() => {
       if (rightPanelRef.current) {
         rightPanelRef.current.scrollTop = 0;
-        // Also scroll the window/body just in case
         window.scrollTo(0, 0);
       }
     }, 50);
@@ -61,6 +60,7 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
   const [submitError, setSubmitError] = useState(null);
   const [showToast, setShowToast] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showCustomizationRequest, setShowCustomizationRequest] = useState(false);
   const [promos, setPromos] = useState([]);
   const subtotalRef = useRef(null);
 
@@ -262,6 +262,199 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
     }
   }, [selectedSizeObj, selectedLegacySize]);
 
+  // ─── CUSTOMIZABLE PRODUCT LAYOUT ──────────────────────────────────────────
+  if (isCustomizableProduct) {
+    return (
+      <>
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4"
+          onClick={onClose}
+        >
+          <div
+            className="bg-white sm:rounded-[44px] rounded-t-[36px] shadow-2xl w-full max-w-lg overflow-hidden relative flex flex-col"
+            style={{ maxHeight: "93vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close — spins 90deg + turns dark on hover */}
+            <button
+              onClick={onClose}
+              className="absolute top-5 right-5 z-30 w-10 h-10 flex items-center justify-center bg-gray-100 rounded-full text-gray-400 text-lg font-bold leading-none
+                transition-all duration-200
+                hover:bg-gray-900 hover:text-white hover:scale-110 hover:rotate-90
+                active:scale-95"
+            >
+              ×
+            </button>
+
+            {/* Hero */}
+            <div className="relative w-full overflow-hidden flex-shrink-0" style={{ height: "260px" }}>
+              <img
+                src={getPreviewImage()}
+                alt={sticker?.title}
+                className="w-full h-full object-cover"
+                style={{ filter: "saturate(1.05)" }}
+              />
+              <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-white via-white/60 to-transparent" />
+
+              {/* Badge — subtle spring lift on hover */}
+              <div className="absolute top-5 left-5 flex items-center gap-1.5 bg-[#FFE100] text-black text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-md
+                transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-default">
+                <span className="w-1.5 h-1.5 rounded-full bg-black/30 inline-block" />
+                Custom Order
+              </div>
+            </div>
+
+            {/* Scrollable body */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
+              <div className="px-10 pb-12 space-y-8 mt-1">
+
+                {/* Title */}
+                <div className="space-y-2">
+                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-yellow-500">
+                    Premium Sticker Sheets
+                  </p>
+                  <h2 className="text-[34px] font-black text-gray-900 tracking-tight leading-none">
+                    {sticker?.title || "Custom Stickers"}
+                  </h2>
+                  {description && (
+                    <p className="text-sm text-gray-400 font-medium leading-relaxed pt-1">
+                      {description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Feature cards — icon bounces, card lifts */}
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { icon: "", label: "Any Size", sub: "Custom dimensions" },
+                    { icon: "", label: "Your Artwork", sub: "Upload your file" },
+                    { icon: "", label: "Get Quoted", sub: "Manual pricing" },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="group rounded-2xl p-5 flex flex-col gap-2 border border-gray-100 cursor-default
+                        transition-all duration-200
+                        hover:border-yellow-300 hover:shadow-md hover:shadow-yellow-100 hover:-translate-y-1 hover:bg-[#fffde8]"
+                      style={{ background: "#fafafa" }}
+                    >
+                      <span className="text-2xl transition-transform duration-300 group-hover:scale-125 group-hover:-rotate-6 inline-block">{item.icon}</span>
+                      <p className="text-[10px] font-black text-gray-800 uppercase tracking-wide leading-tight">{item.label}</p>
+                      <p className="text-[9px] text-gray-400 font-medium leading-tight">{item.sub}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="h-px bg-gray-100" />
+
+                {/* How it works — row slides right, badge flips yellow */}
+                <div className="space-y-1">
+                  <p className="text-[9px] font-black uppercase tracking-[0.25em] text-gray-300 mb-4">
+                    How It Works
+                  </p>
+                  {[
+                    { step: "01", title: "Submit Your Request", text: "Choose size, quantity and upload your design reference." },
+                    { step: "02", title: "Receive a Custom Quote", text: "Our artist reviews your specs and sends a tailored price." },
+                    { step: "03", title: "Approve & We Print", text: "Confirm the quote and we handle production end-to-end." },
+                  ].map((s, i) => (
+                    <div
+                      key={s.step}
+                      className="group flex gap-5 items-start p-3 rounded-2xl cursor-default
+                        transition-all duration-200
+                        hover:bg-gray-50 hover:translate-x-1"
+                    >
+                      <div
+                        className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 text-[11px] font-black
+                          transition-all duration-200
+                          group-hover:scale-110 group-hover:shadow-md group-hover:shadow-yellow-200"
+                        style={{
+                          background: i === 0 ? "#FFE100" : "#f3f3f3",
+                          color: i === 0 ? "#000" : "#bbb",
+                        }}
+                        // non-active badges flip to yellow on hover via inline style trick using group
+                      >
+                        <span
+                          className="transition-colors duration-200"
+                          style={{ color: i === 0 ? "#000" : undefined }}
+                        >
+                          {s.step}
+                        </span>
+                      </div>
+                      <div className="pt-1.5 space-y-1">
+                        <p className="text-[12px] font-black text-gray-800 uppercase tracking-wide transition-colors duration-200 group-hover:text-gray-900">{s.title}</p>
+                        <p className="text-[11px] text-gray-400 font-medium leading-snug transition-colors duration-200 group-hover:text-gray-500">{s.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="h-px bg-gray-100" />
+
+                {/* CTA block */}
+                <div className="space-y-4 pb-2">
+                  {/* Main CTA — lifts, arrow slides right */}
+                  <button
+                    onClick={() => {
+                      if (!currentUser) {
+                        setShowAuthModal(true);
+                      } else {
+                        setShowCustomizationRequest(true);
+                      }
+                    }}
+                    className="group/btn w-full py-6 rounded-[22px] font-black uppercase tracking-widest text-sm
+                      flex items-center justify-center gap-3
+                      transition-all duration-200
+                      hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-yellow-300/50 active:scale-[0.98] active:translate-y-0"
+                    style={{ background: "#FFE100", color: "#000", boxShadow: "0 6px 24px rgba(255,225,0,0.35)" }}
+                  >
+                    Request Customization
+                    <span className="w-7 h-7 rounded-full bg-black/10 flex items-center justify-center text-sm
+                      transition-transform duration-200 group-hover/btn:translate-x-1.5">
+                      →
+                    </span>
+                  </button>
+
+                  {/* Trust row — items lift individually */}
+                  <div className="flex items-center justify-center gap-4">
+                    {[
+                      { icon: "✓", text: "Free Consult" },
+                      { icon: "✓", text: "No Upfront Fee" },
+                      { icon: "✓", text: "Artist Support" },
+                    ].map((t, i) => (
+                      <React.Fragment key={t.text}>
+                        {i > 0 && <span className="text-gray-200">|</span>}
+                        <span className="text-[9px] font-bold text-gray-400 flex items-center gap-1.5
+                          transition-all duration-200 hover:text-gray-600 hover:-translate-y-0.5 cursor-default">
+                          <span className="text-yellow-400 font-black transition-transform duration-200 hover:scale-125 inline-block">{t.icon}</span>
+                          {t.text}
+                        </span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {showAuthModal && <LoginRegisterModal onClose={() => setShowAuthModal(false)} />}
+
+        {showCustomizationRequest && (
+          <ModalRequestCustomization
+            product={{
+              id: sticker.id || sticker.product_id,
+              title: sticker.title || sticker.product_name,
+              sizes: sticker.sizes || [],
+              category: "Stickers",
+            }}
+            onClose={() => setShowCustomizationRequest(false)}
+          />
+        )}
+      </>
+    );
+  }
+
+  // ─── STANDARD PRODUCT LAYOUT ──────────────────────────────────────────────
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-4" onClick={onClose}>
@@ -270,37 +463,32 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
           style={{ height: window.innerWidth < 768 ? "95vh" : "90vh", maxHeight: "95vh" }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Close Button - Responsive Position */}
+          {/* Close — spins + darkens */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-5 sm:top-8 sm:right-10 z-30 w-10 h-10 flex items-center justify-center bg-white/80 sm:bg-transparent backdrop-blur-sm sm:backdrop-blur-none rounded-full text-2xl font-bold text-gray-400 hover:text-black transition-all shadow-sm sm:shadow-none"
+            className="absolute top-4 right-5 sm:top-8 sm:right-10 z-30 w-10 h-10 flex items-center justify-center bg-white/80 sm:bg-gray-100 backdrop-blur-sm sm:backdrop-blur-none rounded-full text-2xl font-bold text-gray-400
+              transition-all duration-200
+              hover:bg-gray-900 hover:text-white hover:scale-110 hover:rotate-90
+              active:scale-95
+              shadow-sm sm:shadow-none"
           >
             ×
           </button>
 
           <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
-            {/* LEFT Panel (Info & Pricing/Chat) */}
-            <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 md:overflow-hidden bg-gray-50/30">
-
-              <div className="flex-shrink-0 p-5 sm:p-8 pb-4 flex flex-col gap-4 md:overflow-y-auto custom-scrollbar" style={{ maxHeight: window.innerWidth >= 768 ? "55%" : "none" }}>
+            {/* LEFT Panel */}
+            <div className="w-full md:w-1/2 flex flex-col border-r border-gray-100 md:overflow-y-auto custom-scrollbar bg-gray-50/30">
+              <div className="p-5 sm:p-8 flex flex-col gap-4">
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">{sticker?.title || "More Stickers"}</h2>
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     <p className="text-xs sm:text-sm font-bold text-yellow-600 uppercase tracking-widest italic">Premium Sticker Sheets</p>
-                    {!isCustomizableProduct && (
-                      isOutOfStock ? (
-                        <span className="text-[10px] font-black uppercase bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full border border-red-200">
-                          Sold Out
-                        </span>
-                      ) : stockCount <= 5 ? (
-                        <span className="text-[10px] font-black uppercase bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full border border-amber-200 animate-pulse">
-                          Only {stockCount} Left!
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                          {stockCount} In Stock
-                        </span>
-                      )
+                    {isOutOfStock ? (
+                      <span className="text-[10px] font-black uppercase bg-red-100 text-red-700 px-2.5 py-0.5 rounded-full border border-red-200">Sold Out</span>
+                    ) : stockCount <= 5 ? (
+                      <span className="text-[10px] font-black uppercase bg-amber-100 text-amber-700 px-2.5 py-0.5 rounded-full border border-amber-200 animate-pulse">Only {stockCount} Left!</span>
+                    ) : (
+                      <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200">{stockCount} In Stock</span>
                     )}
                   </div>
                 </div>
@@ -321,21 +509,33 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                       <tbody className="divide-y divide-gray-50">
                         {sizes.map(({ size, pieces }) => {
                           const isSelected = selectedLegacySize === size;
-                          const isOutOfStockForSize = pieces > stockCount; // Disable if pieces exceed stock
+                          const isOutOfStockForSize = pieces > stockCount;
                           const sizeRawPrice = sizePricing[size] || dbPrice;
                           const sizeDiscounted = getDiscountedPrice(sizeRawPrice, promo);
                           const sizeHasDiscount = sizeDiscounted !== sizeRawPrice && promo && (promo.discount_type === "percentage" || promo.discount_type === "fixed");
-                          const rowClass = `group cursor-pointer transition-colors ${isSelected ? 'bg-yellow-50/30' : 'hover:bg-gray-50/50'} ${isOutOfStockForSize ? 'opacity-50 cursor-not-allowed' : ''}`;
-                          const handleClick = () => {
-                            if (!isOutOfStockForSize) setSelectedLegacySize(size);
-                          };
                           return (
-                            <tr key={size} className={rowClass} onClick={handleClick}>
-                              <td className="py-2.5 sm:py-3 font-bold flex items-center gap-2">
-                                <div className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 flex items-center justify-center transition-all ${isSelected ? 'border-[#FFE100]' : 'border-gray-200'}`}>
-                                  {isSelected && <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#FFE100]" />}
+                            <tr
+                              key={size}
+                              onClick={() => { if (!isOutOfStockForSize) setSelectedLegacySize(size); }}
+                              className={`
+                                cursor-pointer
+                                transition-all duration-150
+                                ${isSelected
+                                  ? "bg-yellow-50/60"
+                                  : "hover:bg-gray-50 hover:translate-x-0.5"
+                                }
+                                ${isOutOfStockForSize ? "opacity-50 cursor-not-allowed" : ""}
+                              `}
+                            >
+                              <td className="py-2.5 sm:py-3 font-bold">
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 flex items-center justify-center transition-all duration-150 ${isSelected ? "border-[#FFE100]" : "border-gray-200"}`}>
+                                    {isSelected && (
+                                      <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-[#FFE100] animate-[scale-in_0.15s_ease-out]" />
+                                    )}
+                                  </div>
+                                  <span className="text-gray-700 text-[11px] sm:text-xs">{size}</span>
                                 </div>
-                                <span className="text-gray-700 text-[11px] sm:text-xs">{size}</span>
                               </td>
                               <td className="py-2.5 sm:py-3 text-gray-500 font-medium text-[11px] sm:text-xs">{pieces} pcs</td>
                               <td className="py-2.5 sm:py-3 text-right">
@@ -356,37 +556,17 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                   </div>
                 )}
               </div>
-
-              {/* Chatbox Panel */}
-              <div className="flex-1 min-h-[300px] md:min-h-0 px-5 sm:px-8 pb-8 pt-2">
-                {isCustomMode ? (
-                  <DesignChatbox
-                    onImageUpload={(img) => {
-                      setUploadedImage({ preview: img });
-                      setSubmitError(null);
-                    }}
-                    productId={sticker.product_id || sticker.id}
-                  />
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center p-6 bg-white rounded-3xl border border-gray-100 shadow-sm text-center">
-                    <span className="text-4xl mb-3">📦</span>
-                    <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Standard / Readymade Order</h4>
-                    <p className="text-xs text-gray-400 mt-2 max-w-[280px]">
-                      This product will be printed using the standard/default design shown in the preview. No design files or artist approvals are needed.
-                    </p>
-                  </div>
-                )}
-              </div>
             </div>
 
-            {/* RIGHT Panel (Configuration & Checkout) */}
+            {/* RIGHT Panel */}
             <div ref={rightPanelRef} className="w-full md:w-1/2 p-5 sm:p-8 md:overflow-y-auto custom-scrollbar bg-white flex flex-col">
               <div className="flex-1 space-y-6">
                 <div className="space-y-2">
+                  {/* Preview image — zooms on hover */}
                   <div className="rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-inner group flex items-center justify-center">
                     <img
                       src={getPreviewImage()}
-                      className="w-full max-h-48 sm:max-h-56 object-contain transition-transform duration-700 group-hover:scale-105"
+                      className="w-full max-h-48 sm:max-h-56 object-contain transition-transform duration-500 group-hover:scale-105"
                       alt={selectedDesign?.design_name || sticker?.title}
                     />
                   </div>
@@ -395,26 +575,34 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                     <div className="flex flex-col gap-1.5 mt-2">
                       <span className="text-[9px] font-black text-gray-400 uppercase tracking-wider italic">Available Designs Gallery</span>
                       <div className="flex gap-2 overflow-x-auto pb-1.5 pt-0.5 custom-scrollbar">
+                        {/* Design thumbnails — spring scale + yellow ring */}
                         <button
                           onClick={() => setSelectedDesign(null)}
-                          className={`w-12 h-12 rounded-xl border-2 overflow-hidden flex-shrink-0 transition-all hover:scale-105 active:scale-95 ${selectedDesign === null ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-gray-200 hover:border-gray-300'}`}
-                          title="Default Design"
+                          className={`w-12 h-12 rounded-xl border-2 overflow-hidden flex-shrink-0
+                            transition-all duration-200
+                            hover:scale-110 hover:shadow-md active:scale-95
+                            ${selectedDesign === null
+                              ? "border-yellow-400 ring-2 ring-yellow-400/30 scale-105"
+                              : "border-gray-200 hover:border-yellow-300"
+                            }`}
                         >
                           <img src={getImageUrl(sticker?.image || sticker?.product_image)} className="w-full h-full object-cover" alt="Default Design" />
                         </button>
-                        {sticker.designs.map((design) => {
-                          const isActive = selectedDesign?.id === design.id;
-                          return (
-                            <button
-                              key={design.id}
-                              onClick={() => setSelectedDesign(design)}
-                              className={`w-12 h-12 rounded-xl border-2 overflow-hidden flex-shrink-0 transition-all hover:scale-105 active:scale-95 ${isActive ? 'border-yellow-400 ring-2 ring-yellow-400/20' : 'border-gray-200 hover:border-gray-300'}`}
-                              title={design.design_name}
-                            >
-                              <img src={getImageUrl(design.design_image || sticker?.image || sticker?.product_image)} className="w-full h-full object-cover" alt={design.design_name} />
-                            </button>
-                          );
-                        })}
+                        {sticker.designs.map((design) => (
+                          <button
+                            key={design.id}
+                            onClick={() => setSelectedDesign(design)}
+                            className={`w-12 h-12 rounded-xl border-2 overflow-hidden flex-shrink-0
+                              transition-all duration-200
+                              hover:scale-110 hover:shadow-md active:scale-95
+                              ${selectedDesign?.id === design.id
+                                ? "border-yellow-400 ring-2 ring-yellow-400/30 scale-105"
+                                : "border-gray-200 hover:border-yellow-300"
+                              }`}
+                          >
+                            <img src={getImageUrl(design.design_image || sticker?.image || sticker?.product_image)} className="w-full h-full object-cover" alt={design.design_name} />
+                          </button>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -422,16 +610,21 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
 
                 <div>
                   <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 italic">Configuration</h3>
-
                   <div className="space-y-6">
-                    {/* DESIGN SELECTOR */}
                     {(!isCustomizableProduct || hasDbDesigns) && (
                       <div>
                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">1. Choose Design</h3>
                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {/* Design card — lifts + yellow ring on selected */}
                           <button
                             onClick={() => setSelectedDesign(null)}
-                            className={`relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all overflow-hidden ${selectedDesign === null ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+                            className={`relative flex flex-col items-center gap-1 p-2 rounded-xl border-2
+                              transition-all duration-200
+                              hover:-translate-y-0.5 hover:shadow-sm active:scale-95
+                              ${selectedDesign === null
+                                ? "border-yellow-400 bg-yellow-50 shadow-md shadow-yellow-100"
+                                : "border-gray-100 bg-white hover:border-yellow-200"
+                              }`}
                           >
                             <img src={getImageUrl(sticker?.image || sticker?.product_image)} className="w-full aspect-square object-cover rounded-lg bg-gray-50" alt="Standard Design" />
                             <span className="text-[9px] font-bold text-gray-800 text-center leading-tight mt-1 truncate w-full">Standard Design</span>
@@ -441,7 +634,13 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                             <button
                               key={design.id}
                               onClick={() => setSelectedDesign(design)}
-                              className={`relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all overflow-hidden ${selectedDesign?.id === design.id ? 'border-yellow-400 bg-yellow-50' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+                              className={`relative flex flex-col items-center gap-1 p-2 rounded-xl border-2
+                                transition-all duration-200
+                                hover:-translate-y-0.5 hover:shadow-sm active:scale-95
+                                ${selectedDesign?.id === design.id
+                                  ? "border-yellow-400 bg-yellow-50 shadow-md shadow-yellow-100"
+                                  : "border-gray-100 bg-white hover:border-yellow-200"
+                                }`}
                             >
                               <img src={getImageUrl(design.design_image || sticker?.image || sticker?.product_image)} className="w-full aspect-square object-cover rounded-lg bg-gray-50" alt={design.design_name} />
                               <span className="text-[9px] font-bold text-gray-800 text-center leading-tight mt-1 truncate w-full">{design.design_name}</span>
@@ -452,9 +651,6 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                       </div>
                     )}
 
-                    {/* QUALITY SELECTOR REMOVED */}
-
-                    {/* SIZE SELECTOR */}
                     {hasDbSizes && (
                       <div>
                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
@@ -465,7 +661,14 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                             <button
                               key={size.id}
                               onClick={() => setSelectedSizeObj(size)}
-                              className={`px-4 py-2 rounded-xl border-2 text-xs font-bold transition-all flex flex-col items-center justify-center gap-0.5 ${selectedSizeObj?.id === size.id ? 'border-yellow-400 bg-yellow-50 text-gray-900' : 'border-gray-100 bg-white text-gray-600 hover:border-gray-200'}`}
+                              className={`px-4 py-2 rounded-xl border-2 text-xs font-bold
+                                transition-all duration-200
+                                hover:-translate-y-0.5 hover:shadow-sm active:scale-95
+                                flex flex-col items-center justify-center gap-0.5
+                                ${selectedSizeObj?.id === size.id
+                                  ? "border-yellow-400 bg-yellow-50 text-gray-900 shadow-md shadow-yellow-100"
+                                  : "border-gray-100 bg-white text-gray-600 hover:border-yellow-200"
+                                }`}
                             >
                               <span>{size.size_name}</span>
                               {parseFloat(size.additional_price) > 0 && <span className="text-[9px] font-black text-yellow-600">+₱{parseFloat(size.additional_price)}</span>}
@@ -475,25 +678,33 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                       </div>
                     )}
 
+                    {/* Quantity — buttons scale + get white card shadow */}
                     <div className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border border-gray-100">
                       <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Order Quantity</span>
                       <div className="flex items-center gap-1">
-                        <button 
-                          onClick={() => setQuantity(q => Math.max(1, q - 1))} 
-                          className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-gray-400 hover:bg-white hover:shadow-sm rounded-xl transition-all text-xl font-bold"
+                        <button
+                          onClick={() => setQuantity(q => Math.max(1, q - 1))}
                           disabled={isOutOfStock || quantity <= 1}
-                        >−</button>
+                          className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-gray-400 rounded-xl text-xl font-bold
+                            transition-all duration-150
+                            hover:bg-white hover:shadow-sm hover:text-gray-800 hover:scale-110
+                            active:scale-95
+                            disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:shadow-none disabled:hover:scale-100"
+                        >
+                          −
+                        </button>
                         <span className="w-8 text-center font-black text-base sm:text-lg">{quantity}</span>
-                        <button 
-                          onClick={() => setQuantity(q => {
-                            if (!isCustomizableProduct) {
-                              return Math.min(stockCount, q + 1);
-                            }
-                            return q + 1;
-                          })} 
-                          className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-gray-400 hover:bg-white hover:shadow-sm rounded-xl transition-all text-xl font-bold"
+                        <button
+                          onClick={() => setQuantity(q => { if (!isCustomizableProduct) { return Math.min(stockCount, q + 1); } return q + 1; })}
                           disabled={isOutOfStock || (!isCustomizableProduct && quantity >= stockCount)}
-                        >+</button>
+                          className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center text-gray-400 rounded-xl text-xl font-bold
+                            transition-all duration-150
+                            hover:bg-white hover:shadow-sm hover:text-gray-800 hover:scale-110
+                            active:scale-95
+                            disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:shadow-none disabled:hover:scale-100"
+                        >
+                          +
+                        </button>
                       </div>
                     </div>
 
@@ -513,11 +724,21 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                   </div>
                 </div>
 
+                {/* Payment method — border + bg animate on hover/selected */}
                 <div>
                   <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 italic">Payment Method</h3>
                   <div className="grid grid-cols-1 gap-2">
                     {["COD", "GCash", "Pickup"].map((id) => (
-                      <label key={id} className={`flex items-center gap-4 p-3.5 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all ${paymentMethod === id ? "border-[#FFE100] bg-yellow-50/30" : "border-gray-50 hover:border-gray-100"}`}>
+                      <label
+                        key={id}
+                        className={`flex items-center gap-4 p-3.5 sm:p-4 rounded-2xl border-2 cursor-pointer
+                          transition-all duration-200
+                          hover:-translate-y-0.5 hover:shadow-sm
+                          ${paymentMethod === id
+                            ? "border-[#FFE100] bg-yellow-50/40 shadow-sm shadow-yellow-100"
+                            : "border-gray-100 hover:border-yellow-200 hover:bg-yellow-50/20"
+                          }`}
+                      >
                         <input type="radio" checked={paymentMethod === id} onChange={() => setPaymentMethod(id)} className="w-4 h-4 sm:w-5 sm:h-5 accent-yellow-500" />
                         <span className="text-xs sm:text-sm font-bold text-gray-700">{id === "COD" ? "Cash on Delivery" : id === "Pickup" ? "Store Pickup" : "GCash"}</span>
                       </label>
@@ -525,8 +746,10 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                   </div>
                 </div>
 
-                <div ref={subtotalRef} className="bg-gray-900 rounded-[28px] sm:rounded-[32px] p-6 sm:p-8 text-white shadow-2xl shadow-gray-200 relative overflow-hidden group mt-4">
-                  <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-white/5 rounded-full -mr-12 -mt-12 sm:-mr-16 sm:-mt-16 transition-transform group-hover:scale-110"></div>
+                {/* Subtotal card */}
+                <div ref={subtotalRef} className="bg-gray-900 rounded-[28px] sm:rounded-[32px] p-6 sm:p-8 text-white shadow-2xl shadow-gray-200 relative overflow-hidden group mt-4
+                  transition-all duration-300 hover:shadow-gray-300">
+                  <div className="absolute top-0 right-0 w-24 h-24 sm:w-32 sm:h-32 bg-white/5 rounded-full -mr-12 -mt-12 sm:-mr-16 sm:-mt-16 transition-transform duration-300 group-hover:scale-125" />
                   <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Estimated Total</p>
                   <div className="flex items-baseline gap-1">
                     <span className="text-lg sm:text-xl font-bold text-yellow-400">₱</span>
@@ -539,30 +762,40 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
               </div>
 
               <div className="mt-8 space-y-3 sm:space-y-4">
+                {/* Checkout CTA — lifts + shadow blooms, arrow slides */}
                 <button
                   onClick={handleBuyNow}
-                  disabled={isOutOfStock || isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview)}
-                  className={`w-full py-5 sm:py-6 rounded-[20px] sm:rounded-[24px] font-black uppercase tracking-widest text-xs sm:text-sm transition-all active:scale-[0.98] shadow-xl
-                    ${(isOutOfStock || isSubmitting || subtotal <= 0 || !paymentMethod || (isCustomMode && !uploadedImage?.preview))
-                      ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                      : "bg-[#FFE100] text-black hover:bg-yellow-400"
+                  disabled={isOutOfStock || isSubmitting || subtotal <= 0 || !paymentMethod}
+                  className={`group/checkout w-full py-5 sm:py-6 rounded-[20px] sm:rounded-[24px] font-black uppercase tracking-widest text-xs sm:text-sm
+                    transition-all duration-200 active:scale-[0.97]
+                    flex items-center justify-center gap-3
+                    ${(isOutOfStock || isSubmitting || subtotal <= 0 || !paymentMethod)
+                      ? "bg-gray-100 text-gray-300 cursor-not-allowed shadow-none"
+                      : "bg-[#FFE100] text-black shadow-xl shadow-yellow-200/60 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-yellow-300/50"
                     }`}
                 >
-                  {isOutOfStock ? "SOLD OUT / OUT OF STOCK" : ((isCustomMode && !uploadedImage?.preview) ? "Upload Design to Proceed" : (isSubmitting ? "Processing..." : "Proceed to Checkout"))}
+                  {isOutOfStock ? "SOLD OUT / OUT OF STOCK" : (isSubmitting ? "Processing..." : (
+                    <>
+                      Proceed to Checkout
+                      <span className="w-6 h-6 rounded-full bg-black/10 flex items-center justify-center text-sm
+                        transition-transform duration-200 group-hover/checkout:translate-x-1">
+                        →
+                      </span>
+                    </>
+                  ))}
                 </button>
+
+                {/* Add to Cart — inverts to dark on hover */}
                 <div className="relative">
                   <button
                     onClick={handleAddToCart}
-                    disabled={isOutOfStock || (isCustomMode && !uploadedImage?.preview)}
-                    style={
-                      (isOutOfStock || (isCustomMode && !uploadedImage?.preview))
-                        ? { border: "1px solid #e5e7eb" }
-                        : { border: "1px solid #FFE100" }
-                    }
-                    className={`w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm transition-all duration-200 active:scale-[0.98]
-                      ${(isOutOfStock || (isCustomMode && !uploadedImage?.preview))
+                    disabled={isOutOfStock}
+                    style={isOutOfStock ? { border: "1px solid #e5e7eb" } : { border: "1.5px solid #FFE100" }}
+                    className={`w-full py-5 rounded-[24px] font-black uppercase tracking-widest text-sm
+                      transition-all duration-200 active:scale-[0.97]
+                      ${isOutOfStock
                         ? "bg-white text-gray-300 cursor-not-allowed"
-                        : "bg-white text-gray-900 hover:bg-gray-900 hover:text-white"
+                        : "bg-white text-gray-900 hover:bg-gray-900 hover:text-white hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-200"
                       }`}
                   >
                     Add to Cart
@@ -575,11 +808,7 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                   {showToast && (
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-[100]">
                       <CartToast
-                        onViewCart={() => {
-                          setShowToast(false);
-                          onClose();
-                          navigate("/cart");
-                        }}
+                        onViewCart={() => { setShowToast(false); onClose(); navigate("/cart"); }}
                         onClose={() => setShowToast(false)}
                       />
                     </div>
@@ -588,7 +817,6 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
                 {submitError && <p className="text-red-500 text-[9px] sm:text-[10px] text-center font-black uppercase tracking-widest mt-4">{submitError}</p>}
               </div>
 
-              {/* Extra spacer for mobile bottom padding */}
               <div className="h-10 md:hidden" />
             </div>
           </div>
@@ -596,6 +824,18 @@ const ModalMoreStickers = ({ sticker, onClose }) => {
       </div>
 
       {showAuthModal && <LoginRegisterModal onClose={() => setShowAuthModal(false)} />}
+
+      {showCustomizationRequest && (
+        <ModalRequestCustomization
+          product={{
+            id: sticker.id || sticker.product_id,
+            title: sticker.title || sticker.product_name,
+            sizes: sticker.sizes || [],
+            category: "Stickers",
+          }}
+          onClose={() => setShowCustomizationRequest(false)}
+        />
+      )}
     </>
   );
 };

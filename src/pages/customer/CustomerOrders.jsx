@@ -406,6 +406,53 @@ const OrderDetailsModal = ({ order, onClose }) => {
                         </div>
                     </div>
 
+                    {/* Design & Artist Info Section */}
+                    {(order.final_design_url || order.artist) && (
+                        <div className="px-6 pb-5">
+                            <SectionLabel>Customization Details</SectionLabel>
+                            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-4">
+                                {order.final_design_url && (
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Final Approved Design</p>
+                                        <div className="relative group rounded-xl overflow-hidden border border-gray-200 bg-white">
+                                            <img
+                                                src={getImageUrl(order.final_design_url)}
+                                                alt="Final Custom Design"
+                                                className="w-full h-auto max-h-60 object-contain mx-auto"
+                                            />
+                                            <div className="absolute top-2 right-2">
+                                                <a
+                                                    href={getImageUrl(order.final_design_url)}
+                                                    download
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="w-8 h-8 rounded-lg bg-white/90 backdrop-blur shadow border border-white flex items-center justify-center hover:bg-[#FDE31E] transition-all"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {order.artist && (
+                                    <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-gray-100">
+                                        <div className="w-10 h-10 rounded-lg bg-yellow-50 border border-yellow-100 flex items-center justify-center text-lg">
+                                            🎨
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Assigned Artist</p>
+                                            <p className="text-sm font-bold text-gray-900 truncate">
+                                                {`${order.artist.first_name || ''} ${order.artist.last_name || ''}`.trim()}
+                                            </p>
+                                            <p className="text-xs text-gray-500 truncate">{order.artist.email}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {order.has_review && (
                         <div className="px-6 pb-4">
                             <SectionLabel>Your Review</SectionLabel>
@@ -1299,6 +1346,8 @@ const CustomerOrders = ({ isModal = false, onClose }) => {
                     return_deadline: order.return_deadline ?? null,
                     artist_id: order.artist_id,
                     artist: order.artist || null,
+                    final_design_url: order.final_design_url || null,
+                    shipment_note: order.shipment_note || null,
                     expected_shipped_at: order.expected_shipped_at || null,
                     expected_delivery_at: order.expected_delivery_at || null,
                     cancel_reason: order.cancel_reason || null,
@@ -1382,6 +1431,8 @@ const CustomerOrders = ({ isModal = false, onClose }) => {
                         return_deadline: item.return_deadline ?? order.return_deadline ?? null,
                         artist_id: order.artist_id,
                         artist: order.artist || null,
+                        final_design_url: order.final_design_url || null,
+                        shipment_note: order.shipment_note || null,
                         expected_shipped_at: order.expected_shipped_at || null,
                         expected_delivery_at: order.expected_delivery_at || null,
                         cancel_reason: order.cancel_reason || null,

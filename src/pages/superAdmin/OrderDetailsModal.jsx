@@ -117,6 +117,7 @@ const OrderDetailsModal = ({ order, onClose }) => {
                   ["Tracking", order.tracking_number || "—"],
                   ["Payment", order.payment_method || "COD"],
                   ["Courier", order.courier || "J&T"],
+                  ...(order.artist ? [["Artist", `${order.artist.first_name || ''} ${order.artist.last_name || ''}`.trim()]] : []),
                 ].map(([label, value]) => (
                   <div key={label} className="flex gap-2">
                     <span className="text-gray-400 w-16 flex-shrink-0">{label}:</span>

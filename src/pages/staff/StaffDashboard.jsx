@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { fetchAllOrders } from "../../services/OrdersAPI";
 import { fetchStaffPendingValidation } from "../../services/customValidationAPI";
+import CustomizationAPI from "../../services/CustomizationAPI";
 
 export default function StaffDashboard() {
     const [orders, setOrders] = useState([]);
@@ -12,12 +13,20 @@ export default function StaffDashboard() {
         const loadDashboardData = async (silent = false) => {
             if (!silent) setLoading(true);
             try {
-                const [ordersResult, validations] = await Promise.all([
+                const [ordersResult, validations, customizationsData] = await Promise.all([
                     fetchAllOrders(),
                     fetchStaffPendingValidation(),
+                    CustomizationAPI.fetchAllCustomizations().catch(() => []),
                 ]);
                 setOrders(Array.isArray(ordersResult) ? ordersResult : []);
-                setPendingValidations(Array.isArray(validations) ? validations : []);
+                
+                const pendingCusts = (Array.isArray(customizationsData) ? customizationsData : [])
+                    .filter(c => c.status === 'pending_feasibility');
+
+                setPendingValidations([
+                    ...(Array.isArray(validations) ? validations : []),
+                    ...pendingCusts
+                ]);
             } catch (err) {
                 console.error("Failed to load staff dashboard data:", err);
             } finally {

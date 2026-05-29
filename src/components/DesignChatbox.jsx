@@ -5,7 +5,7 @@ import { useAuth } from "../context/CustomerAuthContext";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import echo from "../echo";
 
-const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderStatus: orderStatusProp, isArtistChat = false, onNewMessage, isReadOnly = false }) => {
+const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderStatus: orderStatusProp, isArtistChat = false, onNewMessage, isReadOnly = false, customizationRequestId = null, initialInstructions = null, initialImage = null }) => {
   const { currentUser: customerUser } = useAuth();
   const { currentUser: adminUser } = useAdminAuth();
 
@@ -59,8 +59,8 @@ const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderSta
       setIsLoading(true);
       try {
         const data = isArtistSide 
-          ? await fetchAdminUserMessages(effectiveUserId, productId)
-          : await fetchCustomerMessages(productId);
+          ? await fetchAdminUserMessages(effectiveUserId, productId, null, customizationRequestId)
+          : await fetchCustomerMessages(productId, null, customizationRequestId);
         const normalised = (Array.isArray(data) ? data : []).map((m) => {
           let cleanText = m.body || "";
           if (cleanText.startsWith("[DESIGN]")) {
@@ -78,17 +78,45 @@ const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderSta
           };
         });
 
+        // Compute starting context messages from initial customization info if available
+        const initialMsgs = [];
+        if (initialImage) {
+          initialMsgs.push({
+            id: "initial-image",
+            from: isArtistSide ? "bot" : "user", // Left for artist side (from customer), Right for customer side (from me)
+            type: "image",
+            image: resolveImageUrl(initialImage),
+            text: "Uploaded reference image",
+          });
+        }
+        if (initialInstructions) {
+          initialMsgs.push({
+            id: "initial-instruction",
+            from: isArtistSide ? "bot" : "user", // Left for artist side (from customer), Right for customer side (from me)
+            type: "text",
+            text: `📋 Customer Instructions: "${initialInstructions}"`,
+          });
+        }
+
         if (normalised.length === 0) {
-          setChatMessages([
-            {
-              id: "welcome",
-              from: "bot",
-              type: "text",
-              text: "Hi! I can help with your design requirements. Send a message or upload your reference photo here.",
-            },
-          ]);
+          if (initialMsgs.length > 0) {
+            setChatMessages(initialMsgs);
+          } else {
+            if (!isArtistSide) {
+              setChatMessages([
+                {
+                  id: "welcome",
+                  from: "bot",
+                  type: "text",
+                  text: "Hi! I can help with your design requirements. Send a message or upload your reference photo here.",
+                },
+              ]);
+            } else {
+              setChatMessages([]);
+            }
+          }
         } else {
-          setChatMessages(normalised);
+          setChatMessages([...initialMsgs, ...normalised]);
           // Notify parent of the most recent image found in history
           const lastImage = [...normalised].reverse().find(m => m.from === "user" && m.type === "image" && m.image);
           if (lastImage && onImageUpload) {
@@ -102,7 +130,7 @@ const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderSta
       }
     };
     loadHistory();
-  }, [currentUser, productId]);
+  }, [currentUser, productId, customizationRequestId, initialInstructions, initialImage]);
 
   // ✅ Polling Fallback (4 seconds) - Backup for sockets
   useEffect(() => {
@@ -111,12 +139,20 @@ const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderSta
     const interval = setInterval(async () => {
       try {
         const lastMsgId = chatMessages.length > 0 
-          ? [...chatMessages].reverse().find(m => !String(m.id).startsWith('rt-') && !m.isPending)?.id 
+          ? [...chatMessages].reverse().find(m => {
+              const idStr = String(m.id);
+              return !idStr.startsWith('rt-') && 
+                     !idStr.startsWith('ai-') && 
+                     !idStr.startsWith('sys-') && 
+                     idStr !== 'welcome' && 
+                     !m.isPending && 
+                     /^\d+$/.test(idStr);
+            })?.id 
           : null;
           
         const data = isArtistSide 
-          ? await fetchAdminUserMessages(effectiveUserId, productId, lastMsgId)
-          : await fetchCustomerMessages(productId, lastMsgId);
+          ? await fetchAdminUserMessages(effectiveUserId, productId, lastMsgId, customizationRequestId)
+          : await fetchCustomerMessages(productId, lastMsgId, customizationRequestId);
           
         const arr = Array.isArray(data) ? data : (data.messages || []);
         if (arr.length === 0) return;
@@ -149,7 +185,7 @@ const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderSta
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [currentUser, productId, chatMessages.length, isArtistSide, effectiveUserId]);
+  }, [currentUser, productId, customizationRequestId, chatMessages.length, isArtistSide, effectiveUserId]);
 
   // ── Real-time listener ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -227,6 +263,7 @@ const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderSta
       return;
     }
 
+    const hasImage = !!localFile;
     setIsSending(true);
 
     try {
@@ -245,17 +282,19 @@ const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderSta
       const contentWithTag = text ? `[DESIGN] ${text}` : "[DESIGN]";
       
       const response = isArtistSide
-        ? await sendAdminMessage(contentWithTag, effectiveUserId, localFile, productId)
-        : await sendCustomerMessage(contentWithTag, localFile, productId);
+        ? await sendAdminMessage(contentWithTag, effectiveUserId, localFile, productId, customizationRequestId)
+        : await sendCustomerMessage(contentWithTag, localFile, productId, customizationRequestId);
+
+      const msgObj = response?.message || response;
 
       setChatMessages((prev) =>
         prev.map((m) =>
           m.id === tempId
             ? {
                 ...m,
-                id: response.id,
+                id: msgObj?.id,
                 text: text,
-                image: resolveImageUrl(response.image) || m.image,
+                image: resolveImageUrl(msgObj?.image) || m.image,
                 isPending: false,
               }
             : m
@@ -267,26 +306,50 @@ const DesignChatbox = ({ onImageUpload, productId, customerId, orderId, orderSta
       setLocalFile(null);
 
       // ─── Simulated AI Response (Only for non-artist, non-human-chat contexts) ─
-      if (!isArtistSide && !isArtistChat) {
-          setIsTyping(true);
+      if (!isArtistSide && !isArtistChat && currentUser?.is_bot_active !== false) {
           setTimeout(() => {
-            setIsTyping(false);
-            const botResponses = [
-              "Got it! That looks like a great design choice.",
-              "I've noted your requirements. Our designers will review this shortly.",
-              "Perfect! Is there anything specific about the dimensions or material you'd like to adjust?",
-              "That's a popular choice! I'll include these details in your order summary."
-            ];
-            const randomResponse = botResponses[Math.floor(Math.random() * botResponses.length)];
-            
-            setChatMessages(prev => [...prev, {
-              id: `ai-${Date.now()}`,
-              from: "bot",
-              type: "text",
-              text: randomResponse,
-              createdAt: new Date().toISOString()
-            }]);
-          }, 1500);
+            setIsTyping(true);
+            setTimeout(() => {
+              setIsTyping(false);
+              
+              let aiText = "";
+              const query = (text || "").toLowerCase().trim();
+              
+              if (hasImage) {
+                aiText = "Thank you for uploading the design! Our design team will inspect the image resolution and layout to ensure it meets our print quality standards.";
+              } else if (!query) {
+                aiText = "I received your request! If you have a specific design reference, please upload it here.";
+              } else if (query.includes("hi") || query.includes("hello") || query.includes("hey") || query.includes("good day")) {
+                aiText = "Hello! I am your design assistant. Feel free to ask about sizing, materials, pricing, or upload your reference design here!";
+              } else if (query.includes("price") || query.includes("cost") || query.includes("how much") || query.includes("rate") || query.includes("bayad")) {
+                aiText = "Pricing depends on the product size and quantity. You can view the size pricing table on the left configuration panel of this page!";
+              } else if (query.includes("size") || query.includes("dimension") || query.includes("inch") || query.includes("inches") || query.includes("cm") || query.includes("sukat")) {
+                aiText = "We offer sizes from 1.5x1.5 inches up to 9x9 inches for sheet cutouts. You can choose your preferred size in the configuration panel on the right.";
+              } else if (query.includes("material") || query.includes("quality") || query.includes("paper") || query.includes("vinyl") || query.includes("glossy") || query.includes("matte") || query.includes("hologram")) {
+                aiText = "We use premium, waterproof, and smudge-proof vinyl. You can choose from Glossy, Matte, or Holographic finishes to suit your stickers!";
+              } else if (query.includes("lead time") || query.includes("when") || query.includes("how long") || query.includes("kailan") || query.includes("delivery") || query.includes("ship")) {
+                aiText = "Our production lead time is typically 2-3 business days after you approve the final layout. Shipping then takes 2-5 days depending on your location.";
+              } else if (query.includes("edit") || query.includes("layout") || query.includes("change") || query.includes("design") || query.includes("custom")) {
+                aiText = "Our artists can help adjust your designs and layouts! Just upload your reference design here and tell us what changes you want.";
+              } else {
+                const fallbacks = [
+                  "Got it! That looks like a great design choice.",
+                  "I've noted your requirements. Our design team will review this shortly.",
+                  "Perfect! Let me know if you need any adjustments to dimensions, materials, or layout.",
+                  "Thank you for the details! I have saved this in your design inquiry. Feel free to add more details or upload an image."
+                ];
+                aiText = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+              }
+              
+              setChatMessages(prev => [...prev, {
+                id: `ai-${Date.now()}`,
+                from: "bot",
+                type: "text",
+                text: aiText,
+                createdAt: new Date().toISOString()
+              }]);
+            }, 1500);
+          }, 800);
       }
 
     } catch (err) {

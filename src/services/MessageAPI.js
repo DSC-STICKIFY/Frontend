@@ -64,7 +64,7 @@ adminHttp.interceptors.response.use((res) => res, responseErrorHandler);
 // --------------------------------------------------------------
 // CUSTOMER SIDE — always uses customerHttp
 // --------------------------------------------------------------
-export const sendCustomerMessage = async (body, imageFile = null, productId = null) => {
+export const sendCustomerMessage = async (body, imageFile = null, productId = null, customizationRequestId = null) => {
   const token = getCustomerToken();
   if (!token) throw new Error("No authentication token found. Please login again.");
 
@@ -72,6 +72,7 @@ export const sendCustomerMessage = async (body, imageFile = null, productId = nu
     const formData = new FormData();
     if (body) formData.append("body", body);
     if (productId) formData.append("product_id", productId);
+    if (customizationRequestId) formData.append("customization_request_id", customizationRequestId);
     formData.append("image", imageFile);
     const response = await customerHttp.post("/messages", formData, {
       headers: { "Content-Type": "multipart/form-data" },
@@ -79,14 +80,17 @@ export const sendCustomerMessage = async (body, imageFile = null, productId = nu
     return response.data;
   }
 
-  const response = await customerHttp.post("/messages", { body, product_id: productId });
+  const payload = { body, product_id: productId };
+  if (customizationRequestId) payload.customization_request_id = customizationRequestId;
+  const response = await customerHttp.post("/messages", payload);
   return response.data;
 };
 
-export const fetchCustomerMessages = async (productId = null, lastId = null) => {
+export const fetchCustomerMessages = async (productId = null, lastId = null, customizationRequestId = null) => {
   let url = "/messages";
   const params = new URLSearchParams();
   if (productId) params.append("product_id", productId);
+  if (customizationRequestId) params.append("customization_request_id", customizationRequestId);
   if (lastId) params.append("last_id", lastId);
   if (params.toString()) url += `?${params.toString()}`;
   const response = await customerHttp.get(url);
@@ -121,10 +125,11 @@ export const fetchConversations = async () => {
   return response.data.conversations || [];
 };
 
-export const fetchAdminUserMessages = async (userId, productId = null, lastId = null) => {
+export const fetchAdminUserMessages = async (userId, productId = null, lastId = null, customizationRequestId = null) => {
   let url = `/admin/messages/${userId}`;
   const params = new URLSearchParams();
   if (productId) params.append("product_id", productId);
+  if (customizationRequestId) params.append("customization_request_id", customizationRequestId);
   if (lastId) params.append("last_id", lastId);
   if (params.toString()) url += `?${params.toString()}`;
   const response = await adminHttp.get(url);
@@ -132,12 +137,13 @@ export const fetchAdminUserMessages = async (userId, productId = null, lastId = 
   return Array.isArray(messages) ? messages : [];
 };
 
-export const sendAdminMessage = async (body, receiverId, file = null, productId = null) => {
+export const sendAdminMessage = async (body, receiverId, file = null, productId = null, customizationRequestId = null) => {
   if (file) {
     const formData = new FormData();
     if (body) formData.append("body", body);
     formData.append("receiver_id", receiverId);
     if (productId) formData.append("product_id", productId);
+    if (customizationRequestId) formData.append("customization_request_id", customizationRequestId);
     if (file.type.startsWith("video/")) {
       formData.append("video", file);
     } else {
@@ -149,11 +155,13 @@ export const sendAdminMessage = async (body, receiverId, file = null, productId 
     return response.data;
   }
 
-  const response = await adminHttp.post("/admin/messages", {
+  const payload = {
     body,
     receiver_id: receiverId,
     product_id: productId,
-  });
+  };
+  if (customizationRequestId) payload.customization_request_id = customizationRequestId;
+  const response = await adminHttp.post("/admin/messages", payload);
   return response.data;
 };
 

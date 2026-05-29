@@ -17,8 +17,19 @@ import DesignChatbox from "./DesignChatbox";
 import messageIcn from "../assets/sidebarAdminsIcons/inbox.svg";
 import { getImageUrl } from "../services/api";
 import axios from "axios";
+import CustomizationAPI from "../services/CustomizationAPI";
 
 const StatusBadge = ({ status }) => {
+    const labels = {
+        'assigned_to_artist': 'Assigned',
+        'in_progress': 'In Progress',
+        'quotation_sent': 'Quotation Sent',
+        'revision_period': 'Revision Period',
+        'design_finalized': 'Design Finalized',
+        'pending_design_approval': 'Pending Approval',
+        'design_approved': 'Approved',
+        'in_production': 'In Production',
+    };
     const colors = {
         'Accepted': 'bg-blue-100 text-blue-700 border-blue-200',
         'To Process': 'bg-blue-100 text-blue-700 border-blue-200',
@@ -30,11 +41,19 @@ const StatusBadge = ({ status }) => {
         'Awaiting Shipment Approval': 'bg-orange-100 text-orange-700 border-orange-200',
         'To Shipping': 'bg-green-100 text-green-700 border-green-200',
         'Cancelled': 'bg-gray-100 text-gray-700 border-gray-200',
+        'assigned_to_artist': 'bg-blue-100 text-blue-700 border-blue-200',
+        'in_progress': 'bg-purple-100 text-purple-700 border-purple-200',
+        'quotation_sent': 'bg-amber-100 text-amber-700 border-amber-200',
+        'revision_period': 'bg-purple-100 text-purple-700 border-purple-200',
+        'design_finalized': 'bg-green-100 text-green-700 border-green-200',
+        'pending_design_approval': 'bg-orange-100 text-orange-700 border-orange-200',
+        'design_approved': 'bg-green-100 text-green-700 border-green-200',
+        'in_production': 'bg-indigo-100 text-indigo-700 border-indigo-200',
     };
 
     return (
         <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${colors[status] || 'bg-gray-50 text-gray-500'}`}>
-            {status}
+            {labels[status] || status}
         </span>
     );
 };
@@ -48,6 +67,49 @@ const getFutureDateTimeString = (daysAhead) => {
     const hh = String(d.getHours()).padStart(2, '0');
     const min = String(d.getMinutes()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+};
+
+// ─── QuotationForm sub-component ──────────────────────────────────────────────
+const QuotationForm = ({ request, onSubmitted }) => {
+    const [form, setForm] = useState({ material_cost: '', printing_cost: '', design_fee: '', additional_charges: '0', notes: '' });
+    const [loading, setLoading] = useState(false);
+    const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const total = (Number(form.material_cost) || 0) + (Number(form.printing_cost) || 0) + (Number(form.design_fee) || 0) + (Number(form.additional_charges) || 0);
+
+    const handleSubmit = async () => {
+        if (!form.material_cost || !form.printing_cost || !form.design_fee) { alert('Please fill in all required cost fields.'); return; }
+        setLoading(true);
+        try {
+            await CustomizationAPI.artistSubmitQuotation(request.customization_id || request.id, { ...form, total });
+            alert('Quotation submitted successfully!');
+            onSubmitted();
+        } catch (err) {
+            console.error('Quotation error:', err);
+            alert('Failed to submit quotation: ' + (err.response?.data?.message || err.message));
+        } finally { setLoading(false); }
+    };
+
+    return (
+        <div className="space-y-4">
+            {[{ label: 'Material Cost', name: 'material_cost' }, { label: 'Printing & Setup', name: 'printing_cost' }, { label: 'Artist Design Fee', name: 'design_fee' }, { label: 'Additional Charges', name: 'additional_charges' }].map(f => (
+                <div key={f.name}>
+                    <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">{f.label}</label>
+                    <input type="number" name={f.name} value={form[f.name]} onChange={handleChange} placeholder="0.00" className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400" />
+                </div>
+            ))}
+            <div>
+                <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">Notes for Customer</label>
+                <textarea name="notes" value={form.notes} onChange={handleChange} placeholder="Any additional notes..." className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400" rows={3} />
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t border-dashed border-gray-200">
+                <span className="text-xs font-black text-gray-500">Total:</span>
+                <span className="text-sm font-black text-yellow-600">₱{total.toFixed(2)}</span>
+            </div>
+            <button onClick={handleSubmit} disabled={loading} className="w-full py-4 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-50">
+                {loading ? 'Submitting...' : '📤 Submit Quotation to Customer'}
+            </button>
+        </div>
+    );
 };
 
 export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOnly = undefined, showAllOrders = false }) {
@@ -64,34 +126,93 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
     const [dispatching, setDispatching] = useState(false);
     const isFulfillmentHistory = selectedOrder ? ['To Shipping', 'To Receive', 'Completed'].includes(selectedOrder.status) : false;
     const isAdminOrSubAdmin = currentUser?.role === 'admin' || currentUser?.role === 'subadmin';
+
+    // Override isReadOnly for admins — they should always have action controls
+    const effectiveReadOnly = isAdminOrSubAdmin ? false : isReadOnly;
+
     const effectiveChatReadOnly = isChatReadOnly !== undefined ? isChatReadOnly : (isAdminOrSubAdmin ? false : isReadOnly);
 
     // Timeline States
     const [showTimelineForm, setShowTimelineForm] = useState(false);
     const [expectedShippedAt, setExpectedShippedAt] = useState("");
     const [expectedDeliveryAt, setExpectedDeliveryAt] = useState("");
+    // Customization Design Finalization States
+    const [productionDate, setProductionDate] = useState("");
+    const [finalizingDesign, setFinalizingDesign] = useState(false);
+    // Design approval states
+    const [approvingDesign, setApprovingDesign] = useState(false);
+    const [rejectingDesign, setRejectingDesign] = useState(false);
+    const [showDesignRejectInput, setShowDesignRejectInput] = useState(false);
+    const [designRejectReason, setDesignRejectReason] = useState("");
 
     const loadOrders = async () => {
         setLoading(true);
         try {
-            const res = (isReadOnly || showAllOrders) ? await fetchAllOrders() : await fetchArtistOrders();
-            const ordersData = res.data?.orders || res.data || (Array.isArray(res) ? res : []);
-            const data = Array.isArray(ordersData) ? ordersData : [];
+            const [ordersRes, customizationsRaw] = await Promise.all([
+                (isReadOnly || showAllOrders) ? fetchAllOrders() : fetchArtistOrders(),
+                CustomizationAPI.fetchAllCustomizations().catch(() => [])
+            ]);
 
-            const filtered = data.filter(o => {
+            const ordersData = ordersRes.data?.orders || ordersRes.data || (Array.isArray(ordersRes) ? ordersRes : []);
+            const data = Array.isArray(ordersData) ? ordersData : [];
+            const standardOrders = data.filter(o => {
                 const hasArtist = o.artist_id !== null && o.artist_id !== undefined;
                 const status = (o.status || "").toLowerCase();
                 const isTerminal = ['completed', 'cancelled', 'refunded', 'return/refund'].includes(status);
                 return hasArtist && !isTerminal;
-            });
-
-            const mapped = filtered.map(o => {
+            }).map(o => {
                 if (['To Shipping', 'To Receive', 'Shipped'].includes(o.status)) {
                     return { ...o, status: 'To Shipping' };
                 }
                 return o;
             });
-            setOrders(mapped);
+
+            const custArray = Array.isArray(customizationsRaw) ? customizationsRaw : (customizationsRaw?.data || []);
+            const loggedInArtistId = currentUser?.employee_id || currentUser?.id;
+
+            const mappedCusts = custArray
+                .filter(c => {
+                    const hasArtist = c.artist_id != null;
+                    const isTerminal = ['converted_to_order', 'cancelled', 'rejected_by_staff'].includes((c.status || '').toLowerCase());
+                    if (isReadOnly || showAllOrders) return hasArtist && !isTerminal;
+                    return hasArtist && !isTerminal && Number(c.artist_id) === Number(loggedInArtistId);
+                })
+                .map(c => ({
+                    ...c,
+                    order_id: `cust-${c.id}`,
+                    customization_id: c.id,
+                    isCustomizationRequest: true,
+                    order_number: `CUSTOM-${c.id}`,
+                    user: c.customer,
+                    user_id: c.customer_id,
+                    order_details: [{
+                        product_id: c.product_id,
+                        product: {
+                            name: c.product_name || c.product?.name || c.product?.product_name || 'Custom Design',
+                            product_name: c.product_name || c.product?.product_name || 'Custom Design',
+                            product_image: c.reference_image
+                        },
+                        quantity: c.quantity
+                    }],
+                    created_at: c.created_at,
+                    quotation: c.quotation,
+                    final_design_url: c.mockup_image,
+                    expected_shipped_at: c.expected_shipped_at,
+                    expected_delivery_at: c.expected_delivery_at,
+                    in_progress_at: c.in_progress_at,
+                }));
+
+            const merged = [...standardOrders, ...mappedCusts]
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            setOrders(merged);
+
+            if (selectedOrder) {
+                const updatedSelected = merged.find(o => o.order_id === selectedOrder.order_id);
+                if (updatedSelected) {
+                    setSelectedOrder(updatedSelected);
+                }
+            }
         } catch (err) {
             console.error("Failed to load orders", err);
         } finally {
@@ -107,6 +228,8 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
         setShowTimelineForm(false);
         setExpectedShippedAt(getFutureDateTimeString(2));
         setExpectedDeliveryAt(getFutureDateTimeString(5));
+        setShowDesignRejectInput(false);
+        setDesignRejectReason("");
     }, [selectedOrder?.order_id]);
 
     const handleMarkInProgress = async (id) => {
@@ -116,10 +239,17 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
         }
         const isRescheduling = !!selectedOrder.in_progress_at;
         try {
-            await markOrderInProgress(id, {
-                expected_shipped_at: expectedShippedAt,
-                expected_delivery_at: expectedDeliveryAt
-            });
+            if (selectedOrder.isCustomizationRequest) {
+                await CustomizationAPI.markInProgress(selectedOrder.customization_id, {
+                    expected_shipped_at: expectedShippedAt,
+                    expected_delivery_at: expectedDeliveryAt
+                });
+            } else {
+                await markOrderInProgress(id, {
+                    expected_shipped_at: expectedShippedAt,
+                    expected_delivery_at: expectedDeliveryAt
+                });
+            }
 
             setSelectedOrder(prev => prev ? {
                 ...prev,
@@ -146,17 +276,31 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
 
         setUploading(true);
         const formData = new FormData();
-        formData.append('final_design', file);
 
         try {
-            const res = await uploadFinalDesign(id, formData);
-            const updatedOrder = res.data?.order || res.order;
-            if (updatedOrder) {
-                setSelectedOrder(prev => prev ? {
-                    ...prev,
-                    final_design_url: updatedOrder.final_design_url,
-                    status: updatedOrder.status || "Finalizing"
-                } : prev);
+            if (selectedOrder.isCustomizationRequest) {
+                formData.append('mockup', file);
+                const res = await CustomizationAPI.uploadCustomMockup(selectedOrder.customization_id, formData);
+                const updated = res.data || res;
+                if (updated) {
+                    setSelectedOrder(prev => prev ? {
+                        ...prev,
+                        final_design_url: updated.mockup_image,
+                        mockup_image: updated.mockup_image,
+                        status: updated.status || prev.status
+                    } : prev);
+                }
+            } else {
+                formData.append('final_design', file);
+                const res = await uploadFinalDesign(id, formData);
+                const updatedOrder = res.data?.order || res.order;
+                if (updatedOrder) {
+                    setSelectedOrder(prev => prev ? {
+                        ...prev,
+                        final_design_url: updatedOrder.final_design_url,
+                        status: updatedOrder.status || "Finalizing"
+                    } : prev);
+                }
             }
             loadOrders();
             alert("Design uploaded successfully!");
@@ -229,6 +373,38 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
         }
     };
 
+    const handleApproveDesign = async () => {
+        setApprovingDesign(true);
+        try {
+            await CustomizationAPI.adminReviewDesign(selectedOrder.customization_id, 'approve');
+            alert('Design approved! Customer can now proceed to checkout.');
+            loadOrders();
+        } catch (err) {
+            alert('Failed to approve design: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setApprovingDesign(false);
+        }
+    };
+
+    const handleRejectDesign = async () => {
+        if (!designRejectReason.trim()) {
+            alert('Please enter a reason for rejection.');
+            return;
+        }
+        setRejectingDesign(true);
+        try {
+            await CustomizationAPI.adminReviewDesign(selectedOrder.customization_id, 'reject', designRejectReason.trim());
+            alert('Design rejected. Artist has been notified.');
+            setDesignRejectReason('');
+            setShowDesignRejectInput(false);
+            loadOrders();
+        } catch (err) {
+            alert('Failed to reject design: ' + (err.response?.data?.message || err.message));
+        } finally {
+            setRejectingDesign(false);
+        }
+    };
+
     const handleSendReminder = async () => {
         if (!selectedOrder) return;
         setSendingReminder(true);
@@ -277,7 +453,7 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
                             const customerName = `${order.user?.first_name || 'Unknown'} ${order.user?.last_name || ''}`.trim();
                             const initial = customerName.charAt(0).toUpperCase();
                             const product = order.order_details?.[0]?.product;
-                            const productName = product?.name || "Custom Design";
+                            const productName = product?.name || product?.product_name || "Custom Design";
                             const artistName = order.artist ? `${order.artist.first_name} ${order.artist.last_name}`.trim() : "Unknown Artist";
 
                             return (
@@ -289,24 +465,17 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
                                             : 'hover:bg-white/60 border-transparent'
                                         }`}
                                 >
-                                    {/* Row number */}
                                     <span className="text-[11px] font-black text-gray-400 w-5 text-right flex-shrink-0 mt-2.5">{index + 1}</span>
-
-                                    {/* Avatar */}
                                     <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center font-black flex-shrink-0 text-gray-800 shadow-sm">
                                         {initial}
                                     </div>
-
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-start mb-1">
-                                            <span className="text-sm font-black text-gray-900 truncate pr-2">
-                                                {customerName}
-                                            </span>
+                                            <span className="text-sm font-black text-gray-900 truncate pr-2">{customerName}</span>
                                             <span className="text-[9px] font-black uppercase tracking-tighter text-gray-400 whitespace-nowrap mt-0.5">
                                                 {new Date(order.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                                             </span>
                                         </div>
-
                                         <div className="mb-2 flex flex-wrap gap-1">
                                             <span className="inline-block max-w-[140px] truncate text-[9px] font-black uppercase tracking-widest bg-[#FDE31E]/20 text-yellow-700 border border-[#FDE31E]/40 rounded-full px-2 py-0.5">
                                                 {productName}
@@ -317,7 +486,6 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
                                                 </span>
                                             )}
                                         </div>
-
                                         <div className="flex justify-between items-center">
                                             <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${selectedOrder?.order_id === order.order_id ? 'text-yellow-600' : 'text-gray-400'}`}>
                                                 #{order.order_number || order.order_id}
@@ -377,13 +545,16 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
 
                         <div className="flex-1 min-h-0 relative">
                             <DesignChatbox
-                                productId={selectedOrder.order_details?.[0]?.product_id}
+                                productId={selectedOrder.isCustomizationRequest ? selectedOrder.product_id : selectedOrder.order_details?.[0]?.product_id}
                                 customerId={selectedOrder.user_id}
-                                orderId={selectedOrder.order_id}
+                                orderId={selectedOrder.isCustomizationRequest ? selectedOrder.customization_id : selectedOrder.order_id}
                                 orderStatus={selectedOrder.status}
                                 onImageUpload={() => { }}
                                 onNewMessage={loadOrders}
                                 isReadOnly={effectiveChatReadOnly}
+                                customizationRequestId={selectedOrder.isCustomizationRequest ? selectedOrder.customization_id : null}
+                                initialInstructions={selectedOrder.isCustomizationRequest ? selectedOrder.instructions : null}
+                                initialImage={selectedOrder.isCustomizationRequest ? selectedOrder.reference_image : null}
                             />
                         </div>
                     </>
@@ -431,8 +602,8 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
                                     <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-900">Client Requirements</h3>
                                 </div>
                                 <div className="space-y-4">
-                                    {selectedOrder.order_details?.map(item => (
-                                        <div key={item.order_details_id} className="p-8 rounded-[40px] bg-white border-2 border-gray-50 shadow-sm">
+                                    {selectedOrder.order_details?.map((item, idx) => (
+                                        <div key={item.order_details_id || idx} className="p-8 rounded-[40px] bg-white border-2 border-gray-50 shadow-sm">
                                             <div className="flex gap-6 items-start mb-6">
                                                 <div className="w-20 h-20 bg-gray-50 rounded-[24px] border border-gray-100 flex-shrink-0 flex items-center justify-center p-3 overflow-hidden shadow-inner">
                                                     <img
@@ -464,7 +635,341 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
                                     <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-900">Workflow Execution</h3>
                                 </div>
                                 <div className="space-y-6">
-                                    {isReadOnly ? (
+                                    {selectedOrder.isCustomizationRequest ? (
+                                        // V3 Customization request flow — 4-phase layout
+                                        <div className="space-y-6 animate-in fade-in duration-300">
+                                            {(() => {
+                                                const s = (selectedOrder.status || '').toLowerCase();
+                                                const quotationDone = !['assigned_to_artist'].includes(s);
+                                                const customerApproved = !['assigned_to_artist', 'quotation_sent'].includes(s);
+                                                const timelineSet = !!selectedOrder.in_progress_at;
+                                                const designUploaded = !!selectedOrder.final_design_url;
+                                                const isFinalPhase = ['pending_design_approval', 'design_approved', 'converted_to_order'].includes(s);
+                                                const custFulfillment = ['design_approved', 'converted_to_order'].includes(s);
+
+                                                return (
+                                                    <>
+                                                        {/* ── Phase 01: Quotation ── */}
+                                                        <div className={`p-8 rounded-[40px] border-2 transition-all ${quotationDone ? 'border-green-100 bg-green-50/10' : 'border-yellow-400 bg-yellow-50/30 shadow-2xl shadow-yellow-400/10'}`}>
+                                                            <div className="flex justify-between items-center mb-6">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">Phase 01</span>
+                                                                {quotationDone && <span className="bg-green-100 text-green-700 text-[10px] font-black uppercase px-3 py-1 rounded-full">{customerApproved ? 'Completed' : 'Submitted'}</span>}
+                                                            </div>
+                                                            <h4 className="font-black text-xl mb-3 italic uppercase tracking-tight">Pricing & Quotation</h4>
+                                                            <p className="text-[12px] font-medium text-gray-500 mb-8 leading-relaxed">Submit material, printing, and design costs for the customer to review and approve.</p>
+
+                                                            {s === 'assigned_to_artist' ? (
+                                                                effectiveReadOnly ? (
+                                                                    <p className="text-xs font-bold text-orange-500 bg-orange-50 p-4 rounded-2xl border border-orange-100">⏳ Awaiting assigned artist to submit quotation.</p>
+                                                                ) : (
+                                                                    <QuotationForm request={selectedOrder} onSubmitted={loadOrders} />
+                                                                )
+                                                            ) : s === 'quotation_sent' ? (
+                                                                <div className="space-y-4">
+                                                                    <div className="text-[10px] font-black text-green-600 uppercase tracking-widest flex items-center gap-3 bg-white p-4 rounded-2xl border border-green-50 shadow-sm">
+                                                                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)] animate-pulse"></div>
+                                                                        Quotation Submitted
+                                                                    </div>
+                                                                    <p className="text-xs font-bold text-amber-600 bg-amber-50 p-4 rounded-2xl border border-amber-200 flex items-center gap-2">
+                                                                        <span className="animate-pulse">⏳</span>
+                                                                        Awaiting customer approval...
+                                                                    </p>
+                                                                    {selectedOrder.quotation && (
+                                                                        <div className="bg-gray-50 p-6 rounded-[28px] border border-gray-100 text-xs font-bold text-gray-600 shadow-sm leading-relaxed space-y-2">
+                                                                            <div className="flex justify-between"><span>Material Cost:</span><span className="text-gray-900">₱{Number(selectedOrder.quotation.material_cost).toFixed(2)}</span></div>
+                                                                            <div className="flex justify-between"><span>Printing & Setup:</span><span className="text-gray-900">₱{Number(selectedOrder.quotation.printing_cost).toFixed(2)}</span></div>
+                                                                            <div className="flex justify-between"><span>Artist Design Fee:</span><span className="text-gray-900">₱{Number(selectedOrder.quotation.design_fee).toFixed(2)}</span></div>
+                                                                            {Number(selectedOrder.quotation.additional_charges) > 0 && (
+                                                                                <div className="flex justify-between"><span>Additional Charges:</span><span className="text-gray-900">₱{Number(selectedOrder.quotation.additional_charges).toFixed(2)}</span></div>
+                                                                            )}
+                                                                            <div className="flex justify-between pt-2 border-t border-dashed border-gray-200 text-gray-900 font-black">
+                                                                                <span>Total:</span><span className="text-sm text-yellow-600">₱{Number(selectedOrder.quotation.total).toFixed(2)}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="space-y-4">
+                                                                    <div className="text-[10px] font-black text-green-600 uppercase tracking-widest flex items-center gap-3 bg-white p-4 rounded-2xl border border-green-50 shadow-sm">
+                                                                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                                                                        Quotation Approved by Customer
+                                                                    </div>
+                                                                    {selectedOrder.quotation && (
+                                                                        <div className="bg-gray-50 p-6 rounded-[28px] border border-gray-100 text-xs font-bold text-gray-600 shadow-sm leading-relaxed space-y-2">
+                                                                            <div className="flex justify-between"><span>Material Cost:</span><span className="text-gray-900">₱{Number(selectedOrder.quotation.material_cost).toFixed(2)}</span></div>
+                                                                            <div className="flex justify-between"><span>Printing & Setup:</span><span className="text-gray-900">₱{Number(selectedOrder.quotation.printing_cost).toFixed(2)}</span></div>
+                                                                            <div className="flex justify-between"><span>Artist Design Fee:</span><span className="text-gray-900">₱{Number(selectedOrder.quotation.design_fee).toFixed(2)}</span></div>
+                                                                            {Number(selectedOrder.quotation.additional_charges) > 0 && (
+                                                                                <div className="flex justify-between"><span>Additional Charges:</span><span className="text-gray-900">₱{Number(selectedOrder.quotation.additional_charges).toFixed(2)}</span></div>
+                                                                            )}
+                                                                            <div className="flex justify-between pt-2 border-t border-dashed border-gray-200 text-gray-900 font-black">
+                                                                                <span>Total:</span><span className="text-sm text-yellow-600">₱{Number(selectedOrder.quotation.total).toFixed(2)}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* ── Phase 02: Timeline Initialization ── */}
+                                                        <div className={`p-8 rounded-[40px] border-2 transition-all ${!customerApproved ? 'border-gray-100 bg-gray-50/30 opacity-60' : timelineSet ? 'border-green-100 bg-green-50/10' : 'border-yellow-400 bg-yellow-50/30 shadow-2xl shadow-yellow-400/10'}`}>
+                                                            <div className="flex justify-between items-center mb-6">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">Phase 02</span>
+                                                                {timelineSet && customerApproved && <span className="bg-green-100 text-green-700 text-[10px] font-black uppercase px-3 py-1 rounded-full">Completed</span>}
+                                                            </div>
+                                                            <h4 className="font-black text-xl mb-3 italic uppercase tracking-tight">Timeline Initialization</h4>
+                                                            <p className="text-[12px] font-medium text-gray-500 mb-8 leading-relaxed">Set expected shipping and delivery dates to start processing this customization.</p>
+
+                                                            {!customerApproved ? (
+                                                                <div className="flex flex-col items-center justify-center py-10 bg-gray-50 border border-gray-100 rounded-[32px] text-center shadow-inner">
+                                                                    <span className="text-xl mb-2">🔒</span>
+                                                                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Customer must approve quotation to unlock</span>
+                                                                </div>
+                                                            ) : !timelineSet ? (
+                                                                <>
+                                                                    {!effectiveReadOnly && (
+                                                                        !showTimelineForm ? (
+                                                                            <button onClick={() => setShowTimelineForm(true)} className="w-full py-5 bg-black text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-gray-800 transition-all active:scale-95 shadow-xl shadow-black/10">
+                                                                                Start Customization Task
+                                                                            </button>
+                                                                        ) : (
+                                                                            <div className="space-y-4 bg-gray-50 border border-gray-100 p-6 rounded-[28px] animate-in slide-in-from-top duration-300">
+                                                                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Set Expected Schedule Range</p>
+                                                                                <div className="space-y-3">
+                                                                                    <div>
+                                                                                        <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">Expected Shipped Date & Time</label>
+                                                                                        <input type="datetime-local" value={expectedShippedAt} onChange={(e) => setExpectedShippedAt(e.target.value)} className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400" />
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">Expected Delivery Date & Time</label>
+                                                                                        <input type="datetime-local" value={expectedDeliveryAt} onChange={(e) => setExpectedDeliveryAt(e.target.value)} className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400" />
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="flex gap-2 pt-2">
+                                                                                    <button onClick={() => handleMarkInProgress(selectedOrder.order_id)} className="flex-1 py-3.5 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-800 transition-all active:scale-95">Confirm & Start</button>
+                                                                                    <button onClick={() => setShowTimelineForm(false)} className="px-4 py-3.5 bg-white text-gray-400 border border-gray-200 text-[10px] font-black uppercase rounded-xl hover:bg-gray-50 transition-all">Cancel</button>
+                                                                                </div>
+                                                                            </div>
+                                                                        )
+                                                                    )}
+                                                                    {effectiveReadOnly && (
+                                                                        <p className="text-xs font-bold text-orange-500 bg-orange-50 p-4 rounded-2xl border border-orange-100">⏳ Awaiting artist to set timeline and start customization.</p>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <div className="space-y-4">
+                                                                    <div className="text-[10px] font-black text-green-600 uppercase tracking-widest flex items-center gap-3 bg-white p-4 rounded-2xl border border-green-50 shadow-sm">
+                                                                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                                                                        Started {new Date(selectedOrder.in_progress_at).toLocaleString()}
+                                                                    </div>
+                                                                    <div className="bg-gray-50 border border-gray-100 p-4 rounded-2xl text-[10px] font-bold text-gray-600 space-y-1.5 shadow-inner">
+                                                                        <div>🚢 <span className="uppercase tracking-widest text-[9px] font-black text-gray-400">Expected Ship Date:</span> {selectedOrder.expected_shipped_at ? new Date(selectedOrder.expected_shipped_at).toLocaleString() : "Not set"}</div>
+                                                                        <div>🎁 <span className="uppercase tracking-widest text-[9px] font-black text-gray-400">Expected Delivery Date:</span> {selectedOrder.expected_delivery_at ? new Date(selectedOrder.expected_delivery_at).toLocaleString() : "Not set"}</div>
+                                                                    </div>
+                                                                    {!effectiveReadOnly && (
+                                                                        !showTimelineForm ? (
+                                                                            <button onClick={() => { setExpectedShippedAt(selectedOrder.expected_shipped_at ? selectedOrder.expected_shipped_at.substring(0, 16) : getFutureDateTimeString(2)); setExpectedDeliveryAt(selectedOrder.expected_delivery_at ? selectedOrder.expected_delivery_at.substring(0, 16) : getFutureDateTimeString(5)); setShowTimelineForm(true); }} className="w-full py-3 bg-white hover:bg-gray-50 text-black border border-gray-200 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all active:scale-95 shadow-sm">
+                                                                                ✏️ Change Schedule
+                                                                            </button>
+                                                                        ) : (
+                                                                            <div className="space-y-4 bg-gray-50 border border-gray-100 p-6 rounded-[28px] animate-in slide-in-from-top duration-300">
+                                                                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Reschedule timeline</p>
+                                                                                <div className="space-y-3">
+                                                                                    <div>
+                                                                                        <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">Expected Shipped Date & Time</label>
+                                                                                        <input type="datetime-local" value={expectedShippedAt} onChange={(e) => setExpectedShippedAt(e.target.value)} className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400" />
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">Expected Delivery Date & Time</label>
+                                                                                        <input type="datetime-local" value={expectedDeliveryAt} onChange={(e) => setExpectedDeliveryAt(e.target.value)} className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400" />
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="flex gap-2 pt-2">
+                                                                                    <button onClick={async () => { await handleMarkInProgress(selectedOrder.order_id); }} className="flex-1 py-3 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-800 transition-all">Save Changes</button>
+                                                                                    <button onClick={() => setShowTimelineForm(false)} className="px-4 py-3 bg-white text-gray-400 border border-gray-200 text-[10px] font-black uppercase rounded-xl hover:bg-gray-50 transition-all">Cancel</button>
+                                                                                </div>
+                                                                            </div>
+                                                                        )
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* ── Phase 03: Design & Upload ── */}
+                                                        <div className={`p-8 rounded-[40px] border-2 transition-all ${!timelineSet ? 'border-gray-100 bg-gray-50/30 opacity-60' : isFinalPhase ? 'border-green-100 bg-green-50/10' : designUploaded ? 'border-yellow-400 bg-yellow-50/30 shadow-2xl shadow-yellow-400/10' : 'border-gray-50 bg-white'}`}>
+                                                            <div className="flex justify-between items-center mb-6">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">Phase 03</span>
+                                                                {designUploaded && timelineSet && <span className="bg-green-100 text-green-700 text-[10px] font-black uppercase px-3 py-1 rounded-full">{isFinalPhase ? 'Completed' : 'Live'}</span>}
+                                                            </div>
+                                                            <h4 className="font-black text-xl mb-3 italic uppercase tracking-tight">Design & Upload</h4>
+                                                            <p className="text-[12px] font-medium text-gray-500 mb-8 leading-relaxed">Upload and finalize the design, then submit for admin approval.</p>
+
+                                                            {!timelineSet ? (
+                                                                <div className="flex flex-col items-center justify-center py-10 bg-gray-50 border border-gray-100 rounded-[32px] text-center shadow-inner">
+                                                                    <span className="text-xl mb-2">🔒</span>
+                                                                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Complete Timeline Initialization to unlock</span>
+                                                                </div>
+                                                            ) : designUploaded ? (
+                                                                <div className="space-y-4">
+                                                                    <div className="w-full aspect-video rounded-[32px] bg-gray-50 border-4 border-dashed border-gray-100 flex items-center justify-center p-4 overflow-hidden shadow-inner relative group/image">
+                                                                        <img src={getImageUrl(selectedOrder.final_design_url)} className="w-full h-full object-contain rounded-2xl" alt="Uploaded design" />
+                                                                        <div className="absolute inset-0 bg-black/65 opacity-0 group-hover/image:opacity-100 transition-all duration-300 flex flex-col items-center justify-center gap-3.5 rounded-[24px] backdrop-blur-xs">
+                                                                            <a href={getImageUrl(selectedOrder.final_design_url)} target="_blank" rel="noopener noreferrer" className="px-6 py-3 bg-white text-black hover:bg-gray-100 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg flex items-center gap-2 hover:scale-105 active:scale-95">👁️ View Full Resolution</a>
+                                                                            {!effectiveReadOnly && (
+                                                                                <label className="px-6 py-3 bg-yellow-400 text-black hover:bg-yellow-500 text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-lg flex items-center gap-2 cursor-pointer hover:scale-105 active:scale-95">
+                                                                                    <input type="file" className="hidden" onChange={(e) => handleUpload(e, selectedOrder.order_id)} />
+                                                                                    📤 Upload New Version
+                                                                                </label>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Finalize Design action — only if not yet finalized, and only for the artist (not admin) */}
+                                                                    {!isFinalPhase && !isReadOnly && s !== 'pending_design_approval' && (
+                                                                        <div className="space-y-4 bg-gray-50 border border-gray-100 p-6 rounded-[28px]">
+                                                                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Finalize & Submit for Admin Review</p>
+                                                                            <div>
+                                                                                <label className="block text-[9px] font-black uppercase tracking-wider text-gray-400 mb-1">Production Date</label>
+                                                                                <input type="date" value={productionDate} onChange={(e) => setProductionDate(e.target.value)} className="w-full text-xs font-bold border border-gray-200 bg-white rounded-xl px-3 py-2.5 focus:outline-none focus:border-yellow-400" />
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={async () => {
+                                                                                    if (!productionDate) { alert('Please set a production date.'); return; }
+                                                                                    setFinalizingDesign(true);
+                                                                                    try {
+                                                                                        await CustomizationAPI.finalizeDesign(selectedOrder.customization_id, productionDate);
+                                                                                        alert('Design finalized and sent to Admin for approval!');
+                                                                                        loadOrders();
+                                                                                        setSelectedOrder(prev => prev ? { ...prev, status: 'pending_design_approval' } : prev);
+                                                                                    } catch (err) { alert('Failed: ' + (err.response?.data?.message || err.message)); }
+                                                                                    finally { setFinalizingDesign(false); }
+                                                                                }}
+                                                                                disabled={finalizingDesign}
+                                                                                className="w-full py-5 bg-black text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-gray-800 transition-all shadow-xl shadow-black/10 active:scale-95 disabled:opacity-50"
+                                                                            >
+                                                                                {finalizingDesign ? 'Submitting...' : '📤 Finalize Design & Submit for Review'}
+                                                                            </button>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {/* Status badges */}
+                                                                    {s === 'pending_design_approval' && (
+                                                                        <div className="flex items-center gap-3 p-5 rounded-[24px] bg-orange-50 border border-orange-100 text-orange-700 shadow-sm">
+                                                                            <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>
+                                                                            <span className="text-[10px] font-black uppercase tracking-widest">Awaiting Admin Design Review</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {s === 'design_approved' && (
+                                                                        <div className="flex items-center gap-3 p-5 rounded-[24px] bg-green-50 border border-green-100 text-green-700 shadow-sm">
+                                                                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                                                            <span className="text-[10px] font-black uppercase tracking-widest">Design Approved by Admin ✅</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ) : effectiveReadOnly ? (
+                                                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest text-center py-14 bg-gray-50 border border-gray-100 rounded-3xl">No design proof uploaded yet</div>
+                                                            ) : (
+                                                                <label className="w-full flex flex-col items-center justify-center gap-4 py-14 border-4 border-dashed border-gray-100 rounded-[40px] cursor-pointer hover:border-yellow-400 hover:bg-white transition-all duration-500 group shadow-inner">
+                                                                    <input type="file" className="hidden" onChange={(e) => handleUpload(e, selectedOrder.order_id)} />
+                                                                    <div className="w-20 h-20 rounded-[32px] bg-gray-50 flex items-center justify-center group-hover:bg-yellow-100 transition-all duration-500 shadow-sm group-hover:scale-110">
+                                                                        <img src={uploadIcn} className="w-8 h-8 opacity-20 group-hover:opacity-100 transition-opacity" alt="" />
+                                                                    </div>
+                                                                    <div className="text-center">
+                                                                        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400 group-hover:text-black block mb-1">{uploading ? 'Processing File...' : 'Upload Design File'}</span>
+                                                                        <span className="text-[9px] font-bold text-gray-300 uppercase tracking-widest">Supports high-res images & PDFs up to 10MB</span>
+                                                                    </div>
+                                                                </label>
+                                                            )}
+                                                        </div>
+
+                                                        {/* ── Phase 04: Final Dispatch ── */}
+                                                        <div className={`p-8 rounded-[40px] border-2 transition-all ${!timelineSet ? 'border-gray-100 bg-gray-50/30 opacity-60' : custFulfillment ? 'border-green-400 bg-green-50/30 shadow-2xl shadow-green-400/10' : s === 'pending_design_approval' ? 'border-yellow-400 bg-yellow-50/30 shadow-2xl shadow-yellow-400/10' : 'border-gray-50 bg-white'}`}>
+                                                            <div className="flex justify-between items-center mb-6">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">Phase 04</span>
+                                                                {custFulfillment && <span className="bg-green-100 text-green-700 text-[10px] font-black uppercase px-3 py-1 rounded-full">Active</span>}
+                                                                {s === 'pending_design_approval' && isAdminOrSubAdmin && <span className="bg-orange-100 text-orange-700 text-[10px] font-black uppercase px-3 py-1 rounded-full animate-pulse">Action Required</span>}
+                                                            </div>
+                                                            <h4 className="font-black text-xl mb-3 italic uppercase tracking-tight">Final Dispatch</h4>
+
+                                                            {!timelineSet ? (
+                                                                <div className="flex flex-col items-center justify-center py-10 bg-gray-50 border border-gray-100 rounded-[32px] text-center shadow-inner">
+                                                                    <span className="text-xl mb-2">🔒</span>
+                                                                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Unlock after timeline initialization</span>
+                                                                </div>
+                                                            ) : custFulfillment ? (
+                                                                <div className="space-y-4 animate-in fade-in duration-500">
+                                                                    <div className="bg-white p-6 rounded-[28px] border-2 border-green-100 text-xs font-bold text-gray-600 shadow-sm leading-relaxed">
+                                                                        🚢 <span className="uppercase tracking-widest text-[9px] font-black text-green-600 block mb-2">Design Approved & Ready for Fulfillment</span>
+                                                                        <p className="font-extrabold text-green-800 text-[13px] italic">"The admin has verified the design. Awaiting customer checkout to convert to production order."</p>
+                                                                    </div>
+                                                                    {s === 'converted_to_order' && (
+                                                                        <div className="bg-green-500 text-white p-6 rounded-[28px] shadow-lg space-y-2">
+                                                                            <span className="uppercase tracking-widest text-[9px] font-black text-white/80 block">✅ Converted to Order</span>
+                                                                            <p className="text-[13px] font-extrabold uppercase tracking-tight">Customer has checked out. Production order created.</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ) : s === 'pending_design_approval' && isAdminOrSubAdmin ? (
+                                                                // ── Admin approve/reject design block ──
+                                                                <div className="space-y-4 animate-in fade-in duration-300">
+                                                                    <p className="text-[12px] font-medium text-gray-500 leading-relaxed">Review the uploaded design in Phase 03 before approving for customer checkout.</p>
+                                                                    <div className="bg-black rounded-[32px] p-8 text-white shadow-2xl space-y-4">
+                                                                        <h4 className="text-md font-black italic uppercase tracking-tight mb-1">Design Authorization</h4>
+                                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-relaxed">
+                                                                            Approving will notify the customer to proceed with checkout. Rejecting will send it back to the artist for revision.
+                                                                        </p>
+                                                                        <button
+                                                                            onClick={handleApproveDesign}
+                                                                            disabled={approvingDesign}
+                                                                            className="w-full py-5 bg-yellow-400 text-black text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-yellow-500 transition-all shadow-xl shadow-yellow-400/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                                                                        >
+                                                                            {approvingDesign ? 'Approving...' : '✅ Approve Design for Checkout'}
+                                                                        </button>
+
+                                                                        {!showDesignRejectInput ? (
+                                                                            <button
+                                                                                onClick={() => setShowDesignRejectInput(true)}
+                                                                                className="w-full py-4 bg-white/10 text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-red-600 transition-all active:scale-95 border border-white/20"
+                                                                            >
+                                                                                ❌ Reject & Send Back to Artist
+                                                                            </button>
+                                                                        ) : (
+                                                                            <div className="space-y-3 pt-2">
+                                                                                <textarea
+                                                                                    placeholder="Specify the reason for rejection..."
+                                                                                    value={designRejectReason}
+                                                                                    onChange={(e) => setDesignRejectReason(e.target.value)}
+                                                                                    className="w-full p-5 rounded-[24px] border border-white/20 bg-white/10 text-white placeholder:text-gray-500 text-[13px] font-bold outline-none focus:border-red-400 transition-all"
+                                                                                    rows={3}
+                                                                                />
+                                                                                <div className="flex gap-2">
+                                                                                    <button
+                                                                                        onClick={handleRejectDesign}
+                                                                                        disabled={rejectingDesign}
+                                                                                        className="flex-1 py-4 bg-red-500 text-white text-[11px] font-black uppercase tracking-widest rounded-2xl hover:bg-red-600 transition-all active:scale-95 disabled:opacity-50"
+                                                                                    >
+                                                                                        {rejectingDesign ? 'Rejecting...' : 'Confirm Reject'}
+                                                                                    </button>
+                                                                                    <button
+                                                                                        onClick={() => { setShowDesignRejectInput(false); setDesignRejectReason(''); }}
+                                                                                        className="px-5 py-4 bg-white/10 text-white text-[11px] font-black uppercase rounded-2xl hover:bg-white/20 transition-all"
+                                                                                    >
+                                                                                        Cancel
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-[12px] font-medium text-gray-500 leading-relaxed">Design must be approved by admin and customer must complete checkout to proceed to fulfillment.</p>
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+                                    ) : effectiveReadOnly ? (
                                         <div className="space-y-6 animate-in fade-in duration-300">
                                             {/* Design Proof Card */}
                                             <div className="p-8 rounded-[40px] border-2 border-gray-50 bg-white shadow-sm">
@@ -564,7 +1069,8 @@ export default function ArtistWorkflowMonitor({ isReadOnly = false, isChatReadOn
 
                                                         <div className="bg-black rounded-[32px] p-8 text-white shadow-2xl space-y-4">
                                                             <h4 className="text-md font-black italic uppercase tracking-tight mb-1">Authorization Desk</h4>
-                                                            {isReadOnly ? (
+                                                            {/* Use effectiveReadOnly so admin/subadmin always sees action buttons */}
+                                                            {effectiveReadOnly ? (
                                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-relaxed">This shipment request is currently under review by an Administrator.</p>
                                                             ) : (
                                                                 <>

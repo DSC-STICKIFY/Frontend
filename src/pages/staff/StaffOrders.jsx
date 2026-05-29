@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { fetchAllOrders, fetchDispatchedOrders, outForDelivery, staffConfirmShipment, requestShipment, completeProduction } from "../../services/OrdersAPI";
+import { getImageUrl } from "../../services/api";
 
 const DISPATCHED_STATUSES = new Set([
     "to receive",
@@ -785,6 +786,56 @@ export default function StaffOrders() {
                                     </div>
                                 )}
                             </div>
+
+                            {/* Design & Artist Info Section for Staff */}
+                            {(selectedItemForDetails.raw_order?.final_design_url || selectedItemForDetails.raw_order?.artist || selectedItemForDetails.raw_order?.shipment_note) && (
+                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+                                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Customization Details</p>
+                                    
+                                    {selectedItemForDetails.raw_order.final_design_url && (
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-medium text-gray-400 uppercase">Final Design</p>
+                                            <div className="relative group rounded-lg overflow-hidden border border-gray-200 bg-white">
+                                                <img
+                                                    src={getImageUrl(selectedItemForDetails.raw_order.final_design_url)}
+                                                    alt="Final Design"
+                                                    className="w-full h-auto max-h-36 object-contain mx-auto"
+                                                />
+                                                <div className="absolute top-1.5 right-1.5">
+                                                    <a
+                                                        href={getImageUrl(selectedItemForDetails.raw_order.final_design_url)}
+                                                        download
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="w-6 h-6 rounded-md bg-white/90 backdrop-blur shadow border border-white flex items-center justify-center hover:bg-amber-400 transition-all"
+                                                    >
+                                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {selectedItemForDetails.raw_order.artist && (
+                                        <div className="flex items-center gap-2.5 bg-white p-2.5 rounded-lg border border-gray-150">
+                                            <span className="text-base">🎨</span>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-[9px] font-medium text-gray-400 uppercase leading-none mb-0.5">Artist</p>
+                                                <p className="text-xs font-semibold text-gray-900 truncate">
+                                                    {`${selectedItemForDetails.raw_order.artist.first_name || ''} ${selectedItemForDetails.raw_order.artist.last_name || ''}`.trim()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {selectedItemForDetails.raw_order.shipment_note && (
+                                        <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200">
+                                            <p className="text-[9px] font-bold text-amber-850 uppercase tracking-wider mb-1">Shipment Note</p>
+                                            <p className="text-xs text-amber-700 italic">"{selectedItemForDetails.raw_order.shipment_note}"</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="flex justify-between items-center bg-gray-50 px-4 py-3 rounded-xl border border-gray-100">
                                 <p className="text-xs font-medium text-gray-500">Payment method</p>
